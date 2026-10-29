@@ -4,7 +4,7 @@
  "blurb": "Consecrated ground. Allegedly.",
  "size": [
   48,
-  34
+  63
  ],
  "spawn": [
   22,
@@ -38,7 +38,8 @@
      3,
      28
     ]
-   ]
+   ],
+   "level": 0
   },
   {
    "id": "cloister",
@@ -54,7 +55,8 @@
      40,
      2
     ]
-   ]
+   ],
+   "level": 0
   },
   {
    "id": "nave",
@@ -70,7 +72,9 @@
      15,
      15
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "worn"
   },
   {
    "id": "chancel",
@@ -86,7 +90,9 @@
      15,
      8
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "worn"
   },
   {
    "id": "vestry",
@@ -102,7 +108,9 @@
      10,
      6
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "neglected"
   },
   {
    "id": "crypt",
@@ -118,7 +126,9 @@
      10,
      7
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "neglected"
   },
   {
    "id": "refectory",
@@ -134,7 +144,9 @@
      10,
      9
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "worn"
   },
   {
    "id": "rector_study",
@@ -150,7 +162,9 @@
      11,
      6
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "kept"
   },
   {
    "id": "kitchen",
@@ -166,7 +180,9 @@
      11,
      7
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "kept"
   },
   {
    "id": "bedroom",
@@ -182,7 +198,9 @@
      6,
      9
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "worn"
   },
   {
    "id": "bathroom",
@@ -198,7 +216,135 @@
      4,
      9
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "neglected"
+  },
+  {
+   "id": "undercroft",
+   "name": "Undercroft",
+   "floor": "stone",
+   "kind": "cellar",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     4,
+     47,
+     38,
+     2
+    ]
+   ],
+   "level": -1,
+   "condition": "abandoned"
+  },
+  {
+   "id": "parish_archive",
+   "name": "Parish Archive",
+   "floor": "wood_dark",
+   "kind": "study",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     4,
+     50,
+     10,
+     6
+    ]
+   ],
+   "level": -1,
+   "condition": "neglected"
+  },
+  {
+   "id": "ossuary",
+   "name": "Ossuary",
+   "floor": "stone",
+   "kind": "cellar",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     15,
+     50,
+     16,
+     7
+    ]
+   ],
+   "level": -1,
+   "condition": "abandoned"
+  },
+  {
+   "id": "boiler_house",
+   "name": "Boiler House",
+   "floor": "stone",
+   "kind": "cellar",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     32,
+     50,
+     10,
+     6
+    ]
+   ],
+   "level": -1,
+   "condition": "worn"
+  },
+  {
+   "id": "cistern",
+   "name": "Cistern",
+   "floor": "stone",
+   "kind": "cellar",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     4,
+     57,
+     10,
+     5
+    ]
+   ],
+   "level": -1,
+   "condition": "abandoned"
+  },
+  {
+   "id": "service_tunnel",
+   "name": "Service Tunnel",
+   "floor": "stone",
+   "kind": "hall",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     15,
+     58,
+     16,
+     4
+    ]
+   ],
+   "level": -1,
+   "condition": "neglected"
+  },
+  {
+   "id": "church_stores",
+   "name": "Church Stores",
+   "floor": "dirt",
+   "kind": "shed",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     32,
+     57,
+     10,
+     5
+    ]
+   ],
+   "level": -1,
+   "condition": "neglected"
   }
  ],
  "doors": [
@@ -297,6 +443,46 @@
   [
    41,
    18
+  ],
+  [
+   8,
+   49
+  ],
+  [
+   22,
+   49
+  ],
+  [
+   37,
+   49
+  ],
+  [
+   14,
+   53
+  ],
+  [
+   31,
+   53
+  ],
+  [
+   8,
+   56
+  ],
+  [
+   37,
+   56
+  ],
+  [
+   14,
+   59
+  ],
+  [
+   31,
+   59
+  ],
+  [
+   22,
+   57
   ]
  ],
  "furniture": [
@@ -731,6 +917,186 @@
    14,
    1,
    0
+  ],
+  [
+   "covered_armchair",
+   7,
+   6,
+   0
+  ],
+  [
+   "debris",
+   18,
+   10,
+   0
+  ],
+  [
+   "candelabra",
+   5,
+   47,
+   0
+  ],
+  [
+   "debris",
+   26,
+   47,
+   0
+  ],
+  [
+   "pipes",
+   30,
+   48,
+   0
+  ],
+  [
+   "bookshelf",
+   4,
+   50,
+   0
+  ],
+  [
+   "bookshelf",
+   10,
+   50,
+   0
+  ],
+  [
+   "desk",
+   5,
+   53,
+   0
+  ],
+  [
+   "old_trunk",
+   11,
+   54,
+   0
+  ],
+  [
+   "coffin",
+   17,
+   51,
+   0
+  ],
+  [
+   "coffin",
+   27,
+   51,
+   0
+  ],
+  [
+   "candelabra",
+   20,
+   55,
+   0
+  ],
+  [
+   "debris",
+   24,
+   53,
+   0
+  ],
+  [
+   "boiler",
+   38,
+   50,
+   0
+  ],
+  [
+   "coal_pile",
+   33,
+   54,
+   0
+  ],
+  [
+   "pipes",
+   36,
+   55,
+   0
+  ],
+  [
+   "water_tank",
+   5,
+   58,
+   0
+  ],
+  [
+   "water_tank",
+   10,
+   59,
+   0
+  ],
+  [
+   "crates",
+   33,
+   57,
+   0
+  ],
+  [
+   "storage_shelf",
+   38,
+   61,
+   0
+  ],
+  [
+   "barrel",
+   41,
+   57,
+   0
+  ],
+  [
+   "pipes",
+   17,
+   58,
+   0
+  ],
+  [
+   "debris",
+   25,
+   59,
+   0
   ]
+ ],
+ "stairs": [
+  {
+   "name": "Crypt Stairs",
+   "style": "stairs",
+   "a": [
+    7,
+    17
+   ],
+   "a_land": [
+    8,
+    17
+   ],
+   "b": [
+    6,
+    48
+   ],
+   "b_land": [
+    7,
+    48
+   ]
+  },
+  {
+   "name": "Kitchen Stairs",
+   "style": "stairs",
+   "a": [
+    41,
+    15
+   ],
+   "a_land": [
+    40,
+    15
+   ],
+   "b": [
+    40,
+    53
+   ],
+   "b_land": [
+    39,
+    53
+   ]
+  }
  ]
 }

@@ -705,6 +705,8 @@ func _update_spectating() -> void:
 		run.camera.reparent(target, false)
 		run.camera.position = Vector2.ZERO
 		run.camera.reset_smoothing()
+	run._apply_camera_limits(target.global_position)
+	run.view.set_basement_view(run.map.floor_at(target.global_position) < 0)
 	spectate_label.text = "Spectating %s  ·  click to switch" % target.display_name
 
 # --- Messages ----------------------------------------------------------------------------------

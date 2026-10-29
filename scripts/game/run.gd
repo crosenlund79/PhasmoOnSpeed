@@ -156,6 +156,11 @@ func _spawn_hunters() -> void:
 	_apply_camera_limits(player.global_position)
 	player.add_child(camera)
 
+## Oppressive basement presentation for the local viewer (darker, deeper ambience).
+func _on_local_floor(level: int) -> void:
+	view.set_basement_view(level < 0)
+	Sfx.set_loop_pitch("ambience", 0.78 if level < 0 else 1.0)
+
 func _apply_camera_limits(pos: Vector2) -> void:
 	var b := map.floor_bounds(map.floor_at(pos))
 	camera.limit_left = int(b.position.x) - 60
@@ -523,6 +528,7 @@ func _check_stairs(h: Player) -> void:
 	if h == player:
 		_apply_camera_limits(dest)
 		camera.reset_smoothing()
+		_on_local_floor(map.floor_at(dest))
 	sound_to(h, "footstep", -2.0, 0.7)
 	tell(h, map.room_name(h.room_id), "icons/ui_house.png", true)
 	record_event("floor", {"actor": h.actor_id, "floor": map.floor_at(dest)})

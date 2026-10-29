@@ -4,7 +4,7 @@
  "blurb": "Forty rooms, one family portrait, and every eye in it follows you.",
  "size": [
   52,
-  36
+  67
  ],
  "spawn": [
   25,
@@ -26,7 +26,8 @@
      50,
      5
     ]
-   ]
+   ],
+   "level": 0
   },
   {
    "id": "west_lawn",
@@ -42,7 +43,8 @@
      3,
      29
     ]
-   ]
+   ],
+   "level": 0
   },
   {
    "id": "east_lawn",
@@ -58,7 +60,8 @@
      3,
      29
     ]
-   ]
+   ],
+   "level": 0
   },
   {
    "id": "foyer",
@@ -74,7 +77,9 @@
      12,
      9
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "kept"
   },
   {
    "id": "gallery",
@@ -90,7 +95,9 @@
      12,
      7
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "worn"
   },
   {
    "id": "ballroom",
@@ -106,7 +113,9 @@
      14,
      9
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "worn"
   },
   {
    "id": "library",
@@ -122,7 +131,9 @@
      14,
      9
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "worn"
   },
   {
    "id": "dining",
@@ -138,7 +149,9 @@
      14,
      7
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "kept"
   },
   {
    "id": "conservatory",
@@ -154,7 +167,9 @@
      14,
      7
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "neglected"
   },
   {
    "id": "kitchen",
@@ -170,7 +185,9 @@
      9,
      6
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "kept"
   },
   {
    "id": "pantry",
@@ -186,7 +203,9 @@
      4,
      6
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "neglected"
   },
   {
    "id": "servants_hall",
@@ -202,7 +221,9 @@
      42,
      3
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "neglected"
   },
   {
    "id": "master",
@@ -218,7 +239,9 @@
      12,
      6
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "kept"
   },
   {
    "id": "bathroom",
@@ -234,7 +257,9 @@
      5,
      6
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "worn"
   },
   {
    "id": "nursery",
@@ -250,7 +275,135 @@
      8,
      6
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "abandoned"
+  },
+  {
+   "id": "wine_cellar",
+   "name": "Wine Cellar",
+   "floor": "stone",
+   "kind": "cellar",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     4,
+     49,
+     14,
+     7
+    ]
+   ],
+   "level": -1,
+   "condition": "neglected"
+  },
+  {
+   "id": "servants_quarters",
+   "name": "Servants' Quarters",
+   "floor": "wood_light",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     19,
+     49,
+     10,
+     7
+    ]
+   ],
+   "level": -1,
+   "condition": "abandoned"
+  },
+  {
+   "id": "boiler_room",
+   "name": "Boiler Room",
+   "floor": "stone",
+   "kind": "cellar",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     30,
+     49,
+     10,
+     7
+    ]
+   ],
+   "level": -1,
+   "condition": "worn"
+  },
+  {
+   "id": "undercroft",
+   "name": "Undercroft Passage",
+   "floor": "stone",
+   "kind": "hall",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     4,
+     57,
+     36,
+     3
+    ]
+   ],
+   "level": -1,
+   "condition": "neglected"
+  },
+  {
+   "id": "old_laundry",
+   "name": "Old Laundry",
+   "floor": "tile_white",
+   "kind": "laundry",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     4,
+     61,
+     12,
+     5
+    ]
+   ],
+   "level": -1,
+   "condition": "abandoned"
+  },
+  {
+   "id": "strongroom",
+   "name": "Strongroom",
+   "floor": "wood_dark",
+   "kind": "study",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     17,
+     61,
+     9,
+     5
+    ]
+   ],
+   "level": -1,
+   "condition": "neglected"
+  },
+  {
+   "id": "coal_store",
+   "name": "Coal Store",
+   "floor": "dirt",
+   "kind": "shed",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     27,
+     61,
+     13,
+     5
+    ]
+   ],
+   "level": -1,
+   "condition": "abandoned"
   }
  ],
  "doors": [
@@ -365,6 +518,46 @@
   [
    28,
    4
+  ],
+  [
+   18,
+   52
+  ],
+  [
+   29,
+   52
+  ],
+  [
+   10,
+   56
+  ],
+  [
+   24,
+   56
+  ],
+  [
+   35,
+   56
+  ],
+  [
+   9,
+   60
+  ],
+  [
+   21,
+   60
+  ],
+  [
+   33,
+   60
+  ],
+  [
+   16,
+   63
+  ],
+  [
+   26,
+   63
   ]
  ],
  "furniture": [
@@ -925,6 +1118,234 @@
    32,
    31,
    0
+  ],
+  [
+   "broken_chair",
+   43,
+   8,
+   0
+  ],
+  [
+   "debris",
+   40,
+   16,
+   0
+  ],
+  [
+   "boards",
+   25,
+   2,
+   0
+  ],
+  [
+   "wine_rack",
+   5,
+   49,
+   0
+  ],
+  [
+   "wine_rack",
+   9,
+   49,
+   0
+  ],
+  [
+   "wine_rack",
+   13,
+   49,
+   0
+  ],
+  [
+   "wine_rack",
+   5,
+   52,
+   0
+  ],
+  [
+   "wine_rack",
+   12,
+   52,
+   0
+  ],
+  [
+   "barrel",
+   16,
+   54,
+   0
+  ],
+  [
+   "bed_single",
+   20,
+   49,
+   1
+  ],
+  [
+   "old_trunk",
+   25,
+   49,
+   0
+  ],
+  [
+   "covered_armchair",
+   26,
+   52,
+   0
+  ],
+  [
+   "broken_chair",
+   21,
+   54,
+   0
+  ],
+  [
+   "debris",
+   22,
+   52,
+   0
+  ],
+  [
+   "boiler",
+   34,
+   49,
+   0
+  ],
+  [
+   "pipes",
+   30,
+   49,
+   0
+  ],
+  [
+   "water_tank",
+   38,
+   53,
+   0
+  ],
+  [
+   "coal_pile",
+   31,
+   53,
+   0
+  ],
+  [
+   "pipes",
+   12,
+   57,
+   0
+  ],
+  [
+   "debris",
+   28,
+   58,
+   0
+  ],
+  [
+   "wash_tub",
+   4,
+   61,
+   0
+  ],
+  [
+   "wash_tub",
+   7,
+   61,
+   0
+  ],
+  [
+   "storage_shelf",
+   11,
+   65,
+   0
+  ],
+  [
+   "boards",
+   5,
+   64,
+   0
+  ],
+  [
+   "old_trunk",
+   18,
+   61,
+   0
+  ],
+  [
+   "cabinet",
+   22,
+   65,
+   0
+  ],
+  [
+   "storage_shelf",
+   23,
+   61,
+   0
+  ],
+  [
+   "coal_pile",
+   28,
+   61,
+   0
+  ],
+  [
+   "coal_pile",
+   37,
+   64,
+   0
+  ],
+  [
+   "crates",
+   31,
+   64,
+   0
+  ],
+  [
+   "barrel",
+   39,
+   61,
+   0
   ]
+ ],
+ "stairs": [
+  {
+   "name": "Cellar Stairs",
+   "style": "stairs",
+   "a": [
+    12,
+    9
+   ],
+   "a_land": [
+    11,
+    9
+   ],
+   "b": [
+    17,
+    50
+   ],
+   "b_land": [
+    16,
+    50
+   ]
+  },
+  {
+   "name": "Servants' Stairs",
+   "style": "stairs",
+   "a": [
+    44,
+    2
+   ],
+   "a_land": [
+    45,
+    2
+   ],
+   "b": [
+    38,
+    50
+   ],
+   "b_land": [
+    37,
+    50
+   ]
+  }
  ]
 }

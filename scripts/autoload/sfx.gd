@@ -104,6 +104,11 @@ func start_loop(key: String, sound: String, volume_db: float = 0.0, fade: float 
 	p.play()
 	create_tween().tween_property(p, "volume_db", target, fade)
 
+func set_loop_pitch(key: String, pitch: float) -> void:
+	var p: AudioStreamPlayer = _loops.get(key)
+	if p:
+		create_tween().tween_property(p, "pitch_scale", pitch, 0.8)
+
 func stop_loop(key: String, fade: float = 0.6) -> void:
 	var p: AudioStreamPlayer = _loops.get(key)
 	if p == null or not p.playing:

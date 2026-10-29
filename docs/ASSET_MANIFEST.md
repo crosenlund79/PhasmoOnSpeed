@@ -155,3 +155,55 @@ UI: `ui_heart`, `ui_heart_wounded`, `ui_skull`, `ui_clock`, `ui_quill`,
 | `cone.png` | 1024×512 | flashlight cone; origin at the **left-centre** pixel, pointing +X |
 | `cone_centered.png` | 2048×512 | the same cone with its origin at the **image centre** (used in game: the light sits at the holder so shadows are cast from the holder) |
 | `candle.png` | 256×256 | warm, slightly irregular radial |
+
+## Revision 2 additions
+
+### Basement & neglect furniture — `furniture/*.png` (64 px per cell, rotation 0 front faces down)
+
+| file | footprint | blocks | notes |
+|---|---|---|---|
+| `boiler.png` | 3×2 | yes | riveted iron boiler/furnace with pipes, faint orange firebox glow |
+| `wine_rack.png` | 3×1 | yes | dusty wine rack, bottle ends seen from above |
+| `coal_pile.png` | 2×2 | yes | heap of coal with a shovel |
+| `storage_shelf.png` | 3×1 | yes | sagging shelves of jars, tins and boxes |
+| `covered_armchair.png` | 2×2 | yes | armchair under a grey dust sheet |
+| `covered_sofa.png` | 4×2 | yes | sofa under a dust sheet |
+| `broken_chair.png` | 1×1 | yes | toppled chair, a leg snapped |
+| `old_trunk.png` | 2×1 | yes | battered, strapped, lid ajar |
+| `water_tank.png` | 2×2 | yes | round cistern / water tank from above |
+| `pipes.png` | 4×1 | no | exposed pipes run along a wall (decoration, drawn under actors) |
+| `boards.png` | 2×1 | no | loose planks on the floor (decoration) |
+| `debris.png` | 2×2 | no | fallen plaster, rubble, splinters (decoration) |
+| `desk_large.png` | 6×4 | yes | the investigator's desk for the main menu: leather blotter, scattered case papers, photographs, brass lamp base, inkwell |
+
+### Stairs — `furniture/` (walkable, drawn under actors)
+
+| file | footprint | notes |
+|---|---|---|
+| `stairs_down.png` | 1×1 | steps descending away from the viewer (darker at the far edge), stone/wood edging |
+| `stairs_up.png` | 1×1 | steps rising (lighter at the far edge) |
+| `hatch.png` | 1×1 | open wooden cellar hatch / coal chute with a ladder visible |
+
+### Neglect overlays — `decor/`
+
+| file | size | notes |
+|---|---|---|
+| `grime.png` | 512×512 tileable, transparent | soot, dust and scuffs (light) |
+| `damp.png` | 512×512 tileable, transparent | water stains, mould blooms, tide marks (heavier, greenish-brown) |
+| `cracks.png` | 512×512 tileable, transparent | cracked plaster/stone hairlines |
+| `cobweb.png` | 64×64 | corner cobweb, anchored in the TOP-LEFT corner (the game rotates it per corner) |
+| `stain_1.png`, `stain_2.png`, `stain_3.png` | 128×128 | individual damp stains / spills |
+| `peel.png` | 128×32 | peeling wallpaper strip curling off a wall edge (wall along the TOP edge) |
+| `dust_sheet_scrap.png`, `rubble.png`, `papers_scattered.png`, `rat.png` | 64×64 | small floor details |
+
+### Main menu scene — `menu/`
+
+| file | size | notes |
+|---|---|---|
+| `case_photo_1.png`…`case_photo_3.png` | 128×160 | old sepia photographs of the houses / occupants (no real people), slightly curled, with tape |
+| `case_file.png` | 192×256 | manila case file with "SPECTRAL" stamp and handwritten notes |
+| `journal_open.png` | 320×224 | the open hunter's journal from above, inked notes and sketches |
+| `map_pinned.png` | 256×192 | hand-drawn floorplan with red string and pins |
+| `pocket_watch.png`, `magnifier.png`, `inkwell.png` | 96×96 | desk props from above |
+| `plaque.png`, `plaque_hover.png`, `plaque_pressed.png` | 320×64 | 9-slice (24 px margins) brass-framed parchment plaque buttons with nail heads in the corners |
+| `plaque_dev.png` | 320×64 | 9-slice, cold steel/blue variant for developer-only buttons |

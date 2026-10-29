@@ -9,10 +9,19 @@ const ART_SCALE := 0.5   # world art is authored at 64 px per 32 px cell
 const DARKNESS := Color(0.23, 0.24, 0.32)
 const DARKNESS_HUNT := Color(0.13, 0.10, 0.14)
 const DARKNESS_HARBINGER := Color(0.12, 0.13, 0.19)
+const DARKNESS_BASEMENT := Color(0.17, 0.17, 0.22)
+## Neglect per room condition: overlay opacities, decal counts, floor tint.
+const CONDITION := {
+	"kept": {"grime": 0.0, "damp": 0.0, "cracks": 0.0, "stains": 0, "webs": 0, "peel": 0, "litter": 0, "tint": Color(1, 1, 1)},
+	"worn": {"grime": 0.3, "damp": 0.0, "cracks": 0.12, "stains": 1, "webs": 1, "peel": 1, "litter": 0, "tint": Color(0.95, 0.93, 0.9)},
+	"neglected": {"grime": 0.5, "damp": 0.2, "cracks": 0.3, "stains": 3, "webs": 2, "peel": 3, "litter": 2, "tint": Color(0.86, 0.85, 0.8)},
+	"abandoned": {"grime": 0.65, "damp": 0.45, "cracks": 0.45, "stains": 4, "webs": 4, "peel": 5, "litter": 4, "tint": Color(0.76, 0.8, 0.74)},
+}
 
 var map: HouseMap
 var modulate_node: CanvasModulate
 var floor_layer: Node2D
+var neglect_layer: Node2D      # grime, damp, cobwebs — always beneath items and evidence
 var under_layer: Node2D
 var furniture_layer: Node2D
 var decal_layer: Node2D        # evidence decals, placed items
@@ -31,6 +40,7 @@ func build(m: HouseMap, with_collision: bool, with_occluders: bool = true) -> vo
 	modulate_node.color = DARKNESS
 	add_child(modulate_node)
 	floor_layer = _layer("Floors", -10)
+	neglect_layer = _layer("Neglect", -9)
 	under_layer = _layer("Rugs", -8)
 	var walls := WallDrawer.new()
 	walls.map = m
@@ -41,6 +51,8 @@ func build(m: HouseMap, with_collision: bool, with_occluders: bool = true) -> vo
 	actor_layer = _layer("Actors", 0)
 	overlay_layer = _layer("Overlay", 5)
 	_build_floors()
+	_build_neglect()
+	_build_stairs()
 	_build_furniture()
 	_build_lights()
 	if with_collision:
@@ -59,14 +71,15 @@ func _build_floors() -> void:
 	# One textured polygon per room rect, plus door cells using the adjacent room's floor.
 	for r in map.rooms:
 		var tex := Art.tex("floors/%s.png" % r["floor"])
+		var tint: Color = CONDITION.get(r.get("condition", "kept"), CONDITION["kept"])["tint"]
 		for rect in r["rects"]:
-			_floor_poly(tex, Rect2(Vector2(rect[0], rect[1]) * C, Vector2(rect[2], rect[3]) * C))
+			_floor_poly(tex, Rect2(Vector2(rect[0], rect[1]) * C, Vector2(rect[2], rect[3]) * C), tint)
 	for d in map.doors:
 		var rid := map.room_at_cell(d)
 		var tex := Art.tex("floors/%s.png" % map.room(rid).get("floor", "wood_dark"))
 		_floor_poly(tex, Rect2(Vector2(d) * C, Vector2(C, C)))
 
-func _floor_poly(tex: Texture2D, rect: Rect2) -> void:
+func _floor_poly(tex: Texture2D, rect: Rect2, tint: Color = Color.WHITE, layer: Node2D = null, alpha: float = 1.0) -> void:
 	var p := Polygon2D.new()
 	p.texture = tex
 	p.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
@@ -76,7 +89,103 @@ func _floor_poly(tex: Texture2D, rect: Rect2) -> void:
 	for q in pts:
 		uv.append(q / ART_SCALE)
 	p.uv = uv
-	floor_layer.add_child(p)
+	p.color = Color(tint.r, tint.g, tint.b, alpha)
+	(layer if layer else floor_layer).add_child(p)
+
+## Weathering: tiled grime/damp/crack overlays plus a few stains, cobwebs,
+## peeling wallpaper and litter. Deterministic per house and room (never uses
+## the gameplay RNG) and placed away from doorways and stairs.
+func _build_neglect() -> void:
+	for r in map.rooms:
+		var cond: Dictionary = CONDITION.get(r.get("condition", ""), {})
+		if cond.is_empty() or r["outdoor"]:
+			continue
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash(map.id + ":" + r["id"])
+		for layer_name in ["grime", "damp", "cracks"]:
+			var a: float = cond[layer_name]
+			if a <= 0.0 or not Art.has("decor/%s.png" % layer_name):
+				continue
+			var tex := Art.tex("decor/%s.png" % layer_name)
+			for rect in r["rects"]:
+				_floor_poly(tex, Rect2(Vector2(rect[0], rect[1]) * C, Vector2(rect[2], rect[3]) * C), Color.WHITE, neglect_layer, a)
+		var blocked := {}
+		for d in map.doors:
+			for o in [Vector2i.ZERO, Vector2i(0, -1), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(1, 0)]:
+				blocked[d + o] = true
+		for st in map.stairs:
+			for k in ["a", "a_land", "b", "b_land"]:
+				blocked[st[k]] = true
+		var cells: Array = r["cells"].filter(func(c): return not blocked.has(c))
+		var edge: Array = map.wall_adjacent_cells(r["id"]).filter(func(c): return not blocked.has(c))
+		if cells.is_empty():
+			continue
+		for i in int(cond["stains"]):
+			_neglect_decal("decor/stain_%d.png" % rng.randi_range(1, 3), HouseMap.cell_center(cells[rng.randi_range(0, cells.size() - 1)]), rng.randf() * TAU, rng.randf_range(44.0, 80.0), rng.randf_range(0.5, 0.85))
+		for i in int(cond["litter"]):
+			var kinds := ["decor/rubble.png", "decor/papers_scattered.png", "decor/dust_sheet_scrap.png"]
+			_neglect_decal(kinds[rng.randi_range(0, kinds.size() - 1)], HouseMap.cell_center(cells[rng.randi_range(0, cells.size() - 1)]), rng.randf() * TAU, rng.randf_range(22.0, 32.0), 0.95)
+		# Cobwebs in room corners (art anchored top-left; rotate about the corner point).
+		var rect: Array = r["rects"][0]
+		var x0: float = rect[0] * C
+		var y0: float = rect[1] * C
+		var x1: float = (rect[0] + rect[2]) * C
+		var y1: float = (rect[1] + rect[3]) * C
+		var corners := [[Vector2(x0, y0), 0.0, Vector2i(rect[0], rect[1])], [Vector2(x1, y0), PI * 0.5, Vector2i(rect[0] + rect[2] - 1, rect[1])],
+			[Vector2(x1, y1), PI, Vector2i(rect[0] + rect[2] - 1, rect[1] + rect[3] - 1)], [Vector2(x0, y1), PI * 1.5, Vector2i(rect[0], rect[1] + rect[3] - 1)]]
+		var start := rng.randi_range(0, 3)
+		for i in mini(int(cond["webs"]), 4):
+			var cn: Array = corners[(start + i) % 4]
+			if blocked.has(cn[2]):
+				continue
+			_neglect_decal("decor/cobweb.png", cn[0], cn[1], 36.0, 0.85, true)
+		# Peeling wallpaper along walls (papered rooms only).
+		if not (r["floor"] in ["stone", "dirt", "tile_white", "tile_checker"]):
+			for i in int(cond["peel"]):
+				if edge.is_empty():
+					break
+				var c: Vector2i = edge[rng.randi_range(0, edge.size() - 1)]
+				var rot := 0.0
+				if map.is_wall(c + Vector2i(0, -1)):
+					rot = 0.0
+				elif map.is_wall(c + Vector2i(1, 0)):
+					rot = PI * 0.5
+				elif map.is_wall(c + Vector2i(0, 1)):
+					rot = PI
+				else:
+					rot = PI * 1.5
+				var pos := HouseMap.cell_center(c) + Vector2(0, -C * 0.36).rotated(rot)
+				_neglect_decal("decor/peel.png", pos, rot, 40.0, 0.9)
+
+func _neglect_decal(path: String, pos: Vector2, rot: float, size: float, alpha: float, corner: bool = false) -> void:
+	if not Art.has(path):
+		return
+	var s := Sprite2D.new()
+	s.texture = Art.tex(path)
+	s.position = pos
+	s.rotation = rot
+	if corner:
+		s.centered = false   # the texture's top-left corner sits on the room corner
+	var k := size / maxf(1.0, s.texture.get_size().x)
+	s.scale = Vector2(k, k)
+	s.modulate.a = alpha
+	neglect_layer.add_child(s)
+
+## Staircases and hatches between floors (walkable cells, drawn under actors).
+func _build_stairs() -> void:
+	for st in map.stairs:
+		var top := "furniture/hatch.png" if st.get("style", "stairs") == "hatch" else "furniture/stairs_down.png"
+		for pair in [[st["a"], st["a_land"], top], [st["b"], st["b_land"], "furniture/stairs_up.png"]]:
+			var cell: Vector2i = pair[0]
+			var land: Vector2i = pair[1]
+			var s := Sprite2D.new()
+			s.texture = Art.tex(pair[2])
+			s.position = HouseMap.cell_center(cell)
+			# Steps lead away from the landing.
+			s.rotation = Vector2(cell - land).angle() - PI * 0.5
+			var k := C / maxf(1.0, s.texture.get_size().x)
+			s.scale = Vector2(k, k)
+			under_layer.add_child(s)
 
 func _build_furniture() -> void:
 	for f in map.furniture:
@@ -148,6 +257,8 @@ func _build_lights() -> void:
 				_light(pos, Color(1.0, 0.8, 0.55), 0.85, 0.75, "lights/candle.png", 0.05, "lamp", true)
 			"hearth":
 				_light(pos + Vector2(0, 10).rotated(f["rot"] * PI * 0.5), Color(1.0, 0.5, 0.2), 1.1, 0.9, "lights/candle.png", 0.25, "hearth", true)
+			"furnace":
+				_light(pos + Vector2(0, 14).rotated(f["rot"] * PI * 0.5), Color(1.0, 0.42, 0.16), 0.8, 0.7, "lights/candle.png", 0.3, "hearth", true)
 
 func _build_collision() -> void:
 	var body := StaticBody2D.new()
@@ -217,7 +328,19 @@ func flicker(duration: float, strength: float = 1.0) -> void:
 
 func set_darkness(c: Color, time: float = 1.0) -> void:
 	_darkness = c
-	create_tween().tween_property(modulate_node, "color", c, time)
+	create_tween().tween_property(modulate_node, "color", _effective_darkness(), time)
+
+## The viewer's floor: basements are always a shade darker (and colder).
+var basement_view := false
+
+func set_basement_view(on: bool) -> void:
+	if on == basement_view:
+		return
+	basement_view = on
+	create_tween().tween_property(modulate_node, "color", _effective_darkness(), 0.6)
+
+func _effective_darkness() -> Color:
+	return _darkness * Color(0.74, 0.76, 0.84) if basement_view else _darkness
 
 func _process(delta: float) -> void:
 	_t += delta

@@ -18,6 +18,8 @@ func _ready() -> void:
 		"test_seeded_reset_repeatable", "test_genuine_evidence_room", "test_reckless_and_harbinger",
 		"test_correct_blind_victory", "test_wound_then_death", "test_replay_is_passive",
 		"test_crucifix_blocks_ghost_hunt", "test_shapeshifter_needs_exposure", "test_full_flow_records_once",
+		"test_basements", "test_stairs_and_basement_evidence", "test_encyclopedia_matches_game",
+		"test_all_entities_selectable", "test_occupant_identities", "test_mp_scoring",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -375,3 +377,136 @@ func test_full_flow_records_once() -> void:
 	await _frames(120)
 	check(SaveData.house_record("ashgrove")["runs"] == 1, "results replay did not record again")
 	SaveData.reset_all()
+
+# --- Revision 2 -----------------------------------------------------------------------
+
+func test_basements() -> void:
+	for id in Game.house_ids:
+		var m := HouseMap.from_data(Game.house(id))
+		var below: Array = m.rooms.filter(func(r): return int(r["level"]) == -1)
+		check(below.size() >= 4, "%s: basement has several rooms" % id)
+		check(m.stairs.size() >= 2, "%s: two ways between floors" % id)
+		check(m.floors() == [0, -1], "%s: two floors" % id)
+		var reach := m.reachable_from_spawn()
+		for r in below:
+			check(reach.has(m.free_cells(r["id"], false)[0]), "%s: %s reachable via the stairs" % [id, r["id"]])
+			check(r.has("condition"), "%s: %s has a condition" % [id, r["id"]])
+		# Floors never share walls or sight lines.
+		var top := m.floor_bounds(0)
+		var bottom := m.floor_bounds(-1)
+		check(not top.intersects(bottom), "%s: floors are separate" % id)
+		var a := HouseMap.cell_center(m.spawn_cell)
+		var b := HouseMap.cell_center(m.free_cells(below[0]["id"])[0])
+		var path := m.path(a, b)
+		check(not path.is_empty(), "%s: path from spawn into the basement" % id)
+		var jumps := 0
+		for i in range(1, path.size()):
+			if path[i].distance_to(path[i - 1]) > 90.0:
+				jumps += 1
+		check(jumps == 1, "%s: path takes exactly one staircase (%d)" % [id, jumps])
+		check(not m.los(a, b), "%s: no line of sight between floors" % id)
+
+func test_stairs_and_basement_evidence() -> void:
+	var run := await _start("blackwood", "werewolf", 13)
+	var st: Dictionary = run.map.stairs[0]
+	run.player.global_position = HouseMap.cell_center(st["a"])
+	await _frames(3)
+	check(run.map.floor_at(run.player.global_position) == -1, "stepping on the stairs took the hunter down")
+	check(run.map.room(run.player.room_id).get("level", 0) == -1, "basement room recognised (%s)" % run.player.room_id)
+	check(run.recorder.data["events"].any(func(e): return e[1] == "floor"), "floor change recorded for the replay")
+	await _frames(30)
+	check(run.map.floor_at(run.player.global_position) == -1, "no bouncing back up from the landing")
+	var basement_room: String = run.player.room_id
+	run.discover(run.player, "fur", basement_room)
+	check(run.player.journal.has("fur") and run.player.journal.entries[-1]["room_name"] == run.map.room_name(basement_room), "basement evidence keeps its room name")
+	# A creature in the basement can still reach a hunter upstairs.
+	run.player.global_position = HouseMap.cell_center(run.map.spawn_cell)
+	run.creature.position = HouseMap.cell_center(st["b_land"])
+	check(not run.map.path(run.creature.position, run.player.global_position).is_empty(), "creature can climb to the hunter")
+
+func test_encyclopedia_matches_game() -> void:
+	for id in Defs.ENCYCLOPEDIA_ORDER:
+		var d: Dictionary = Defs.CREATURES[id]
+		for k in ["name", "blurb", "behaviour", "hunting", "strengths", "weaknesses", "vanquish"]:
+			check(d.has(k) and not str(d[k]).is_empty(), "%s has %s" % [id, k])
+		check(d["evidence"].size() == (0 if id == "harbinger" else 3), "%s: three evidence types" % id)
+	# The written requirements match the code paths.
+	check(Defs.vanquish_summary("vampire").contains("garlic") and Defs.vanquish_summary("vampire").contains("wooden stake"), "vampire text")
+	check(Defs.vanquish_summary("werewolf").contains("silver"), "werewolf text")
+	check(Defs.vanquish_summary("shapeshifter").contains("mirror") and Defs.vanquish_summary("shapeshifter").contains("iron"), "shapeshifter text")
+	check(Defs.vanquish_summary("shade").contains("salt"), "shade text")
+	check(Defs.vanquish_summary("poltergeist").contains("Ghost Writing Book"), "poltergeist text")
+	check(Defs.vanquish_summary("harbinger").contains("sigil"), "harbinger text")
+	for e in Defs.EQUIPMENT:
+		check(Defs.EQUIPMENT[e].has("desc"), "equipment %s described" % e)
+	var enc = preload("res://scripts/ui/encyclopedia.gd").new()
+	get_tree().root.add_child(enc)
+	await _frames(2)
+	for id in Defs.ENCYCLOPEDIA_ORDER + ["_equipment"]:
+		enc.show_entry(id)
+	await _frames(2)
+	check(enc.page.get_child_count() > 5, "encyclopedia renders pages")
+	enc.queue_free()
+
+func test_all_entities_selectable() -> void:
+	var run := await _start("ashgrove", "vampire", 3)
+	var seen := {}
+	for i in 6:
+		run.cycle_suspect(run.player, 1)
+		seen[run.player.suspect] = true
+	for id in Defs.ORDINARY_CREATURES:
+		check(seen.has(id), "%s selectable as a suspect" % id)
+	run.player.suspect = "vampire"
+	check(run.player.attempts.is_empty(), "selecting a suspect is not an attempt")
+	check(not run.can_begin_rite(run.player), "no rite for a vampire")
+
+func test_occupant_identities() -> void:
+	for house in Game.house_ids:
+		var run := await _start(house, "shapeshifter", 5)
+		var names := run.occupants.map(func(o): return o.person["name"])
+		var looks := run.occupants.map(func(o): return o.person["token"])
+		var uniq_n := {}
+		var uniq_t := {}
+		for n in names:
+			uniq_n[n] = true
+		for t in looks:
+			uniq_t[t] = true
+		check(uniq_n.size() == names.size() and uniq_t.size() == looks.size(), "%s: distinct occupants" % house)
+		check(not (run.disguise["name"] in names) and not (run.disguise["token"] in looks), "%s: disguise is not a copy of an occupant" % house)
+		check(run.creature.tag != null, "%s: disguise wears the same name tag as occupants" % house)
+		check(Occupants.PERSONALITIES.has(run.disguise["personality"]), "%s: disguise has a personality" % house)
+		run.creature._set_form("human", false)
+		check(run.creature.current_token() == run.disguise["token"], "%s: human form uses the disguise look" % house)
+		for o in run.occupants:
+			check(Occupants.PERSONALITIES.has(o.person["personality"]), "personality set")
+		_cleanup_scene()
+		await get_tree().process_frame
+
+func test_mp_scoring() -> void:
+	var base := {"creature": "werewolf", "vanquished": true, "alive": true, "wounds": 0, "time": 200.0,
+		"true_evidence": 1, "first_finds": 1, "suspect_correct": true, "vanquisher": true,
+		"incorrect_attempts": 0, "reckless_attempts": 0, "incomplete_attempts": 0, "clean_hunts_survived": 0}
+	var a := MpScoring.compute(base)
+	check(a["total"] == MpScoring.compute(base)["total"], "deterministic")
+	var hoarder := base.duplicate()
+	hoarder["vanquisher"] = false
+	hoarder["true_evidence"] = 3
+	hoarder["first_finds"] = 3
+	var blind_vanq := base.duplicate()
+	blind_vanq["true_evidence"] = 0
+	blind_vanq["first_finds"] = 0
+	check(MpScoring.compute(hoarder)["total"] > MpScoring.compute(blind_vanq)["total"], "a thorough investigator can beat a lucky vanquisher")
+	check(a["total"] > MpScoring.compute(hoarder)["total"] - 600, "vanquishing still carries real weight")
+	var shover := base.duplicate()
+	shover["shoves_given"] = 50
+	check(MpScoring.compute(shover)["total"] == a["total"], "shoving never scores")
+	var dead := base.duplicate()
+	dead["alive"] = false
+	dead["vanquisher"] = false
+	check(MpScoring.compute(dead)["total"] < MpScoring.compute(hoarder)["total"], "dead hunters keep evidence but lose survival")
+	var rows := [{"score": 100, "vanquisher": false, "alive": true, "incorrect_attempts": 0, "index": 1},
+		{"score": 100, "vanquisher": true, "alive": true, "incorrect_attempts": 0, "index": 0},
+		{"score": 300, "vanquisher": false, "alive": false, "incorrect_attempts": 2, "index": 2}]
+	var ranked := MpScoring.rank(rows)
+	check(ranked[0]["score"] == 300 and ranked[1]["vanquisher"] and ranked[2]["rank"] == 3, "highest score wins; ties to the vanquisher")
+	check(MpScoring.RULES_VERSION != Scoring.RULES_VERSION, "separate rule versions")

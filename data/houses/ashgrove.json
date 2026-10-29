@@ -4,7 +4,7 @@
  "blurb": "A widow's cottage at the edge of the moor. The kettle is still warm.",
  "size": [
   44,
-  30
+  56
  ],
  "spawn": [
   11,
@@ -38,7 +38,8 @@
      10,
      1
     ]
-   ]
+   ],
+   "level": 0
   },
   {
    "id": "shed",
@@ -54,7 +55,9 @@
      8,
      3
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "neglected"
   },
   {
    "id": "west_path",
@@ -70,7 +73,8 @@
      3,
      19
     ]
-   ]
+   ],
+   "level": 0
   },
   {
    "id": "east_path",
@@ -86,7 +90,8 @@
      3,
      19
     ]
-   ]
+   ],
+   "level": 0
   },
   {
    "id": "front_garden",
@@ -102,7 +107,8 @@
      42,
      4
     ]
-   ]
+   ],
+   "level": 0
   },
   {
    "id": "kitchen",
@@ -118,7 +124,9 @@
      9,
      6
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "kept"
   },
   {
    "id": "dining",
@@ -134,7 +142,9 @@
      11,
      6
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "worn"
   },
   {
    "id": "study",
@@ -150,7 +160,9 @@
      12,
      6
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "neglected"
   },
   {
    "id": "hallway",
@@ -166,7 +178,9 @@
      34,
      3
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "worn"
   },
   {
    "id": "living",
@@ -182,7 +196,9 @@
      12,
      6
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "kept"
   },
   {
    "id": "bathroom",
@@ -198,7 +214,9 @@
      5,
      6
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "neglected"
   },
   {
    "id": "master",
@@ -214,7 +232,9 @@
      8,
      6
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "worn"
   },
   {
    "id": "guest",
@@ -230,7 +250,81 @@
      6,
      6
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "kept"
+  },
+  {
+   "id": "root_cellar",
+   "name": "Root Cellar",
+   "floor": "stone",
+   "kind": "cellar",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     4,
+     43,
+     10,
+     6
+    ]
+   ],
+   "level": -1,
+   "condition": "neglected"
+  },
+  {
+   "id": "cellar_store",
+   "name": "Cellar Storage",
+   "floor": "dirt",
+   "kind": "cellar",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     15,
+     43,
+     10,
+     6
+    ]
+   ],
+   "level": -1,
+   "condition": "abandoned"
+  },
+  {
+   "id": "cold_store",
+   "name": "Cold Store",
+   "floor": "stone",
+   "kind": "cellar",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     4,
+     50,
+     6,
+     4
+    ]
+   ],
+   "level": -1,
+   "condition": "abandoned"
+  },
+  {
+   "id": "coal_hole",
+   "name": "Coal Hole",
+   "floor": "dirt",
+   "kind": "shed",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     11,
+     50,
+     14,
+     4
+    ]
+   ],
+   "level": -1,
+   "condition": "neglected"
   }
  ],
  "doors": [
@@ -309,6 +403,26 @@
   [
    17,
    2
+  ],
+  [
+   14,
+   45
+  ],
+  [
+   6,
+   49
+  ],
+  [
+   20,
+   49
+  ],
+  [
+   10,
+   52
+  ],
+  [
+   12,
+   49
   ]
  ],
  "furniture": [
@@ -683,6 +797,150 @@
    33,
    27,
    0
+  ],
+  [
+   "debris",
+   32,
+   11,
+   0
+  ],
+  [
+   "boards",
+   19,
+   3,
+   0
+  ],
+  [
+   "storage_shelf",
+   5,
+   43,
+   0
+  ],
+  [
+   "wine_rack",
+   9,
+   43,
+   0
+  ],
+  [
+   "barrel",
+   13,
+   43,
+   0
+  ],
+  [
+   "crates",
+   10,
+   47,
+   0
+  ],
+  [
+   "pipes",
+   4,
+   48,
+   0
+  ],
+  [
+   "old_trunk",
+   16,
+   43,
+   0
+  ],
+  [
+   "covered_armchair",
+   19,
+   43,
+   0
+  ],
+  [
+   "storage_shelf",
+   22,
+   43,
+   0
+  ],
+  [
+   "broken_chair",
+   16,
+   47,
+   0
+  ],
+  [
+   "debris",
+   17,
+   45,
+   0
+  ],
+  [
+   "water_tank",
+   4,
+   50,
+   0
+  ],
+  [
+   "barrel",
+   8,
+   53,
+   0
+  ],
+  [
+   "coal_pile",
+   14,
+   51,
+   0
+  ],
+  [
+   "boiler",
+   21,
+   50,
+   0
+  ],
+  [
+   "boards",
+   17,
+   52,
+   0
   ]
+ ],
+ "stairs": [
+  {
+   "name": "Cellar Stairs",
+   "style": "stairs",
+   "a": [
+    6,
+    11
+   ],
+   "a_land": [
+    7,
+    11
+   ],
+   "b": [
+    5,
+    45
+   ],
+   "b_land": [
+    6,
+    45
+   ]
+  },
+  {
+   "name": "Garden Hatch",
+   "style": "hatch",
+   "a": [
+    33,
+    4
+   ],
+   "a_land": [
+    32,
+    4
+   ],
+   "b": [
+    23,
+    46
+   ],
+   "b_land": [
+    22,
+    46
+   ]
+  }
  ]
 }

@@ -198,6 +198,20 @@ const FURNITURE := {
 	"coffin": {"size": Vector2i(2, 4), "solid": true},
 	"hay": {"size": Vector2i(2, 2), "solid": true},
 	"wash_tub": {"size": Vector2i(2, 2), "solid": true},
+	# Revision 2: basements and neglect.
+	"boiler": {"size": Vector2i(3, 2), "solid": true, "light": "furnace", "melt": true},
+	"wine_rack": {"size": Vector2i(3, 1), "solid": true},
+	"coal_pile": {"size": Vector2i(2, 2), "solid": true},
+	"storage_shelf": {"size": Vector2i(3, 1), "solid": true},
+	"covered_armchair": {"size": Vector2i(2, 2), "solid": true},
+	"covered_sofa": {"size": Vector2i(4, 2), "solid": true},
+	"broken_chair": {"size": Vector2i(1, 1), "solid": true},
+	"old_trunk": {"size": Vector2i(2, 1), "solid": true},
+	"water_tank": {"size": Vector2i(2, 2), "solid": true},
+	"pipes": {"size": Vector2i(4, 1), "solid": false, "under": true},
+	"boards": {"size": Vector2i(2, 1), "solid": false, "under": true},
+	"debris": {"size": Vector2i(2, 2), "solid": false, "under": true},
+	"desk_large": {"size": Vector2i(6, 4), "solid": true},
 }
 
 static func evidence_name(id: String) -> String:

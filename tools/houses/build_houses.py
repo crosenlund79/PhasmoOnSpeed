@@ -340,6 +340,206 @@ HOUSES.append({
 })
 
 
+# ---------------------------------------------------------------------------
+# Basements (revision 2). Coordinates are local to the basement; the basement
+# is placed below the main floor with a void gap so the two levels never share
+# walls, light or line of sight. Rooms get "level": -1. Staircases link a cell
+# on each level to a landing cell beside its partner (no ping-pong).
+FLOOR_GAP = 12
+
+
+def broom(rid, name, floor, kind, rects, lit=False):
+    r = room(rid, name, floor, kind, rects, lit=lit)
+    r["level"] = -1
+    return r
+
+
+BASEMENTS = {
+    "ashgrove": {
+        "size": [30, 14],
+        "rooms": [
+            broom("root_cellar", "Root Cellar", "stone", "cellar", [[4, 1, 10, 6]]),
+            broom("cellar_store", "Cellar Storage", "dirt", "cellar", [[15, 1, 10, 6]]),
+            broom("cold_store", "Cold Store", "stone", "cellar", [[4, 8, 6, 4]]),
+            broom("coal_hole", "Coal Hole", "dirt", "shed", [[11, 8, 14, 4]], lit=True),
+        ],
+        "doors": [[14, 3], [6, 7], [20, 7], [10, 10], [12, 7]],
+        "furniture": [
+            ["storage_shelf", 5, 1, 0], ["wine_rack", 9, 1, 0], ["barrel", 13, 1, 0], ["crates", 10, 5, 0], ["pipes", 4, 6, 0],
+            ["old_trunk", 16, 1, 0], ["covered_armchair", 19, 1, 0], ["storage_shelf", 22, 1, 0], ["broken_chair", 16, 5, 0],
+            ["debris", 17, 3, 0], ["water_tank", 4, 8, 0], ["barrel", 8, 11, 0], ["coal_pile", 14, 9, 0], ["boiler", 21, 8, 0],
+            ["boards", 17, 10, 0],
+        ],
+        "stairs": [
+            {"name": "Cellar Stairs", "a": [6, 11], "a_land": [7, 11], "b": [5, 3], "b_land": [6, 3], "style": "stairs"},
+            {"name": "Garden Hatch", "a": [33, 4], "a_land": [32, 4], "b": [23, 4], "b_land": [22, 4], "style": "hatch"},
+        ],
+    },
+    "blackwood": {
+        "size": [44, 19],
+        "rooms": [
+            broom("wine_cellar", "Wine Cellar", "stone", "cellar", [[4, 1, 14, 7]]),
+            broom("servants_quarters", "Servants' Quarters", "wood_light", "bedroom", [[19, 1, 10, 7]]),
+            broom("boiler_room", "Boiler Room", "stone", "cellar", [[30, 1, 10, 7]], lit=True),
+            broom("undercroft", "Undercroft Passage", "stone", "hall", [[4, 9, 36, 3]]),
+            broom("old_laundry", "Old Laundry", "tile_white", "laundry", [[4, 13, 12, 5]]),
+            broom("strongroom", "Strongroom", "wood_dark", "study", [[17, 13, 9, 5]]),
+            broom("coal_store", "Coal Store", "dirt", "shed", [[27, 13, 13, 5]]),
+        ],
+        "doors": [[18, 4], [29, 4], [10, 8], [24, 8], [35, 8], [9, 12], [21, 12], [33, 12], [16, 15], [26, 15]],
+        "furniture": [
+            ["wine_rack", 5, 1, 0], ["wine_rack", 9, 1, 0], ["wine_rack", 13, 1, 0], ["wine_rack", 5, 4, 0], ["wine_rack", 12, 4, 0],
+            ["barrel", 16, 6, 0], ["bed_single", 20, 1, 1], ["old_trunk", 25, 1, 0], ["covered_armchair", 26, 4, 0],
+            ["broken_chair", 21, 6, 0], ["debris", 22, 4, 0], ["boiler", 34, 1, 0], ["pipes", 30, 1, 0], ["water_tank", 38, 5, 0],
+            ["coal_pile", 31, 5, 0], ["pipes", 12, 9, 0], ["debris", 28, 10, 0], ["wash_tub", 4, 13, 0], ["wash_tub", 7, 13, 0],
+            ["storage_shelf", 11, 17, 0], ["boards", 5, 16, 0], ["old_trunk", 18, 13, 0], ["cabinet", 22, 17, 0],
+            ["storage_shelf", 23, 13, 0], ["coal_pile", 28, 13, 0], ["coal_pile", 37, 16, 0], ["crates", 31, 16, 0], ["barrel", 39, 13, 0],
+        ],
+        "stairs": [
+            {"name": "Cellar Stairs", "a": [12, 9], "a_land": [11, 9], "b": [17, 2], "b_land": [16, 2], "style": "stairs"},
+            {"name": "Servants' Stairs", "a": [44, 2], "a_land": [45, 2], "b": [38, 2], "b_land": [37, 2], "style": "stairs"},
+        ],
+    },
+    "hollow_lane": {
+        "size": [38, 18],
+        "rooms": [
+            broom("root_store", "Root Store", "dirt", "cellar", [[4, 1, 9, 6]]),
+            broom("cellar_passage", "Cellar Passage", "stone", "hall", [[14, 1, 3, 10], [4, 8, 10, 3]]),
+            broom("old_workshop", "Old Workshop", "wood_dark", "shed", [[18, 1, 12, 6]], lit=True),
+            broom("pump_room", "Pump Room", "stone", "cellar", [[31, 1, 5, 9]]),
+            broom("feed_store", "Feed Store", "dirt", "shed", [[4, 12, 13, 5]]),
+            broom("well_room", "Well Room", "stone", "cellar", [[18, 8, 12, 9]]),
+        ],
+        "doors": [[8, 7], [13, 3], [17, 3], [30, 3], [17, 9], [24, 7], [30, 8], [8, 11], [17, 14]],
+        "furniture": [
+            ["storage_shelf", 8, 1, 0], ["barrel", 12, 1, 0], ["crates", 4, 5, 0], ["pipes", 4, 10, 0], ["debris", 10, 9, 0],
+            ["workbench", 19, 1, 0], ["woodpile", 23, 1, 0], ["storage_shelf", 26, 1, 0], ["crates", 27, 5, 0],
+            ["broken_chair", 20, 5, 0], ["boards", 22, 4, 0], ["boiler", 32, 1, 0], ["water_tank", 33, 6, 0],
+            ["hay", 5, 13, 0], ["hay", 13, 13, 0], ["barrel", 4, 16, 0], ["water_tank", 23, 11, 0], ["coal_pile", 27, 14, 0],
+            ["barrel", 19, 16, 0], ["crates", 19, 10, 0],
+        ],
+        "stairs": [
+            {"name": "Cellar Stairs", "a": [24, 22], "a_land": [23, 22], "b": [5, 2], "b_land": [6, 2], "style": "stairs"},
+            {"name": "Barn Trapdoor", "a": [39, 13], "a_land": [39, 12], "b": [34, 4], "b_land": [33, 4], "style": "hatch"},
+        ],
+    },
+    "evangeline": {
+        "size": [46, 17],
+        "rooms": [
+            broom("undercroft", "Undercroft", "stone", "cellar", [[4, 1, 38, 2]]),
+            broom("parish_archive", "Parish Archive", "wood_dark", "study", [[4, 4, 10, 6]], lit=True),
+            broom("ossuary", "Ossuary", "stone", "cellar", [[15, 4, 16, 7]]),
+            broom("boiler_house", "Boiler House", "stone", "cellar", [[32, 4, 10, 6]]),
+            broom("cistern", "Cistern", "stone", "cellar", [[4, 11, 10, 5]]),
+            broom("service_tunnel", "Service Tunnel", "stone", "hall", [[15, 12, 16, 4]]),
+            broom("church_stores", "Church Stores", "dirt", "shed", [[32, 11, 10, 5]]),
+        ],
+        "doors": [[8, 3], [22, 3], [37, 3], [14, 7], [31, 7], [8, 10], [37, 10], [14, 13], [31, 13], [22, 11]],
+        "furniture": [
+            ["candelabra", 5, 1, 0], ["debris", 26, 1, 0], ["pipes", 30, 2, 0],
+            ["bookshelf", 4, 4, 0], ["bookshelf", 10, 4, 0], ["desk", 5, 7, 0], ["old_trunk", 11, 8, 0],
+            ["coffin", 17, 5, 0], ["coffin", 27, 5, 0], ["candelabra", 20, 9, 0], ["debris", 24, 7, 0],
+            ["boiler", 38, 4, 0], ["coal_pile", 33, 8, 0], ["pipes", 36, 9, 0],
+            ["water_tank", 5, 12, 0], ["water_tank", 10, 13, 0], ["crates", 33, 11, 0], ["storage_shelf", 38, 15, 0],
+            ["barrel", 41, 11, 0], ["pipes", 17, 12, 0], ["debris", 25, 13, 0],
+        ],
+        "stairs": [
+            {"name": "Crypt Stairs", "a": [7, 17], "a_land": [8, 17], "b": [6, 2], "b_land": [7, 2], "style": "stairs"},
+            {"name": "Kitchen Stairs", "a": [41, 15], "a_land": [40, 15], "b": [40, 7], "b_land": [39, 7], "style": "stairs"},
+        ],
+    },
+    "marrow_street": {
+        "size": [36, 17],
+        "rooms": [
+            broom("coal_cellar", "Coal Vault", "dirt", "shed", [[4, 1, 7, 15]]),
+            broom("basement_passage", "Basement Passage", "stone", "hall", [[12, 1, 20, 2]]),
+            broom("utility_room", "Utility Room", "stone", "cellar", [[12, 4, 9, 5]], lit=True),
+            broom("wine_store", "Wine Store", "stone", "cellar", [[22, 4, 10, 5]]),
+            broom("laundry", "Laundry", "tile_white", "laundry", [[12, 10, 9, 6]]),
+            broom("lumber_room", "Lumber Room", "wood_light", "shed", [[22, 10, 10, 6]]),
+        ],
+        "doors": [[11, 2], [11, 6], [11, 12], [16, 3], [27, 3], [21, 6], [16, 9], [27, 9], [21, 13]],
+        "furniture": [
+            ["coal_pile", 4, 4, 0], ["coal_pile", 8, 9, 0], ["barrel", 4, 14, 0], ["boards", 5, 12, 0],
+            ["boiler", 13, 4, 0], ["water_tank", 18, 7, 0], ["pipes", 13, 1, 0],
+            ["wine_rack", 22, 4, 0], ["wine_rack", 28, 4, 0], ["wine_rack", 23, 8, 0],
+            ["wash_tub", 12, 14, 0], ["wash_tub", 17, 10, 0], ["pipes", 13, 10, 0],
+            ["covered_sofa", 23, 14, 0], ["covered_armchair", 29, 10, 0], ["old_trunk", 25, 11, 0], ["broken_chair", 31, 15, 0],
+        ],
+        "stairs": [
+            {"name": "Coal Chute", "a": [9, 5], "a_land": [10, 5], "b": [6, 2], "b_land": [7, 2], "style": "hatch"},
+            {"name": "Basement Stairs", "a": [34, 17], "a_land": [33, 17], "b": [30, 7], "b_land": [29, 7], "style": "stairs"},
+        ],
+    },
+}
+
+# Neglect: some rooms are lived in and kept, others forgotten. Outdoor rooms have none.
+CONDITIONS = {
+    "ashgrove": {"kitchen": "kept", "living": "kept", "guest": "kept", "hallway": "worn", "dining": "worn", "master": "worn",
+                 "study": "neglected", "bathroom": "neglected", "shed": "neglected", "root_cellar": "neglected",
+                 "cellar_store": "abandoned", "cold_store": "abandoned", "coal_hole": "neglected"},
+    "blackwood": {"foyer": "kept", "dining": "kept", "master": "kept", "kitchen": "kept", "ballroom": "worn", "library": "worn",
+                  "gallery": "worn", "bathroom": "worn", "conservatory": "neglected", "nursery": "abandoned",
+                  "servants_hall": "neglected", "pantry": "neglected", "wine_cellar": "neglected",
+                  "servants_quarters": "abandoned", "boiler_room": "worn", "undercroft": "neglected",
+                  "old_laundry": "abandoned", "strongroom": "neglected", "coal_store": "abandoned"},
+    "hollow_lane": {"kitchen": "kept", "parlor": "kept", "corridor": "worn", "bedroom": "worn", "mudroom": "worn",
+                    "bathroom": "worn", "kids_room": "neglected", "cellar": "neglected", "barn": "neglected",
+                    "root_store": "neglected", "old_workshop": "worn", "pump_room": "abandoned",
+                    "cellar_passage": "neglected", "feed_store": "abandoned", "well_room": "abandoned"},
+    "evangeline": {"rector_study": "kept", "kitchen": "kept", "nave": "worn", "chancel": "worn", "refectory": "worn",
+                   "bedroom": "worn", "vestry": "neglected", "crypt": "neglected", "bathroom": "neglected",
+                   "undercroft": "abandoned", "parish_archive": "neglected", "boiler_house": "worn", "ossuary": "abandoned",
+                   "service_tunnel": "neglected", "cistern": "abandoned", "church_stores": "neglected"},
+    "marrow_street": {"front_parlor": "kept", "entry": "kept", "dining": "kept", "kitchen": "kept", "stair_hall": "worn",
+                      "bedroom": "worn", "bathroom": "worn", "drawing_room": "neglected", "scullery": "neglected",
+                      "box_room": "abandoned", "coal_shed": "neglected", "coal_cellar": "abandoned", "utility_room": "worn",
+                      "wine_store": "neglected", "basement_passage": "neglected", "laundry": "abandoned",
+                      "lumber_room": "abandoned"},
+}
+
+# A few signs of neglect on the main floors (validated like everything else).
+MAIN_NEGLECT = {
+    "ashgrove": [["debris", 32, 11, 0], ["boards", 19, 3, 0]],
+    "blackwood": [["broken_chair", 43, 8, 0], ["debris", 40, 16, 0], ["boards", 25, 2, 0]],
+    "hollow_lane": [["debris", 37, 7, 0], ["boards", 6, 16, 0]],
+    "evangeline": [["covered_armchair", 7, 6, 0], ["debris", 18, 10, 0]],
+    "marrow_street": [["debris", 33, 22, 0], ["boards", 6, 17, 0]],
+}
+
+
+def attach_basement(h):
+    b = BASEMENTS.get(h["id"])
+    w, main_h = h["size"]
+    oy = main_h + FLOOR_GAP
+    for r in h["rooms"]:
+        r.setdefault("level", 0)
+        cond = CONDITIONS.get(h["id"], {}).get(r["id"])
+        if cond:
+            r["condition"] = cond
+    h["furniture"] = h["furniture"] + MAIN_NEGLECT.get(h["id"], [])
+    if not b:
+        return
+    h["size"] = [max(w, b["size"][0]), oy + b["size"][1]]
+    for r in b["rooms"]:
+        r = dict(r)
+        cond = CONDITIONS.get(h["id"], {}).get(r["id"])
+        r["id"] = r["id"] if r["id"] not in [x["id"] for x in h["rooms"]] else "basement_" + r["id"]
+        r["rects"] = [[x, y + oy, rw, rh] for x, y, rw, rh in r["rects"]]
+        if cond:
+            r["condition"] = cond
+        h["rooms"].append(r)
+    h["doors"] = h["doors"] + [[x, y + oy] for x, y in b["doors"]]
+    h["furniture"] = h["furniture"] + [[t, x, y + oy, rot] for t, x, y, rot in b["furniture"]]
+    h["stairs"] = [{"name": st["name"], "style": st["style"], "a": st["a"], "a_land": st["a_land"],
+                    "b": [st["b"][0], st["b"][1] + oy], "b_land": [st["b_land"][0], st["b_land"][1] + oy]}
+                   for st in b["stairs"]]
+
+
+for _h in HOUSES:
+    attach_basement(_h)
+
+
 FURN_SIZES = {}
 
 
@@ -459,6 +659,21 @@ def validate(h, grid):
             if 0 <= nx < w and 0 <= ny < ht and grid[ny][nx] not in (None, "#", "+") and (nx, ny) in solid:
                 problems.append(f"door {x},{y} blocked by furniture at {nx},{ny}")
     walk = {(x, y) for y in range(ht) for x in range(w) if grid[y][x] not in (None, "#") and (x, y) not in solid}
+    links = {}
+    door_adj = {(x + dx, y + dy) for x, y in h["doors"] for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))}
+    for st in h.get("stairs", []):
+        for cell_k, land_k in (("a", "b_land"), ("b", "a_land")):
+            c, land = tuple(st[cell_k]), tuple(st[land_k])
+            links[c] = land
+        for k in ("a", "a_land", "b", "b_land"):
+            c = tuple(st[k])
+            if c not in walk:
+                problems.append(f"stair {st['name']} {k} {c} not walkable")
+            if c in door_adj:
+                problems.append(f"stair {st['name']} {k} {c} touches a doorway")
+        for k, land in (("a", "a_land"), ("b", "b_land")):
+            if abs(st[k][0] - st[land][0]) + abs(st[k][1] - st[land][1]) != 1:
+                problems.append(f"stair {st['name']}: landing {land} not beside {k}")
     start = tuple(h["spawn"])
     if start not in walk:
         problems.append("spawn not walkable")
@@ -467,8 +682,10 @@ def validate(h, grid):
     stack = [start]
     while stack:
         x, y = stack.pop()
-        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-            n = (x + dx, y + dy)
+        nexts = [(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+        if (x, y) in links:
+            nexts.append(links[(x, y)])
+        for n in nexts:
             if n in walk and n not in seen:
                 seen.add(n)
                 stack.append(n)

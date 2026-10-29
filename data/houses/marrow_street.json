@@ -4,7 +4,7 @@
  "blurb": "Three generations lived here. One of them never left.",
  "size": [
   40,
-  34
+  63
  ],
  "spawn": [
   19,
@@ -26,7 +26,8 @@
      38,
      4
     ]
-   ]
+   ],
+   "level": 0
   },
   {
    "id": "alley",
@@ -54,7 +55,8 @@
      2,
      26
     ]
-   ]
+   ],
+   "level": 0
   },
   {
    "id": "entry",
@@ -70,7 +72,9 @@
      8,
      8
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "kept"
   },
   {
    "id": "front_parlor",
@@ -86,7 +90,9 @@
      11,
      8
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "kept"
   },
   {
    "id": "drawing_room",
@@ -102,7 +108,9 @@
      11,
      8
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "neglected"
   },
   {
    "id": "stair_hall",
@@ -118,7 +126,9 @@
      32,
      4
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "worn"
   },
   {
    "id": "dining",
@@ -134,7 +144,9 @@
      10,
      5
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "kept"
   },
   {
    "id": "kitchen",
@@ -150,7 +162,9 @@
      10,
      5
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "kept"
   },
   {
    "id": "scullery",
@@ -166,7 +180,9 @@
      4,
      5
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "neglected"
   },
   {
    "id": "bedroom",
@@ -182,7 +198,9 @@
      5,
      5
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "worn"
   },
   {
    "id": "courtyard",
@@ -198,7 +216,8 @@
      14,
      4
     ]
-   ]
+   ],
+   "level": 0
   },
   {
    "id": "coal_shed",
@@ -214,7 +233,9 @@
      5,
      4
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "neglected"
   },
   {
    "id": "bathroom",
@@ -230,7 +251,9 @@
      5,
      4
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "worn"
   },
   {
    "id": "box_room",
@@ -246,7 +269,117 @@
      5,
      4
     ]
-   ]
+   ],
+   "level": 0,
+   "condition": "abandoned"
+  },
+  {
+   "id": "coal_cellar",
+   "name": "Coal Vault",
+   "floor": "dirt",
+   "kind": "shed",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     4,
+     47,
+     7,
+     15
+    ]
+   ],
+   "level": -1,
+   "condition": "abandoned"
+  },
+  {
+   "id": "basement_passage",
+   "name": "Basement Passage",
+   "floor": "stone",
+   "kind": "hall",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     12,
+     47,
+     20,
+     2
+    ]
+   ],
+   "level": -1,
+   "condition": "neglected"
+  },
+  {
+   "id": "utility_room",
+   "name": "Utility Room",
+   "floor": "stone",
+   "kind": "cellar",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     12,
+     50,
+     9,
+     5
+    ]
+   ],
+   "level": -1,
+   "condition": "worn"
+  },
+  {
+   "id": "wine_store",
+   "name": "Wine Store",
+   "floor": "stone",
+   "kind": "cellar",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     22,
+     50,
+     10,
+     5
+    ]
+   ],
+   "level": -1,
+   "condition": "neglected"
+  },
+  {
+   "id": "laundry",
+   "name": "Laundry",
+   "floor": "tile_white",
+   "kind": "laundry",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     12,
+     56,
+     9,
+     6
+    ]
+   ],
+   "level": -1,
+   "condition": "abandoned"
+  },
+  {
+   "id": "lumber_room",
+   "name": "Lumber Room",
+   "floor": "wood_light",
+   "kind": "shed",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     22,
+     56,
+     10,
+     6
+    ]
+   ],
+   "level": -1,
+   "condition": "abandoned"
   }
  ],
  "doors": [
@@ -377,6 +510,42 @@
   [
    24,
    6
+  ],
+  [
+   11,
+   48
+  ],
+  [
+   11,
+   52
+  ],
+  [
+   11,
+   58
+  ],
+  [
+   16,
+   49
+  ],
+  [
+   27,
+   49
+  ],
+  [
+   21,
+   52
+  ],
+  [
+   16,
+   55
+  ],
+  [
+   27,
+   55
+  ],
+  [
+   21,
+   59
   ]
  ],
  "furniture": [
@@ -727,6 +896,162 @@
    25,
    31,
    0
+  ],
+  [
+   "debris",
+   33,
+   22,
+   0
+  ],
+  [
+   "boards",
+   6,
+   17,
+   0
+  ],
+  [
+   "coal_pile",
+   4,
+   50,
+   0
+  ],
+  [
+   "coal_pile",
+   8,
+   55,
+   0
+  ],
+  [
+   "barrel",
+   4,
+   60,
+   0
+  ],
+  [
+   "boards",
+   5,
+   58,
+   0
+  ],
+  [
+   "boiler",
+   13,
+   50,
+   0
+  ],
+  [
+   "water_tank",
+   18,
+   53,
+   0
+  ],
+  [
+   "pipes",
+   13,
+   47,
+   0
+  ],
+  [
+   "wine_rack",
+   22,
+   50,
+   0
+  ],
+  [
+   "wine_rack",
+   28,
+   50,
+   0
+  ],
+  [
+   "wine_rack",
+   23,
+   54,
+   0
+  ],
+  [
+   "wash_tub",
+   12,
+   60,
+   0
+  ],
+  [
+   "wash_tub",
+   17,
+   56,
+   0
+  ],
+  [
+   "pipes",
+   13,
+   56,
+   0
+  ],
+  [
+   "covered_sofa",
+   23,
+   60,
+   0
+  ],
+  [
+   "covered_armchair",
+   29,
+   56,
+   0
+  ],
+  [
+   "old_trunk",
+   25,
+   57,
+   0
+  ],
+  [
+   "broken_chair",
+   31,
+   61,
+   0
   ]
+ ],
+ "stairs": [
+  {
+   "name": "Coal Chute",
+   "style": "hatch",
+   "a": [
+    9,
+    5
+   ],
+   "a_land": [
+    10,
+    5
+   ],
+   "b": [
+    6,
+    48
+   ],
+   "b_land": [
+    7,
+    48
+   ]
+  },
+  {
+   "name": "Basement Stairs",
+   "style": "stairs",
+   "a": [
+    34,
+    17
+   ],
+   "a_land": [
+    33,
+    17
+   ],
+   "b": [
+    30,
+    53
+   ],
+   "b_land": [
+    29,
+    53
+   ]
+  }
  ]
 }

@@ -140,6 +140,8 @@ func _local_stairs() -> void:
 	_apply_camera_limits(dest)
 	camera.reset_smoothing()
 	Sfx.play("footstep", -2.0, 0.7)
+	view.set_basement_view(map.floor_at(dest) < 0)
+	Sfx.set_loop_pitch("ambience", 0.78 if map.floor_at(dest) < 0 else 1.0)
 
 # --- Host → client ---------------------------------------------------------------------------
 
