@@ -89,7 +89,7 @@ def fleuron(cv, x, y, s, color, ang):
 
 
 def frame(name, W, H, m, center, border="#2a2724", rule=GOLD, glow=None, pressed=False, radius=6.0,
-          border_w=7.0, rule_in=10.5, ornaments=True):
+          border_w=7.0, rule_in=10.5, ornaments=True, clean=True):
     cv = Canvas(W, H, 4, name="ui:" + name)
     # outer charcoal border plate
     outer = cv.mask().rect(1.2, 1.2, W - 1.2, H - 1.2, radius)
@@ -136,7 +136,7 @@ def frame(name, W, H, m, center, border="#2a2724", rule=GOLD, glow=None, pressed
         cv.glow(blur(ring, 2 * cv.ss) * inner.arr, glow, 0.35)
     cv.grain(0.05)
     img = cv.image()
-    return nine_clean(img, m)
+    return nine_clean(img, m) if clean else img
 
 
 def panels():
@@ -155,7 +155,8 @@ def panels():
     # hotbar slots
     for nm, rule, glow in (("slot", "#7a6438", None), ("slot_selected", GOLD_HI, (255, 200, 110))):
         cv_img = frame(nm, 64, 64, 16, "#1a1816", border="#2e2b27" if nm == "slot" else "#3e3424", rule=rule,
-                       glow=glow, radius=6, border_w=6.0, rule_in=9.0, ornaments=nm == "slot_selected")
+                       glow=glow, radius=6, border_w=6.0, rule_in=9.0, ornaments=nm == "slot_selected",
+                       clean=False)
         if nm == "slot_selected":
             # amber outer glow
             a = np.asarray(cv_img).astype(np.float32)
@@ -311,7 +312,7 @@ def banners():
             fall = np.clip(1 - radial(cv.W, cv.H, cx * ss, cy * ss, 480 * ss), 0, 1) ** 1.5
             cv.paint(ray.arr * fall, (232, 205, 140), 0.35)
         for x0, x1 in ((40, 300), (700, 960)):
-            for dy in (-62, 62):
+            for dy in (-74, 74):
                 ln_ = cv.mask().line([(x0, cy + dy), (x1, cy + dy)], 2.2)
                 cv.paint(dilate(ln_.arr, 1.6 * ss), INK, 0.8)
                 cv.paint(ln_, gold_tex(cv.W, cv.H, "bn"))

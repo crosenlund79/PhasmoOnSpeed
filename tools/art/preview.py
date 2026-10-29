@@ -210,7 +210,69 @@ def ui(out):
     lg.convert("RGB").save(out / "logo.png")
 
 
-SHEETS = {"floors": floors, "furniture": furniture, "tokens": tokens, "icons": icons, "items": items, "ui": ui}
+def room(out):
+    """A mock room at game scale (32 px per cell), shown 2x."""
+    cell = 64  # authoring density; we compose at 2x density then show as-is
+    W, H = 18 * cell, 11 * cell
+    sheet = Image.new("RGBA", (W, H))
+    fl = Image.open(OUT / "floors" / "wood_dark.png").convert("RGBA")
+    cp = Image.open(OUT / "floors" / "carpet_red.png").convert("RGBA")
+    tl = Image.open(OUT / "floors" / "tile_checker.png").convert("RGBA")
+    for yy in range(0, H, 512):
+        for xx in range(0, W, 512):
+            sheet.paste(fl, (xx, yy))
+    # carpeted study on the left, kitchen tiles on the right
+    for yy in range(cell, 9 * cell, 512):
+        for xx in range(cell, 9 * cell, 512):
+            sheet.paste(cp.crop((0, 0, min(512, 9 * cell - xx), min(512, 9 * cell - yy))), (xx, yy))
+    for yy in range(cell, 10 * cell, 512):
+        sheet.paste(tl.crop((0, 0, 7 * cell, min(512, 10 * cell - yy))), (11 * cell, yy))
+    wall = Image.open(OUT / "walls" / "wall_top.png").convert("RGBA").resize((cell, cell))
+    for x in range(18):
+        sheet.paste(wall, (x * cell, 0))
+        sheet.paste(wall, (x * cell, 10 * cell))
+    for y in range(11):
+        sheet.paste(wall, (0, y * cell))
+        sheet.paste(wall, (17 * cell, y * cell))
+        if y not in (4, 5):
+            sheet.paste(wall, (10 * cell, y * cell))
+    def put(name, cx, cy, rot=0):
+        im = Image.open(OUT / "furniture" / f"{name}.png").convert("RGBA")
+        if rot:
+            im = im.rotate(rot, expand=True)
+        sheet.alpha_composite(im, (cx * cell, cy * cell))
+    put("rug_round", 3, 3)
+    put("bookshelf", 1, 1)
+    put("fireplace", 5, 1)
+    put("armchair", 3, 4)
+    put("desk", 6, 6)
+    put("chair", 7, 5)
+    put("grandfather_clock", 9, 1)
+    put("potted_plant", 1, 8)
+    put("candelabra", 9, 8)
+    put("stove", 11, 1)
+    put("counter", 13, 1)
+    put("sink_kitchen", 15, 1)
+    put("icebox", 16, 3)
+    put("dining_table", 11, 5)
+    put("barrel", 16, 8)
+    for name, x, y, r in (("investigator", 4.5, 8.4, 0), ("occupant_a", 8.2, 3.0, 180), ("vampire", 13.5, 3.3, 90),
+                          ("cat", 2.0, 6.0, -90), ("shade", 6.0, 3.4, 45)):
+        im = Image.open(OUT / "tokens" / f"{name}.png").convert("RGBA")
+        im = im.rotate(r, resample=Image.BICUBIC)
+        sheet.alpha_composite(im, (int(x * cell - 64), int(y * cell - 64)))
+    for name, x, y in (("salt_pile", 9.5, 6.5), ("ghost_book_written", 2.5, 1.6), ("claw_marks", 12.3, 8.6),
+                       ("sigil_candle_lit", 7.6, 8.6)):
+        im = Image.open(OUT / "items" / f"{name}.png").convert("RGBA")
+        sheet.alpha_composite(im, (int(x * cell - 32), int(y * cell - 32)))
+    # darkness + lights
+    dark = Image.new("RGBA", (W, H), (6, 8, 14, 150))
+    sheet.alpha_composite(dark)
+    sheet.convert("RGB").save(out / "room_authoring_res.png")
+    sheet.convert("RGB").resize((W // 2, H // 2), Image.LANCZOS).save(out / "room_gamescale.png")
+
+
+SHEETS = {"floors": floors, "furniture": furniture, "tokens": tokens, "icons": icons, "items": items, "ui": ui, "room": room}
 
 if __name__ == "__main__":
     out = Path(sys.argv[1])
