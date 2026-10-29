@@ -3,3 +3,4 @@
 /export/
 /server/*.sqlite3
 __pycache__/
+tools/art/__pycache__/
