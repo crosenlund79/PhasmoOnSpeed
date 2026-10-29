@@ -12,11 +12,31 @@ const DARKNESS_HARBINGER := Color(0.12, 0.13, 0.19)
 const DARKNESS_BASEMENT := Color(0.17, 0.17, 0.22)
 ## Neglect per room condition: overlay opacities, decal counts, floor tint.
 const CONDITION := {
-	"kept": {"grime": 0.0, "damp": 0.0, "cracks": 0.0, "stains": 0, "webs": 0, "peel": 0, "litter": 0, "tint": Color(1, 1, 1)},
-	"worn": {"grime": 0.3, "damp": 0.0, "cracks": 0.12, "stains": 1, "webs": 1, "peel": 1, "litter": 0, "tint": Color(0.95, 0.93, 0.9)},
-	"neglected": {"grime": 0.5, "damp": 0.2, "cracks": 0.3, "stains": 3, "webs": 2, "peel": 3, "litter": 2, "tint": Color(0.86, 0.85, 0.8)},
-	"abandoned": {"grime": 0.65, "damp": 0.45, "cracks": 0.45, "stains": 4, "webs": 4, "peel": 5, "litter": 4, "tint": Color(0.76, 0.8, 0.74)},
+	"kept": {"grime": 0.0, "damp": 0.0, "cracks": 0.0, "dust": 0.0, "mould": 0.0, "sat": 1.0, "stains": 0, "webs": 0, "peel": 0, "litter": 0, "tint": Color(1, 1, 1)},
+	"worn": {"grime": 0.5, "damp": 0.0, "cracks": 0.25, "dust": 0.25, "mould": 0.0, "sat": 0.88, "stains": 2, "webs": 1, "peel": 2, "litter": 1, "tint": Color(0.97, 0.95, 0.92)},
+	"neglected": {"grime": 0.8, "damp": 0.4, "cracks": 0.5, "dust": 0.45, "mould": 0.2, "sat": 0.7, "stains": 5, "webs": 3, "peel": 5, "litter": 3, "tint": Color(0.93, 0.92, 0.88)},
+	"abandoned": {"grime": 1.0, "damp": 0.75, "cracks": 0.7, "dust": 0.6, "mould": 0.45, "sat": 0.5, "stains": 8, "webs": 4, "peel": 8, "litter": 6, "tint": Color(0.9, 0.93, 0.88)},
 }
+## Faded, desaturated floors for neglected rooms.
+const FADE_SHADER := """
+shader_type canvas_item;
+uniform float sat = 1.0;
+void fragment() {
+	vec4 c = texture(TEXTURE, UV) * COLOR;
+	float g = dot(c.rgb, vec3(0.3, 0.59, 0.11));
+	c.rgb = mix(vec3(g), c.rgb, sat);
+	COLOR = c;
+}
+"""
+## Uses an overlay's alpha as a mask for a LIGHT colour (dust, pale tide marks):
+## neglect reads as a change in value, not just more darkness.
+const MASK_SHADER := """
+shader_type canvas_item;
+uniform vec4 tint : source_color = vec4(0.8, 0.78, 0.72, 0.5);
+void fragment() {
+	COLOR = vec4(tint.rgb, texture(TEXTURE, UV).a * tint.a);
+}
+"""
 
 var map: HouseMap
 var modulate_node: CanvasModulate
@@ -69,17 +89,32 @@ func _layer(n: String, z: int) -> Node2D:
 
 func _build_floors() -> void:
 	# One textured polygon per room rect, plus door cells using the adjacent room's floor.
+	_fade_shader = _shader(FADE_SHADER)
+	_mask_shader = _shader(MASK_SHADER)
 	for r in map.rooms:
 		var tex := Art.tex("floors/%s.png" % r["floor"])
-		var tint: Color = CONDITION.get(r.get("condition", "kept"), CONDITION["kept"])["tint"]
+		var cond: Dictionary = CONDITION.get(r.get("condition", "kept"), CONDITION["kept"])
+		var mat: ShaderMaterial = null
+		if float(cond["sat"]) < 1.0:
+			mat = ShaderMaterial.new()
+			mat.shader = _fade_shader
+			mat.set_shader_parameter("sat", cond["sat"])
 		for rect in r["rects"]:
-			_floor_poly(tex, Rect2(Vector2(rect[0], rect[1]) * C, Vector2(rect[2], rect[3]) * C), tint)
+			_floor_poly(tex, Rect2(Vector2(rect[0], rect[1]) * C, Vector2(rect[2], rect[3]) * C), cond["tint"], null, 1.0, mat)
 	for d in map.doors:
 		var rid := map.room_at_cell(d)
 		var tex := Art.tex("floors/%s.png" % map.room(rid).get("floor", "wood_dark"))
 		_floor_poly(tex, Rect2(Vector2(d) * C, Vector2(C, C)))
 
-func _floor_poly(tex: Texture2D, rect: Rect2, tint: Color = Color.WHITE, layer: Node2D = null, alpha: float = 1.0) -> void:
+var _fade_shader: Shader
+var _mask_shader: Shader
+
+func _shader(code: String) -> Shader:
+	var sh := Shader.new()
+	sh.code = code
+	return sh
+
+func _floor_poly(tex: Texture2D, rect: Rect2, tint: Color = Color.WHITE, layer: Node2D = null, alpha: float = 1.0, mat: Material = null, uv_scale: float = 1.0) -> void:
 	var p := Polygon2D.new()
 	p.texture = tex
 	p.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
@@ -87,9 +122,11 @@ func _floor_poly(tex: Texture2D, rect: Rect2, tint: Color = Color.WHITE, layer: 
 	p.polygon = pts
 	var uv := PackedVector2Array()
 	for q in pts:
-		uv.append(q / ART_SCALE)
+		uv.append(q / ART_SCALE * uv_scale)
 	p.uv = uv
 	p.color = Color(tint.r, tint.g, tint.b, alpha)
+	if mat:
+		p.material = mat
 	(layer if layer else floor_layer).add_child(p)
 
 ## Weathering: tiled grime/damp/crack overlays plus a few stains, cobwebs,
@@ -102,13 +139,23 @@ func _build_neglect() -> void:
 			continue
 		var rng := RandomNumberGenerator.new()
 		rng.seed = hash(map.id + ":" + r["id"])
-		for layer_name in ["grime", "damp", "cracks"]:
-			var a: float = cond[layer_name]
-			if a <= 0.0 or not Art.has("decor/%s.png" % layer_name):
+		# Dark passes (soot, damp, cracks) and light passes (dust, pale mould and
+		# tide marks) from the same masks, offset so they never line up.
+		var passes := [["grime", cond["grime"], null, 1.0], ["damp", cond["damp"], null, 1.0], ["cracks", cond["cracks"], null, 1.0],
+			["grime", cond["dust"], Color(0.78, 0.75, 0.68, 1.0), 0.73], ["damp", cond["mould"], Color(0.62, 0.7, 0.55, 1.0), 0.61]]
+		for pass_def in passes:
+			var a: float = pass_def[1]
+			if a <= 0.0 or not Art.has("decor/%s.png" % pass_def[0]):
 				continue
-			var tex := Art.tex("decor/%s.png" % layer_name)
+			var tex := Art.tex("decor/%s.png" % pass_def[0])
+			var mat: ShaderMaterial = null
+			if pass_def[2] != null:
+				mat = ShaderMaterial.new()
+				mat.shader = _mask_shader
+				var c: Color = pass_def[2]
+				mat.set_shader_parameter("tint", Color(c.r, c.g, c.b, a))
 			for rect in r["rects"]:
-				_floor_poly(tex, Rect2(Vector2(rect[0], rect[1]) * C, Vector2(rect[2], rect[3]) * C), Color.WHITE, neglect_layer, a)
+				_floor_poly(tex, Rect2(Vector2(rect[0], rect[1]) * C, Vector2(rect[2], rect[3]) * C), Color.WHITE, neglect_layer, a, mat, pass_def[3])
 		var blocked := {}
 		for d in map.doors:
 			for o in [Vector2i.ZERO, Vector2i(0, -1), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(1, 0)]:
@@ -121,7 +168,12 @@ func _build_neglect() -> void:
 		if cells.is_empty():
 			continue
 		for i in int(cond["stains"]):
-			_neglect_decal("decor/stain_%d.png" % rng.randi_range(1, 3), HouseMap.cell_center(cells[rng.randi_range(0, cells.size() - 1)]), rng.randf() * TAU, rng.randf_range(44.0, 80.0), rng.randf_range(0.5, 0.85))
+			var spos := HouseMap.cell_center(cells[rng.randi_range(0, cells.size() - 1)])
+			var ssize := rng.randf_range(56.0, 110.0)
+			var srot := rng.randf() * TAU
+			var stain := "decor/stain_%d.png" % rng.randi_range(1, 3)
+			_neglect_decal(stain, spos, srot, ssize * 1.12, 0.55, false, Color(0.8, 0.77, 0.66))   # pale tide ring
+			_neglect_decal(stain, spos, srot, ssize, rng.randf_range(0.75, 1.0))
 		for i in int(cond["litter"]):
 			var kinds := ["decor/rubble.png", "decor/papers_scattered.png", "decor/dust_sheet_scrap.png"]
 			_neglect_decal(kinds[rng.randi_range(0, kinds.size() - 1)], HouseMap.cell_center(cells[rng.randi_range(0, cells.size() - 1)]), rng.randf() * TAU, rng.randf_range(22.0, 32.0), 0.95)
@@ -138,7 +190,7 @@ func _build_neglect() -> void:
 			var cn: Array = corners[(start + i) % 4]
 			if blocked.has(cn[2]):
 				continue
-			_neglect_decal("decor/cobweb.png", cn[0], cn[1], 36.0, 0.85, true)
+			_neglect_decal("decor/cobweb.png", cn[0], cn[1], 48.0, 0.95, true)
 		# Peeling wallpaper along walls (papered rooms only).
 		if not (r["floor"] in ["stone", "dirt", "tile_white", "tile_checker"]):
 			for i in int(cond["peel"]):
@@ -155,12 +207,17 @@ func _build_neglect() -> void:
 				else:
 					rot = PI * 1.5
 				var pos := HouseMap.cell_center(c) + Vector2(0, -C * 0.36).rotated(rot)
-				_neglect_decal("decor/peel.png", pos, rot, 40.0, 0.9)
+				_neglect_decal("decor/peel.png", pos, rot, 46.0, 1.0)
 
-func _neglect_decal(path: String, pos: Vector2, rot: float, size: float, alpha: float, corner: bool = false) -> void:
+func _neglect_decal(path: String, pos: Vector2, rot: float, size: float, alpha: float, corner: bool = false, light: Color = Color(0, 0, 0, 0)) -> void:
 	if not Art.has(path):
 		return
 	var s := Sprite2D.new()
+	if light.a > 0.0:
+		var mat := ShaderMaterial.new()
+		mat.shader = _mask_shader
+		mat.set_shader_parameter("tint", Color(light.r, light.g, light.b, alpha))
+		s.material = mat
 	s.texture = Art.tex(path)
 	s.position = pos
 	s.rotation = rot

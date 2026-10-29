@@ -120,6 +120,22 @@ func _shot(s: String) -> void:
 		run.player.aim_override = 0.3
 		await _wait(60)
 		await _save(s)
+	elif s.begins_with("room_"):
+		# room_<house>:<room id> — stand in the middle of a room at game zoom.
+		var parts := s.substr(5).split(":")
+		var run: Run = Game.start_run(parts[0], 5, "werewolf")
+		await _wait(5)
+		run.creature.set_process(false)
+		for o in run.occupants:
+			o.set_process(false)
+		var cells := run.map.free_cells(parts[1], false)
+		run.player.global_position = HouseMap.cell_center(cells[cells.size() / 2])
+		run._apply_camera_limits(run.player.global_position)
+		run._on_local_floor(run.map.floor_at(run.player.global_position))
+		run.camera.reset_smoothing()
+		run.player.aim_override = 1.2
+		await _wait(60)
+		await _save(s.replace(":", "_"))
 	elif s == "results":
 		var run: Run = Game.start_run("ashgrove", 5, "poltergeist")
 		await _wait(200)
