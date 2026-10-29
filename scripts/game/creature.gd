@@ -53,7 +53,7 @@ func setup(p_run: Run, p_type: String, p_lair: String, start: Vector2) -> void:
 	lair_room = p_lair
 	position = start
 	room_id = map.room_at(start)
-	var size := 46.0 if p_type == "harbinger" else 36.0
+	var size := 58.0 if p_type == "harbinger" else 44.0
 	token = TokenSprite.new(def["token"], size)
 	add_child(token)
 	glow = PointLight2D.new()

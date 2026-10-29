@@ -36,7 +36,7 @@ func setup(p_run: Run, id: String, token_file: String, start: Vector2) -> void:
 	actor_id = id
 	token_path = token_file
 	position = start
-	token = TokenSprite.new(token_file, 30.0)
+	token = TokenSprite.new(token_file, 36.0)
 	add_child(token)
 	bubble = Label.new()
 	bubble.add_theme_font_override("font", Art.font_italic)

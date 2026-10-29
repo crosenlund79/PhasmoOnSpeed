@@ -162,7 +162,7 @@ func update_tools(delta: float) -> void:
 		"emf":
 			var r := ph.emf_at(player.global_position)
 			var lv: int = r[0]
-			readout = "EMF  " + "▮".repeat(lv) + "▯".repeat(5 - lv) + "  %d" % lv
+			readout = "EMF   " + "▮".repeat(lv) + "▯".repeat(5 - lv) + ("   LEVEL FIVE" if lv == 5 else "")
 			if lv >= 4:
 				readout_color = Color(1.0, 0.45, 0.3)
 			_beep_t -= delta

@@ -258,6 +258,7 @@ class WallDrawer extends Node2D:
 					var outdoor_only := _outdoor_only(c)
 					var src := Rect2(Vector2(posmod(x, 4), posmod(y, 4)) * 32.0, Vector2(32, 32))
 					draw_texture_rect_region(cap, Rect2(p, cs), src, Color(0.55, 0.62, 0.5) if outdoor_only else Color.WHITE)
+					_maybe_window(c, p)
 				elif v == HouseMap.DOOR:
 					_draw_door(c, p)
 		# Ink outlines and soft shadows where walls meet floor.
@@ -297,6 +298,30 @@ class WallDrawer extends Node2D:
 						var p := Vector2(c + o) * C
 						var e := Vector2(0, C) if o.x == 1 else Vector2(C, 0)
 						draw_line(p, p + e, Color(0, 0, 0, 0.5), 2.0)
+
+	## Leaded windows on straight exterior walls (indoor on one side, outdoors on the other).
+	func _maybe_window(c: Vector2i, p: Vector2) -> void:
+		if posmod(c.x * 3 + c.y * 5, 7) != 0:
+			return
+		for o in [Vector2i(0, 1), Vector2i(1, 0)]:
+			var a := map.at(c - o)
+			var b := map.at(c + o)
+			if a < 0 or b < 0 or map.rooms[a]["outdoor"] == map.rooms[b]["outdoor"]:
+				continue
+			var side := Vector2i(o.y, o.x)
+			if not (map.is_wall(c + side) and map.is_wall(c - side)):
+				continue
+			var r := Rect2(p + Vector2(4, 11), Vector2(C - 8, 10)) if o.y == 1 else Rect2(p + Vector2(11, 4), Vector2(10, C - 8))
+			draw_rect(r.grow(2.0), Color(0.33, 0.24, 0.15))
+			draw_rect(r, Color(0.42, 0.5, 0.62))
+			draw_rect(Rect2(r.position, r.size * Vector2(0.5, 0.5)), Color(0.62, 0.7, 0.8, 0.6))
+			var mid := r.get_center()
+			if o.y == 1:
+				draw_line(Vector2(mid.x, r.position.y), Vector2(mid.x, r.end.y), Art.INK, 1.5)
+			else:
+				draw_line(Vector2(r.position.x, mid.y), Vector2(r.end.x, mid.y), Art.INK, 1.5)
+			draw_rect(r.grow(2.0), Art.INK, false, 1.5)
+			return
 
 	func _outdoor_only(c: Vector2i) -> bool:
 		for dy in [-1, 0, 1]:

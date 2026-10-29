@@ -48,7 +48,7 @@ func _init() -> void:
 	circle.radius = RADIUS
 	cs.shape = circle
 	add_child(cs)
-	token = TokenSprite.new("tokens/investigator.png", 34.0)
+	token = TokenSprite.new("tokens/investigator.png", 40.0)
 	add_child(token)
 	light_pivot = Node2D.new()
 	add_child(light_pivot)

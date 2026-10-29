@@ -97,6 +97,13 @@ func _ready() -> void:
 	Sfx.start_loop("ambience", "ambience_house", -6.0, 1.5)
 	recorder.event(0.0, "start", {"house": house_id})
 	hud.toast(map.name + " — something is here.", "icons/ui_house.png")
+	if int(SaveData.data.get("runs_started", 0)) <= 3:
+		# Brief onboarding for the first few runs; never blocks play.
+		var tw := create_tween()
+		tw.tween_interval(3.0)
+		tw.tween_callback(func(): toast("Evidence you observe is written in your journal automatically.", "icons/ui_quill.png", true))
+		tw.tween_interval(3.0)
+		tw.tween_callback(func(): toast("Press H for controls. Two wounds and you perish.", "icons/ui_skull.png", true))
 
 func _spawn_player() -> void:
 	player = Player.new()
@@ -115,7 +122,7 @@ func _spawn_player() -> void:
 	camera.limit_right = int(map.world_size().x) + 60 + int(300.0 / CAMERA_ZOOM)
 	camera.limit_bottom = int(map.world_size().y) + 110
 	player.add_child(camera)
-	recorder.register_actor(player.actor_id, "player", "tokens/investigator.png", 34.0)
+	recorder.register_actor(player.actor_id, "player", "tokens/investigator.png", 40.0)
 
 func _choose_creature() -> void:
 	# Uniform choice from the run seed only — statistics never influence it.
@@ -193,7 +200,7 @@ func _spawn_occupants() -> void:
 		o.setup(self, "npc_%d" % (i + 1), tokens[i % tokens.size()], HouseMap.cell_center(map.random_free_cell(r["id"], rng)))
 		view.actor_layer.add_child(o)
 		occupants.append(o)
-		recorder.register_actor(o.actor_id, "npc", o.token_path, 30.0)
+		recorder.register_actor(o.actor_id, "npc", o.token_path, 36.0)
 
 # --- Main loop -----------------------------------------------------------------------
 

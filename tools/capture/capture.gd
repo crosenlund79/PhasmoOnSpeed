@@ -77,6 +77,22 @@ func _shot(s: String) -> void:
 		run.attempt_vanquish("werewolf", "silver_stake")
 		await _wait(100)
 		await _save("harbinger")
+	elif s == "gallery":
+		var run: Run = Game.start_run("blackwood", 3, "shade")
+		await _wait(5)
+		run.creature.set_process(false)
+		var base := run.map.room_center("foyer") + Vector2(-170, -40)
+		run.player.global_position = base + Vector2(0, 90)
+		var tokens := ["tokens/shade.png", "tokens/poltergeist.png", "tokens/vampire.png", "tokens/werewolf.png", "tokens/shapeshifter.png", "tokens/cat.png", "tokens/harbinger.png", "tokens/occupant_bitten.png"]
+		for i in tokens.size():
+			var t := TokenSprite.new(tokens[i], 36.0 if i != 6 else 46.0)
+			t.position = base + Vector2(i * 48, 0)
+			run.view.actor_layer.add_child(t)
+		var items := ["items/garlic.png", "items/wooden_stake.png", "items/silverware.png", "items/hand_mirror.png", "items/iron_nails.png", "items/blood_drops.png", "items/claw_marks.png", "items/paw_print.png", "items/fur_tuft.png", "items/shed_skin.png", "items/ghost_book_written.png", "items/sigil_candle_lit.png"]
+		for i in items.size():
+			run._item_sprite(items[i], base + Vector2(i * 30 - 10, 45), 26.0)
+		await _wait(40)
+		await _save("gallery")
 	elif s == "results":
 		var run: Run = Game.start_run("ashgrove", 5, "poltergeist")
 		await _wait(200)
