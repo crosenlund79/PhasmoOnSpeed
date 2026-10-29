@@ -58,6 +58,14 @@ func _ready() -> void:
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			l.custom_minimum_size = Vector2(1400, 0)
 			body.add_child(l)
+	var mp: Dictionary = SaveData.data.get("mp", {})
+	body.add_child(Art.heading("Competitive matches (separate from solo)", 24))
+	body.add_child(Art.label("Matches %d · wins %d · vanquishes %d · deaths %d · best %d · shoves %d given / %d taken" % [
+		int(mp.get("matches", 0)), int(mp.get("wins", 0)), int(mp.get("vanquishes", 0)), int(mp.get("deaths", 0)),
+		int(mp.get("best_score", 0)), int(mp.get("shoves_given", 0)), int(mp.get("shoves_taken", 0))], 15))
+	for m in mp.get("history", []).slice(-8):
+		body.add_child(Art.label("%s · %s · %s · %s · rank %d/%d · %d pts" % [m["date"], Game.house(m["house"]).get("name", m["house"]),
+			Defs.creature_name(m["creature"]), m["outcome"], int(m["rank"]), int(m["players"]), int(m["score"])], 14))
 	body.add_child(Art.heading("Recent runs", 24))
 	var hist: Array = SaveData.data["history"]
 	for i in range(hist.size() - 1, maxi(-1, hist.size() - 16), -1):

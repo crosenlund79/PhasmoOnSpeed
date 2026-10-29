@@ -33,7 +33,9 @@ func _ready() -> void:
 		blurb.custom_minimum_size = Vector2(250, 60)
 		card.add_child(blurb)
 		var rec: Dictionary = SaveData.house_record(id)
-		var info := "Rooms: %d  ·  Occupants: %d" % [plan.house.rooms.size(), int(h.get("npcs", 2))]
+		# No exact occupant count: a shapeshifter posing as one more person
+		# must never be exposed by the menu.
+		var info := "Rooms: %d  ·  Floors: %d" % [plan.house.rooms.size(), plan.house.floors().size()]
 		card.add_child(Art.label(info, 14, Color(0.3, 0.22, 0.15)))
 		var pb := "Best: —" if rec["best_time"] <= 0.0 else "Best: %s  ·  %d pts" % [Journal.format_time_precise(rec["best_time"]), int(rec["best_score"])]
 		card.add_child(Art.label(pb, 15, Color(0.3, 0.22, 0.15), Art.font_heading))

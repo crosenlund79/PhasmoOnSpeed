@@ -23,6 +23,14 @@ decisions made during development. **Contains spoilers.**
 * Mirrors: every house has at least two wall mirrors. The shapeshifter's true
   form appears in a mirror it passes (Wrong Reflection).
 
+## Identification
+
+Every entity — including the vampire, werewolf and shapeshifter — can be chosen
+as the suspect at any time with Tab / Shift+Tab, with zero, one, two or three
+clues. The encyclopedia (main menu) openly describes all of them. Only the
+evidence *journal* keeps its rule: hidden evidence types are never listed until
+you actually find one.
+
 ## Attempting to vanquish
 
 Selecting a suspect (Tab) is never an attempt. An attempt happens only when a
@@ -72,16 +80,36 @@ old entity's evidence types are no longer accepted.
 * Fixed width (288 px at 1600×900), discovered list scrolls and auto-scrolls to
   the newest; the unconfirmed list is a single wrapped line.
 
-## Multiplayer boundaries (not implemented)
+## Basements
 
-* Every actor has a stable id (`player_1`, `creature_1`, `npc_N`) used by the
-  replay; per-player state (wounds, inventory, stamina) lives on `Player`.
-* `Run` owns authoritative state (time, dread, attempts, journal) and resolves
-  every gameplay decision through methods (`discover`, `attempt_vanquish`,
-  `on_creature_contact`, `place_item`, `strike`) that a future network layer
-  can call on the host.
-* Creature targeting uses `run.player`; supporting several players means
-  choosing the nearest visible player there and in `Phenomena._observe`.
+Every house has a basement (root cellar, wine vaults, farm cellar, ossuary ring,
+coal vault) with internal loops and two connections to the main floor
+(staircases or hatches). Stepping onto a stair tile takes you to the landing on
+the other floor. Floors are laid out apart in the same world, so they never
+share walls, light or line of sight; paths for the entity and occupants include
+the staircase jump. Basement rooms are rooms like any other (names, evidence,
+resources, lairs). The view is darker and the ambience deeper while you are below.
+
+## Neglect
+
+Each room has a condition — kept, worn, neglected or abandoned — that tints the
+floor and layers grime, damp and cracks plus stains, cobwebs, peeling paper and
+litter. These are placed deterministically per house, away from doorways and
+stairs, on a layer beneath items and evidence, so they never hide anything that
+matters.
+
+## Occupants
+
+Occupants have names (shown under them; can be hidden in Settings) and one of
+five personalities — nervous, skeptical, curious, dramatic, calm — which nudges
+their walking pace, idling, chatter frequency and how they react to bangs and
+rattles (the curious go to look). The shapeshifter's human form uses the same
+name tag and an unused occupant look and talks like a person with a personality
+of its own; only its behaviour and the evidence give it away.
+
+## Competitive multiplayer
+
+See `docs/MULTIPLAYER.md` and the competitive section of `docs/SCORING.md`.
 
 ## Analytics
 

@@ -55,3 +55,34 @@ Only **vanquished** runs score. A run that ends in death scores 0.
 The offline rankings (`scripts/core/rankings.gd`) list twelve **fictional**
 legendary hunters with scores on this same scale (6 380 – 11 420). The UI labels
 them as fictional everywhere they appear.
+
+---
+
+# Competitive Scoring Rules mp-1.0.0
+
+Implemented in `scripts/core/mp_scoring.gd`, computed **only by the host** from
+authoritative facts when the match ends, and ranked separately from solo play.
+Highest individual score wins (ties: the vanquisher, then survivors, then fewer
+wrong attempts).
+
+| Component | Points | Rule |
+|---|---|---|
+| Evidence | 400 each, max 1200 | the final entity's evidence in **your** journal |
+| First discoveries | 250 each, max 750 | evidence you recorded before any rival |
+| Correct suspect | 800 | your chosen suspect was right when the match ended (the vanquisher always qualifies) |
+| Vanquished it | 1800 | the hunter whose rite or strike succeeded |
+| Survival | 800 / 400 | alive and unharmed / alive and wounded — won matches only |
+| Swiftness | 0–1500 | surviving hunters of a won match: full at ≤ 60 s, zero at ≥ 7 min |
+| Hunts survived | 100 each, max 300 | reckless-provoked and Harbinger hunts never count |
+| Creature difficulty | ×1.00 – ×1.30 | same table as solo |
+| Wrong attempts | −700 each | plus −300 more for each reckless (uninvestigated) one |
+| Incomplete attempts | −250 each | right identity, preparation missing |
+
+Never rewarded: shoving, repeated equipment use, duplicate discoveries.
+Dead hunters keep evidence, first discoveries and suspect points, but lose
+survival and swiftness. If every hunter dies, scores are still calculated (no
+vanquish, survival or swiftness) and the match is recorded as lost.
+
+Balance intent (covered by tests): a thorough investigator with three first
+discoveries can beat a vanquisher who found nothing, while a vanquisher who also
+investigated usually wins.

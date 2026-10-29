@@ -11,6 +11,10 @@ any time, even blind… but the house notices recklessness.
 The player believes they are investigating ghosts. Sometimes they are
 dangerously mistaken.
 
+**Competitive Hunt** puts two to four rival investigators in the same house over
+the network: one entity, private journals, shoves, and the highest individual
+score wins (see `docs/MULTIPLAYER.md`).
+
 ## Running
 
 1. Install Godot **4.3** (standard build).
@@ -29,9 +33,10 @@ dangerously mistaken.
 | Q / mouse wheel | Cycle items (Q jumps to found resources) |
 | Left click | Use the equipped item (ask, place, pour, splash, strike; hold for the hand mirror) |
 | E | Interact: pick up, retrieve placed items; **hold** to melt silver or light sigil candles |
-| Tab | Choose the ghost you suspect (just a choice, never an attempt) |
+| Tab / Shift+Tab | Choose the entity you suspect — any entity (a choice, never an attempt) |
 | V (hold) | Perform the banishing rite |
-| R (hold) | Restart the run immediately |
+| Space | Shove a rival (competitive matches) |
+| R (hold) | Restart the run immediately (solo) |
 | H | Controls overlay |
 | Esc / P | Pause |
 | F11 | Fullscreen |
@@ -45,7 +50,14 @@ dangerously mistaken.
 * **Journal** (right edge): timer, wounds, dread, discovered evidence as compact
   records — icon, name, elapsed time, room — and a one-line list of the
   conventional evidence not yet confirmed. Hidden evidence types never appear
-  until you actually discover one.
+  until you actually discover one. Each new record also pops an
+  "EVIDENCE RECORDED" card beside your investigator with the pencil sound.
+* **Readings** (EMF value, temperature, Spirit Box state) appear right under your
+  investigator. Size/opacity of readings and evidence cards are in Settings.
+* **Houses** have basements reached by stairs or hatches; some rooms are kept,
+  others damp and abandoned. Occupants have names and personalities.
+* **Encyclopedia** (main menu): every entity, its evidence, behaviour and exact
+  vanquishing requirements, plus an equipment reference.
 * **Entities**: two conventional ghosts (the Shade, the Poltergeist), and three
   that are *not* ghosts and laugh at ghost equipment. A fourth, worse thing
   answers repeated recklessness.
@@ -82,6 +94,8 @@ tools/                art/audio generators, house authoring tool, screenshot cap
 godot --headless --path . --import
 godot --headless --fixed-fps 60 --path . res://tests/test_runner.tscn
 godot --headless --fixed-fps 60 --path . res://tests/bot_playtest.tscn
+GODOT=godot tests/net_test.sh 3 full    # real host + 3 client processes
+GODOT=godot tests/net_test.sh 2 drop    # disconnect / host shutdown
 python3 tools/houses/build_houses.py --validate
 python3 server/test_leaderboard_server.py
 ```
