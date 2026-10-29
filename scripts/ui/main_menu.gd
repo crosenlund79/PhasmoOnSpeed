@@ -176,10 +176,10 @@ func _plaque(text: String, cb: Callable, width: int = 360, dev: bool = false) ->
 		b.add_theme_stylebox_override("hover", Art.stylebox("menu/plaque_hover.png" if not dev else base, 24, Color(), Color()))
 		b.add_theme_stylebox_override("focus", Art.stylebox("menu/plaque_hover.png" if not dev else base, 24, Color(), Color()))
 		b.add_theme_stylebox_override("pressed", Art.stylebox("menu/plaque_pressed.png" if not dev else base, 24, Color(), Color()))
-		var ink := Color(0.16, 0.11, 0.07) if not dev else Color(0.82, 0.9, 1.0)
+		var ink := Color(0.16, 0.11, 0.07) if not dev else Color(0.08, 0.12, 0.2)
 		b.add_theme_color_override("font_color", ink)
-		b.add_theme_color_override("font_hover_color", Color(0.45, 0.12, 0.05) if not dev else Color(1, 1, 1))
-		b.add_theme_color_override("font_focus_color", Color(0.45, 0.12, 0.05) if not dev else Color(1, 1, 1))
+		b.add_theme_color_override("font_hover_color", Color(0.45, 0.12, 0.05) if not dev else Color(0.02, 0.05, 0.12))
+		b.add_theme_color_override("font_focus_color", Color(0.45, 0.12, 0.05) if not dev else Color(0.02, 0.05, 0.12))
 		b.add_theme_color_override("font_pressed_color", Color(0.3, 0.08, 0.03))
 	# A small tactile tilt on hover.
 	b.pivot_offset = Vector2(width * 0.5, 29)

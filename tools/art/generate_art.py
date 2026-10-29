@@ -3,6 +3,7 @@
 
     python3 tools/art/generate_art.py                 # everything
     python3 tools/art/generate_art.py floors tokens   # only some groups
+        groups: floors furniture tokens items icons ui | rev. 2: basement decor menu
     python3 tools/art/generate_art.py --check         # verify sizes vs docs/ASSET_MANIFEST.md
     python3 tools/art/generate_art.py --preview DIR   # also write contact sheets to DIR
 
@@ -34,6 +35,20 @@ FURNITURE = {
     "pew": (4, 1), "altar": (3, 2), "tree": (3, 3), "hedge": (2, 1), "gravestone": (1, 1), "coffin": (2, 4),
     "hay": (2, 2), "wash_tub": (2, 2),
 }
+# revision 2: basement / neglect furniture and stairs (built by neglect.py, group "basement")
+FURNITURE2 = {
+    "boiler": (3, 2), "wine_rack": (3, 1), "coal_pile": (2, 2), "storage_shelf": (3, 1), "covered_armchair": (2, 2),
+    "covered_sofa": (4, 2), "broken_chair": (1, 1), "old_trunk": (2, 1), "water_tank": (2, 2), "pipes": (4, 1),
+    "boards": (2, 1), "debris": (2, 2), "desk_large": (6, 4), "stairs_down": (1, 1), "stairs_up": (1, 1),
+    "hatch": (1, 1),
+}
+DECOR = {"grime": (512, 512), "damp": (512, 512), "cracks": (512, 512), "cobweb": (64, 64), "stain_1": (128, 128),
+         "stain_2": (128, 128), "stain_3": (128, 128), "peel": (128, 32), "dust_sheet_scrap": (64, 64),
+         "rubble": (64, 64), "papers_scattered": (64, 64), "rat": (64, 64)}
+MENU = {"case_photo_1": (128, 160), "case_photo_2": (128, 160), "case_photo_3": (128, 160), "case_file": (192, 256),
+        "journal_open": (320, 224), "map_pinned": (256, 192), "pocket_watch": (96, 96), "magnifier": (96, 96),
+        "inkwell": (96, 96), "plaque": (320, 64), "plaque_hover": (320, 64), "plaque_pressed": (320, 64),
+        "plaque_dev": (320, 64)}
 FLOORS = ["wood_dark", "wood_light", "parquet", "carpet_red", "carpet_blue", "carpet_green", "tile_checker",
           "tile_white", "stone", "dirt", "grass", "gravel"]
 TOKENS = ["investigator", "occupant_a", "occupant_b", "occupant_c", "occupant_bitten", "occupant_d", "occupant_e",
@@ -64,6 +79,12 @@ def expected():
     exp["walls/wall_top.png"] = (128, 128)
     for f, (w, h) in FURNITURE.items():
         exp[f"furniture/{f}.png"] = (w * C, h * C)
+    for f, (w, h) in FURNITURE2.items():
+        exp[f"furniture/{f}.png"] = (w * C, h * C)
+    for f, s in DECOR.items():
+        exp[f"decor/{f}.png"] = s
+    for f, s in MENU.items():
+        exp[f"menu/{f}.png"] = s
     for f in TOKENS:
         exp[f"tokens/{f}.png"] = (128, 128)
     for f in ITEMS:
@@ -113,7 +134,7 @@ def check():
     return ok
 
 
-GROUPS = ["floors", "furniture", "tokens", "items", "ui"]
+GROUPS = ["floors", "furniture", "tokens", "items", "ui", "basement", "decor", "menu"]
 
 
 def main(argv):
@@ -144,6 +165,15 @@ def main(argv):
         elif g == "ui":
             import ui
             ui.build_all()
+        elif g == "basement":
+            import neglect
+            neglect.build_furniture()
+        elif g == "decor":
+            import neglect
+            neglect.build_decor()
+        elif g == "menu":
+            import menu_props
+            menu_props.build_all()
         else:
             print("unknown group", g)
             continue

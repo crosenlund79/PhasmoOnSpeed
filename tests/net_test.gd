@@ -73,6 +73,18 @@ func _host() -> void:
 	for h in run.hunters:
 		if h.remote:
 			check(h.global_position.distance_to(spawn) > 60.0, "%s moved on the host (%s)" % [h.display_name, h.global_position])
+	if scenario == "shot":
+		# Keep the match alive for a rendering client to photograph: the host's
+		# hunter loiters beside the client and the entity rattles about.
+		var c: Player = run.hunters[1]
+		for i in 2400:
+			run.player.global_position = c.global_position + Vector2(55, -20)
+			run.player.aim_angle = PI * 0.8
+			await get_tree().process_frame
+		run.discover(run.player, "fur", run.player.room_id)
+		await _wait(20.0)
+		_done()
+		return
 	if scenario == "drop":
 		await _until(func(): return run.hunters.any(func(h): return h.get_meta("disconnected", false)), 15.0)
 		check(run.hunters.any(func(h): return h.get_meta("disconnected", false)), "host noticed the dropped client")

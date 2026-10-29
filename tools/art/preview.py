@@ -272,7 +272,218 @@ def room(out):
     sheet.convert("RGB").resize((W // 2, H // 2), Image.LANCZOS).save(out / "room_gamescale.png")
 
 
-SHEETS = {"floors": floors, "furniture": furniture, "tokens": tokens, "icons": icons, "items": items, "ui": ui, "room": room}
+# --------------------------------------------------------------------------
+# revision 2 sheets
+# --------------------------------------------------------------------------
+REV2_FURN = ["boiler", "wine_rack", "coal_pile", "storage_shelf", "covered_armchair", "covered_sofa", "broken_chair",
+             "old_trunk", "water_tank", "pipes", "boards", "debris", "desk_large", "stairs_down", "stairs_up", "hatch",
+             "armchair", "sofa", "trunk", "crates", "barrel", "stove"]
+
+
+def _tile_bg(W, H, path):
+    fl = Image.open(path).convert("RGBA")
+    bg = Image.new("RGBA", (W, H))
+    for yy in range(0, H, fl.height):
+        for xx in range(0, W, fl.width):
+            bg.paste(fl, (xx, yy))
+    return bg
+
+
+def furniture2(out):
+    """new basement furniture on a stone floor (authoring res + game scale); old pieces at the end for reference"""
+    W = 1600
+    x, y, rowh = 20, 20, 0
+    place = []
+    for nm in REV2_FURN:
+        im = Image.open(OUT / "furniture" / f"{nm}.png")
+        if x + im.width + 20 > W:
+            x, y = 20, y + rowh + 30
+            rowh = 0
+        place.append((nm, im, x, y + 20))
+        x += im.width + 24
+        rowh = max(rowh, im.height + 20)
+    H = y + rowh + 40
+    sheet = _tile_bg(W, H, OUT / "floors" / "stone.png")
+    d = ImageDraw.Draw(sheet)
+    for nm, im, x, y in place:
+        sheet.alpha_composite(im.convert("RGBA"), (x, y))
+        d.text((x, y - 18), nm, font=LABEL, fill=(240, 230, 200))
+    sheet.convert("RGB").save(out / "furniture2.png")
+    sheet.convert("RGB").resize((W // 2, H // 2), Image.LANCZOS).save(out / "furniture2_gamescale.png")
+    # a mock cellar at game scale (32 px / cell), shown at 2x for inspection
+    cell = 64
+    cw, ch = 14, 9
+    room = _tile_bg(cw * cell, ch * cell, OUT / "floors" / "stone.png")
+    for nm, ov in (("grime", 0.5), ("damp", 0.45), ("cracks", 0.5)):
+        o = Image.open(OUT / "decor" / f"{nm}.png").convert("RGBA")
+        a = o.getchannel("A").point(lambda v, k=ov: int(v * k))
+        o.putalpha(a)
+        room.alpha_composite(_tile_rgba(o, cw * cell, ch * cell))
+    wall = Image.open(OUT / "walls" / "wall_top.png").convert("RGBA").resize((cell, cell))
+    for xx in range(cw):
+        room.paste(wall, (xx * cell, 0))
+    for yy in range(ch):
+        room.paste(wall, (0, yy * cell))
+        room.paste(wall, ((cw - 1) * cell, yy * cell))
+
+    def put(dirn, nm, cx, cy, rot=0):
+        im = Image.open(OUT / dirn / f"{nm}.png").convert("RGBA")
+        if rot:
+            im = im.rotate(rot, expand=True)
+        room.alpha_composite(im, (int(cx * cell), int(cy * cell)))
+    put("furniture", "pipes", 1, 1)
+    put("furniture", "pipes", 5, 1)
+    put("decor", "peel", 9, 1)
+    put("furniture", "boiler", 1, 2)
+    put("furniture", "water_tank", 5, 2)
+    put("furniture", "coal_pile", 1, 5)
+    put("furniture", "wine_rack", 9, 2)
+    put("furniture", "storage_shelf", 10, 7, 90)
+    put("furniture", "covered_armchair", 7, 5)
+    put("furniture", "old_trunk", 4, 7)
+    put("furniture", "broken_chair", 6, 7)
+    put("furniture", "debris", 10, 3)
+    put("furniture", "boards", 4, 5)
+    put("furniture", "stairs_up", 12, 1)
+    put("furniture", "stairs_down", 12, 2)
+    put("furniture", "hatch", 3, 4)
+    put("decor", "cobweb", 1, 1)
+    cw_ = Image.open(OUT / "decor" / "cobweb.png").convert("RGBA").transpose(Image.FLIP_LEFT_RIGHT)
+    room.alpha_composite(cw_, ((cw - 2) * cell, 1 * cell))
+    put("decor", "stain_1", 7.5, 7)
+    put("decor", "rat", 9, 6)
+    put("decor", "rubble", 9.5, 3.5)
+    put("decor", "papers_scattered", 6, 4)
+    put("decor", "dust_sheet_scrap", 11, 6)
+    tok = Image.open(OUT / "tokens" / "investigator.png").convert("RGBA")
+    room.alpha_composite(tok, (int(7.5 * cell - 64), int(3.5 * cell - 64)))
+    room.alpha_composite(Image.new("RGBA", room.size, (6, 8, 14, 110)))
+    room.convert("RGB").save(out / "cellar_authoring_res.png")
+    room.convert("RGB").resize((cw * 32, ch * 32), Image.LANCZOS).save(out / "cellar_gamescale.png")
+    # stairs/hatch at true game size (32 px) and 2x nearest
+    st = _tile_bg(32 * 9, 32 * 3, OUT / "floors" / "wood_dark.png").resize((32 * 9, 32 * 3))
+    for i, nm in enumerate(("stairs_down", "stairs_up", "hatch")):
+        im = Image.open(OUT / "furniture" / f"{nm}.png").convert("RGBA").resize((32, 32), Image.LANCZOS)
+        st.alpha_composite(im, (32 + i * 96, 32))
+    st.resize((st.width * 3, st.height * 3), Image.NEAREST).convert("RGB").save(out / "stairs_32px_x3.png")
+
+
+def _tile_rgba(o, W, H):
+    bg = Image.new("RGBA", (W, H))
+    for yy in range(0, H, o.height):
+        for xx in range(0, W, o.width):
+            bg.paste(o, (xx, yy))
+    return bg
+
+
+def overlays(out):
+    """each neglect overlay tiled 2x2 over wood_dark at 40% opacity (plus 100% for inspection)"""
+    names = ("grime", "damp", "cracks")
+    T = 1024
+    sheet = Image.new("RGBA", (len(names) * (T // 2 + 10) + 10, 2 * (T // 2 + 34) + 10), (30, 30, 34, 255))
+    d = ImageDraw.Draw(sheet)
+    for i, nm in enumerate(names):
+        for j, op in enumerate((0.4, 1.0)):
+            bg = _tile_bg(T, T, OUT / "floors" / "wood_dark.png")
+            o = Image.open(OUT / "decor" / f"{nm}.png").convert("RGBA")
+            o.putalpha(o.getchannel("A").point(lambda v, k=op: int(v * k)))
+            bg.alpha_composite(_tile_rgba(o, T, T))
+            x, y = 10 + i * (T // 2 + 10), 10 + j * (T // 2 + 34)
+            sheet.paste(bg.resize((T // 2, T // 2), Image.LANCZOS), (x, y + 22))
+            _label(d, (x, y), f"{nm} 2x2 @ {int(op * 100)}%")
+    sheet.convert("RGB").save(out / "overlays.png")
+    # seam check crop at native res (centre of a 2x2 tiling = the seam cross)
+    for nm in names:
+        bg = _tile_bg(1024, 1024, OUT / "floors" / "wood_light.png")
+        bg.alpha_composite(_tile_rgba(Image.open(OUT / "decor" / f"{nm}.png").convert("RGBA"), 1024, 1024))
+        bg.crop((256, 256, 768, 768)).convert("RGB").save(out / f"overlay_seam_{nm}.png")
+    # small decals on stone and wood
+    small = ["cobweb", "stain_1", "stain_2", "stain_3", "peel", "dust_sheet_scrap", "rubble", "papers_scattered", "rat"]
+    W = 1400
+    s2 = _tile_bg(W, 600, OUT / "floors" / "stone.png")
+    wd = _tile_bg(W, 300, OUT / "floors" / "wood_light.png")
+    s2.paste(wd, (0, 300))
+    d = ImageDraw.Draw(s2)
+    x = 20
+    for nm in small:
+        im = Image.open(OUT / "decor" / f"{nm}.png").convert("RGBA")
+        k = 2 if im.width <= 64 else 1
+        big = im.resize((im.width * k, im.height * k), Image.LANCZOS)
+        s2.alpha_composite(big, (x, 40))
+        s2.alpha_composite(im, (x, 340))
+        d.text((x, 14), nm, font=LABEL, fill=(240, 230, 200))
+        x += big.width + 24
+    s2.convert("RGB").save(out / "decor_small.png")
+
+
+def menu(out):
+    """menu props on a desk-coloured background (+ the large desk)"""
+    M = OUT / "menu"
+    W, H = 1500, 1000
+    sheet = Image.new("RGBA", (W, H), (58, 34, 24, 255))
+    import numpy as _np
+    n = _np.random.default_rng(3).normal(0, 6, (H, W, 1))
+    arr = _np.asarray(sheet).astype(_np.float32)
+    arr[..., :3] += n
+    sheet = Image.fromarray(_np.clip(arr, 0, 255).astype(_np.uint8), "RGBA")
+    d = ImageDraw.Draw(sheet)
+    lay = [("case_photo_1", 20, 30), ("case_photo_2", 170, 30), ("case_photo_3", 320, 30), ("case_file", 480, 30),
+           ("journal_open", 700, 30), ("map_pinned", 1060, 30), ("pocket_watch", 20, 260), ("magnifier", 140, 260),
+           ("inkwell", 260, 260)]
+    for nm, x, y in lay:
+        im = Image.open(M / f"{nm}.png").convert("RGBA")
+        sheet.alpha_composite(im, (x, y + 20))
+        d.text((x, y), nm, font=LABEL, fill=(240, 230, 200))
+    desk = Image.open(OUT / "furniture" / "desk_large.png").convert("RGBA")
+    sheet.alpha_composite(desk, (480, 330))
+    d.text((480, 310), "desk_large", font=LABEL, fill=(240, 230, 200))
+    # an arranged desk at 2x
+    big = desk.resize((desk.width * 2, desk.height * 2), Image.LANCZOS)
+    s3 = Image.new("RGBA", (big.width + 80, big.height + 80), (24, 18, 16, 255))
+    s3.alpha_composite(big, (40, 40))
+    for nm, x, y, r in (("case_file", 300, 120, -6), ("journal_open", 380, 260, 3), ("case_photo_1", 240, 300, 12),
+                        ("case_photo_3", 620, 90, -9), ("map_pinned", 540, 110, 4), ("pocket_watch", 230, 470, 0),
+                        ("magnifier", 640, 380, 30)):
+        im = Image.open(M / f"{nm}.png").convert("RGBA").rotate(r, expand=True, resample=Image.BICUBIC)
+        s3.alpha_composite(im, (x, y))
+    s3.convert("RGB").save(out / "menu_desk_arranged.png")
+    sheet.convert("RGB").save(out / "menu_props.png")
+
+
+def plaques(out):
+    M = OUT / "menu"
+    names = ("plaque", "plaque_hover", "plaque_pressed", "plaque_dev")
+
+    def nine(img, w, h, m):
+        out_ = Image.new("RGBA", (w, h))
+        W_, H_ = img.size
+        xs = [(0, m, 0, m), (m, W_ - m, m, w - m), (W_ - m, W_, w - m, w)]
+        ys = [(0, m, 0, m), (m, H_ - m, m, h - m), (H_ - m, H_, h - m, h)]
+        for sx0, sx1, dx0, dx1 in xs:
+            for sy0, sy1, dy0, dy1 in ys:
+                piece = img.crop((sx0, sy0, sx1, sy1)).resize((dx1 - dx0, dy1 - dy0), Image.LANCZOS)
+                out_.paste(piece, (dx0, dy0))
+        return out_
+    f = ImageFont.truetype(str(FONTS / "IMFellEnglishSC-Regular.ttf"), 30)
+    sheet = Image.new("RGBA", (1180, 460), (58, 34, 24, 255))
+    d = ImageDraw.Draw(sheet)
+    for i, nm in enumerate(names):
+        im = Image.open(M / f"{nm}.png").convert("RGBA")
+        y = 20 + i * 108
+        sheet.alpha_composite(im, (20, y + 20))
+        b = nine(im, 340, 64, 24)
+        sheet.alpha_composite(b, (380, y + 20))
+        txt = (40, 26, 14) if nm != "plaque_dev" else (24, 34, 46)
+        d.text((550, y + 52 + (2 if nm == "plaque_pressed" else 0)), ["Begin Investigation", "Begin Investigation",
+               "Begin Investigation", "Dev: Skip Night"][i], font=f, fill=txt, anchor="mm")
+        b2 = nine(im, 420, 96, 24)
+        sheet.alpha_composite(b2, (740, y))
+        _label(d, (20, y), nm)
+    sheet.convert("RGB").save(out / "plaques.png")
+
+
+SHEETS = {"floors": floors, "furniture": furniture, "tokens": tokens, "icons": icons, "items": items, "ui": ui, "room": room,
+          "furniture2": furniture2, "overlays": overlays, "menu": menu, "plaques": plaques}
 
 if __name__ == "__main__":
     out = Path(sys.argv[1])

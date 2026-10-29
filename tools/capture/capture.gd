@@ -136,6 +136,44 @@ func _shot(s: String) -> void:
 		run.player.aim_override = 1.2
 		await _wait(60)
 		await _save(s.replace(":", "_"))
+	elif s.begins_with("mp:"):
+		# mp:<port> — join a running host (tests/net_test.gd "shot" scenario) and photograph the client view.
+		var port := int(s.split(":")[1])
+		Net.join("127.0.0.1", port, "Mina")
+		var t := 0.0
+		while not Net.lobby.has(Net.my_peer_id()) and t < 10.0:
+			await get_tree().process_frame
+			t += get_process_delta_time()
+		Net.set_ready(true)
+		t = 0.0
+		while Net.client_run == null and t < 20.0:
+			await get_tree().process_frame
+			t += get_process_delta_time()
+		var cr: ClientRun = Net.client_run
+		await _wait(10)
+		await get_tree().process_frame
+		Input.action_press("move_right")
+		await _wait(25)
+		Input.action_release("move_right")
+		cr.player.aim_override = -0.4
+		await _wait(60)
+		cr.player.journal.record("claw_marks", 41.0, cr.player.room_id, cr.map.room_name(cr.player.room_id))
+		await _wait(20)
+		await _save("multiplayer_client")
+		Net.leave()
+	elif s == "lobby":
+		Net.host(24799, "Host")
+		Game.goto_lobby()
+		await _wait(20)
+		await _save("lobby")
+		Net.leave()
+	elif s == "encyclopedia":
+		Game.goto_encyclopedia()
+		await _wait(10)
+		var enc = get_tree().current_scene
+		enc.show_entry("werewolf")
+		await _wait(10)
+		await _save("encyclopedia")
 	elif s == "results":
 		var run: Run = Game.start_run("ashgrove", 5, "poltergeist")
 		await _wait(200)

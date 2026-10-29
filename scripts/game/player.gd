@@ -128,6 +128,14 @@ func attach_name_label(layer: CanvasLayer) -> void:
 	name_label.size = Vector2(160, 18)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	layer.add_child(name_label)
+	queue_redraw()
+
+## Rival hunters share the investigator token; a coloured ring tells them apart.
+func _draw() -> void:
+	if name_label == null:
+		return
+	draw_arc(Vector2.ZERO, 22.0, 0.0, TAU, 40, Color(0, 0, 0, 0.6), 5.0)
+	draw_arc(Vector2.ZERO, 22.0, 0.0, TAU, 40, color(), 2.5)
 
 func _process(_delta: float) -> void:
 	if name_label:
