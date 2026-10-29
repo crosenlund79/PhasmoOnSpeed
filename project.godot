@@ -1,0 +1,44 @@
+; Engine configuration file.
+config_version=5
+
+[application]
+
+config/name="SPECTRAL RUN"
+config/description="A fast Gothic Noir supernatural investigation speedrunner."
+config/version="0.9.0"
+run/main_scene="res://scenes/boot.tscn"
+config/features=PackedStringArray("4.3", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[autoload]
+
+Art="*res://scripts/autoload/art.gd"
+Sfx="*res://scripts/autoload/sfx.gd"
+SaveData="*res://scripts/autoload/save_data.gd"
+Online="*res://scripts/autoload/online.gd"
+Game="*res://scripts/autoload/game.gd"
+
+[display]
+
+window/size/viewport_width=1600
+window/size/viewport_height=900
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=false
+
+[layer_names]
+
+2d_physics/layer_1="walls"
+2d_physics/layer_2="furniture"
+2d_physics/layer_3="player"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/canvas_textures/default_texture_filter=1
+2d/snap/snap_2d_transforms_to_pixel=false
+environment/defaults/default_clear_color=Color(0.03, 0.03, 0.04, 1)

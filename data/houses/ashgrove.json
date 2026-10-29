@@ -1,0 +1,688 @@
+{
+ "id": "ashgrove",
+ "name": "Ashgrove Cottage",
+ "blurb": "A widow's cottage at the edge of the moor. The kettle is still warm.",
+ "size": [
+  44,
+  30
+ ],
+ "spawn": [
+  11,
+  26
+ ],
+ "npcs": 2,
+ "rooms": [
+  {
+   "id": "back_garden",
+   "name": "Back Garden",
+   "floor": "grass",
+   "kind": "yard",
+   "lit": false,
+   "outdoor": true,
+   "rects": [
+    [
+     1,
+     1,
+     16,
+     5
+    ],
+    [
+     27,
+     1,
+     16,
+     5
+    ],
+    [
+     17,
+     5,
+     10,
+     1
+    ]
+   ]
+  },
+  {
+   "id": "shed",
+   "name": "Garden Shed",
+   "floor": "dirt",
+   "kind": "shed",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     18,
+     1,
+     8,
+     3
+    ]
+   ]
+  },
+  {
+   "id": "west_path",
+   "name": "West Path",
+   "floor": "gravel",
+   "kind": "yard",
+   "lit": false,
+   "outdoor": true,
+   "rects": [
+    [
+     1,
+     6,
+     3,
+     19
+    ]
+   ]
+  },
+  {
+   "id": "east_path",
+   "name": "East Path",
+   "floor": "gravel",
+   "kind": "yard",
+   "lit": false,
+   "outdoor": true,
+   "rects": [
+    [
+     40,
+     6,
+     3,
+     19
+    ]
+   ]
+  },
+  {
+   "id": "front_garden",
+   "name": "Front Garden",
+   "floor": "grass",
+   "kind": "yard",
+   "lit": false,
+   "outdoor": true,
+   "rects": [
+    [
+     1,
+     25,
+     42,
+     4
+    ]
+   ]
+  },
+  {
+   "id": "kitchen",
+   "name": "Kitchen",
+   "floor": "tile_checker",
+   "kind": "kitchen",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     7,
+     9,
+     6
+    ]
+   ]
+  },
+  {
+   "id": "dining",
+   "name": "Dining Room",
+   "floor": "parquet",
+   "kind": "dining",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     15,
+     7,
+     11,
+     6
+    ]
+   ]
+  },
+  {
+   "id": "study",
+   "name": "Study",
+   "floor": "wood_dark",
+   "kind": "study",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     27,
+     7,
+     12,
+     6
+    ]
+   ]
+  },
+  {
+   "id": "hallway",
+   "name": "Hallway",
+   "floor": "wood_dark",
+   "kind": "hall",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     14,
+     34,
+     3
+    ]
+   ]
+  },
+  {
+   "id": "living",
+   "name": "Living Room",
+   "floor": "carpet_red",
+   "kind": "living",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     18,
+     12,
+     6
+    ]
+   ]
+  },
+  {
+   "id": "bathroom",
+   "name": "Bathroom",
+   "floor": "tile_white",
+   "kind": "bathroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     18,
+     18,
+     5,
+     6
+    ]
+   ]
+  },
+  {
+   "id": "master",
+   "name": "Master Bedroom",
+   "floor": "carpet_blue",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     24,
+     18,
+     8,
+     6
+    ]
+   ]
+  },
+  {
+   "id": "guest",
+   "name": "Guest Bedroom",
+   "floor": "wood_light",
+   "kind": "bedroom",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     33,
+     18,
+     6,
+     6
+    ]
+   ]
+  }
+ ],
+ "doors": [
+  [
+   9,
+   6
+  ],
+  [
+   14,
+   10
+  ],
+  [
+   26,
+   10
+  ],
+  [
+   9,
+   13
+  ],
+  [
+   20,
+   13
+  ],
+  [
+   33,
+   13
+  ],
+  [
+   4,
+   15
+  ],
+  [
+   39,
+   9
+  ],
+  [
+   39,
+   15
+  ],
+  [
+   10,
+   17
+  ],
+  [
+   20,
+   17
+  ],
+  [
+   28,
+   17
+  ],
+  [
+   35,
+   17
+  ],
+  [
+   17,
+   21
+  ],
+  [
+   32,
+   21
+  ],
+  [
+   11,
+   24
+  ],
+  [
+   39,
+   19
+  ],
+  [
+   21,
+   4
+  ],
+  [
+   17,
+   2
+  ]
+ ],
+ "furniture": [
+  [
+   "stove",
+   5,
+   7,
+   0
+  ],
+  [
+   "counter",
+   7,
+   7,
+   0
+  ],
+  [
+   "sink_kitchen",
+   11,
+   7,
+   0
+  ],
+  [
+   "icebox",
+   13,
+   7,
+   0
+  ],
+  [
+   "counter",
+   7,
+   9,
+   0
+  ],
+  [
+   "counter",
+   9,
+   9,
+   0
+  ],
+  [
+   "barrel",
+   5,
+   12,
+   0
+  ],
+  [
+   "chair",
+   12,
+   11,
+   0
+  ],
+  [
+   "rug_rect",
+   18,
+   8,
+   0
+  ],
+  [
+   "dining_table",
+   18,
+   8,
+   0
+  ],
+  [
+   "candelabra",
+   15,
+   7,
+   0
+  ],
+  [
+   "candelabra",
+   25,
+   7,
+   0
+  ],
+  [
+   "cabinet",
+   16,
+   12,
+   0
+  ],
+  [
+   "grandfather_clock",
+   25,
+   12,
+   0
+  ],
+  [
+   "bookshelf",
+   27,
+   7,
+   0
+  ],
+  [
+   "bookshelf",
+   30,
+   7,
+   0
+  ],
+  [
+   "desk",
+   34,
+   8,
+   0
+  ],
+  [
+   "chair",
+   35,
+   10,
+   2
+  ],
+  [
+   "armchair",
+   28,
+   10,
+   0
+  ],
+  [
+   "side_table",
+   30,
+   11,
+   0
+  ],
+  [
+   "floor_lamp",
+   38,
+   12,
+   0
+  ],
+  [
+   "rug_rect",
+   11,
+   14,
+   0
+  ],
+  [
+   "rug_rect",
+   25,
+   14,
+   0
+  ],
+  [
+   "grandfather_clock",
+   5,
+   14,
+   0
+  ],
+  [
+   "wall_mirror",
+   15,
+   14,
+   0
+  ],
+  [
+   "side_table",
+   24,
+   16,
+   0
+  ],
+  [
+   "potted_plant",
+   31,
+   16,
+   0
+  ],
+  [
+   "potted_plant",
+   38,
+   14,
+   0
+  ],
+  [
+   "fireplace",
+   5,
+   18,
+   0
+  ],
+  [
+   "rug_round",
+   8,
+   19,
+   0
+  ],
+  [
+   "sofa",
+   5,
+   20,
+   1
+  ],
+  [
+   "coffee_table",
+   8,
+   21,
+   0
+  ],
+  [
+   "armchair",
+   13,
+   19,
+   0
+  ],
+  [
+   "piano",
+   13,
+   22,
+   0
+  ],
+  [
+   "candelabra",
+   16,
+   18,
+   0
+  ],
+  [
+   "bathtub",
+   21,
+   21,
+   0
+  ],
+  [
+   "toilet",
+   18,
+   23,
+   0
+  ],
+  [
+   "washbasin",
+   22,
+   18,
+   0
+  ],
+  [
+   "wall_mirror",
+   22,
+   19,
+   1
+  ],
+  [
+   "bed_double",
+   26,
+   20,
+   2
+  ],
+  [
+   "nightstand",
+   25,
+   23,
+   0
+  ],
+  [
+   "nightstand",
+   29,
+   23,
+   0
+  ],
+  [
+   "wardrobe",
+   24,
+   18,
+   0
+  ],
+  [
+   "dresser",
+   30,
+   18,
+   0
+  ],
+  [
+   "bed_single",
+   37,
+   20,
+   2
+  ],
+  [
+   "nightstand",
+   36,
+   23,
+   0
+  ],
+  [
+   "dresser",
+   33,
+   23,
+   0
+  ],
+  [
+   "wall_mirror",
+   36,
+   18,
+   0
+  ],
+  [
+   "workbench",
+   19,
+   1,
+   0
+  ],
+  [
+   "woodpile",
+   22,
+   1,
+   0
+  ],
+  [
+   "crates",
+   24,
+   1,
+   0
+  ],
+  [
+   "barrel",
+   18,
+   1,
+   0
+  ],
+  [
+   "tree",
+   3,
+   1,
+   0
+  ],
+  [
+   "tree",
+   36,
+   1,
+   0
+  ],
+  [
+   "hedge",
+   11,
+   2,
+   0
+  ],
+  [
+   "wash_tub",
+   30,
+   2,
+   0
+  ],
+  [
+   "barrel",
+   41,
+   7,
+   0
+  ],
+  [
+   "tree",
+   2,
+   25,
+   0
+  ],
+  [
+   "tree",
+   38,
+   25,
+   0
+  ],
+  [
+   "hedge",
+   15,
+   27,
+   0
+  ],
+  [
+   "hedge",
+   26,
+   27,
+   0
+  ],
+  [
+   "gravestone",
+   33,
+   27,
+   0
+  ]
+ ]
+}

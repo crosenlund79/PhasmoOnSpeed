@@ -1,0 +1,736 @@
+{
+ "id": "evangeline",
+ "name": "St. Evangeline Rectory",
+ "blurb": "Consecrated ground. Allegedly.",
+ "size": [
+  48,
+  34
+ ],
+ "spawn": [
+  22,
+  31
+ ],
+ "npcs": 2,
+ "rooms": [
+  {
+   "id": "graveyard",
+   "name": "Graveyard",
+   "floor": "grass",
+   "kind": "yard",
+   "lit": false,
+   "outdoor": true,
+   "rects": [
+    [
+     1,
+     29,
+     46,
+     4
+    ],
+    [
+     1,
+     1,
+     3,
+     28
+    ],
+    [
+     44,
+     1,
+     3,
+     28
+    ]
+   ]
+  },
+  {
+   "id": "cloister",
+   "name": "Cloister Walk",
+   "floor": "stone",
+   "kind": "yard",
+   "lit": false,
+   "outdoor": true,
+   "rects": [
+    [
+     4,
+     1,
+     40,
+     2
+    ]
+   ]
+  },
+  {
+   "id": "nave",
+   "name": "Nave",
+   "floor": "stone",
+   "kind": "chapel",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     16,
+     13,
+     15,
+     15
+    ]
+   ]
+  },
+  {
+   "id": "chancel",
+   "name": "Chancel",
+   "floor": "carpet_red",
+   "kind": "chapel",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     16,
+     4,
+     15,
+     8
+    ]
+   ]
+  },
+  {
+   "id": "vestry",
+   "name": "Vestry",
+   "floor": "wood_dark",
+   "kind": "study",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     4,
+     10,
+     6
+    ]
+   ]
+  },
+  {
+   "id": "crypt",
+   "name": "Crypt",
+   "floor": "stone",
+   "kind": "cellar",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     11,
+     10,
+     7
+    ]
+   ]
+  },
+  {
+   "id": "refectory",
+   "name": "Refectory",
+   "floor": "parquet",
+   "kind": "dining",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     19,
+     10,
+     9
+    ]
+   ]
+  },
+  {
+   "id": "rector_study",
+   "name": "Rector's Study",
+   "floor": "carpet_green",
+   "kind": "study",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     32,
+     4,
+     11,
+     6
+    ]
+   ]
+  },
+  {
+   "id": "kitchen",
+   "name": "Rectory Kitchen",
+   "floor": "tile_checker",
+   "kind": "kitchen",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     32,
+     11,
+     11,
+     7
+    ]
+   ]
+  },
+  {
+   "id": "bedroom",
+   "name": "Rector's Bedroom",
+   "floor": "carpet_blue",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     32,
+     19,
+     6,
+     9
+    ]
+   ]
+  },
+  {
+   "id": "bathroom",
+   "name": "Bathroom",
+   "floor": "tile_white",
+   "kind": "bathroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     39,
+     19,
+     4,
+     9
+    ]
+   ]
+  }
+ ],
+ "doors": [
+  [
+   22,
+   28
+  ],
+  [
+   23,
+   28
+  ],
+  [
+   10,
+   28
+  ],
+  [
+   35,
+   28
+  ],
+  [
+   4,
+   7
+  ],
+  [
+   4,
+   22
+  ],
+  [
+   43,
+   7
+  ],
+  [
+   43,
+   14
+  ],
+  [
+   10,
+   3
+  ],
+  [
+   18,
+   3
+  ],
+  [
+   37,
+   3
+  ],
+  [
+   23,
+   12
+  ],
+  [
+   15,
+   7
+  ],
+  [
+   31,
+   7
+  ],
+  [
+   10,
+   10
+  ],
+  [
+   15,
+   15
+  ],
+  [
+   10,
+   18
+  ],
+  [
+   15,
+   24
+  ],
+  [
+   31,
+   15
+  ],
+  [
+   31,
+   24
+  ],
+  [
+   37,
+   10
+  ],
+  [
+   35,
+   18
+  ],
+  [
+   38,
+   22
+  ],
+  [
+   41,
+   18
+  ]
+ ],
+ "furniture": [
+  [
+   "pew",
+   17,
+   15,
+   0
+  ],
+  [
+   "pew",
+   26,
+   15,
+   0
+  ],
+  [
+   "pew",
+   17,
+   18,
+   0
+  ],
+  [
+   "pew",
+   26,
+   18,
+   0
+  ],
+  [
+   "pew",
+   17,
+   21,
+   0
+  ],
+  [
+   "pew",
+   26,
+   21,
+   0
+  ],
+  [
+   "pew",
+   17,
+   24,
+   0
+  ],
+  [
+   "pew",
+   26,
+   24,
+   0
+  ],
+  [
+   "candelabra",
+   16,
+   13,
+   0
+  ],
+  [
+   "candelabra",
+   30,
+   13,
+   0
+  ],
+  [
+   "candelabra",
+   16,
+   27,
+   0
+  ],
+  [
+   "candelabra",
+   30,
+   27,
+   0
+  ],
+  [
+   "altar",
+   22,
+   4,
+   0
+  ],
+  [
+   "candelabra",
+   20,
+   4,
+   0
+  ],
+  [
+   "candelabra",
+   26,
+   4,
+   0
+  ],
+  [
+   "rug_rect",
+   21,
+   7,
+   0
+  ],
+  [
+   "pew",
+   16,
+   10,
+   0
+  ],
+  [
+   "pew",
+   27,
+   10,
+   0
+  ],
+  [
+   "wall_mirror",
+   30,
+   5,
+   1
+  ],
+  [
+   "wardrobe",
+   5,
+   4,
+   0
+  ],
+  [
+   "trunk",
+   12,
+   4,
+   0
+  ],
+  [
+   "desk",
+   11,
+   6,
+   0
+  ],
+  [
+   "chair",
+   12,
+   8,
+   2
+  ],
+  [
+   "woodpile",
+   5,
+   9,
+   0
+  ],
+  [
+   "coffin",
+   6,
+   12,
+   0
+  ],
+  [
+   "coffin",
+   9,
+   12,
+   0
+  ],
+  [
+   "coffin",
+   12,
+   12,
+   0
+  ],
+  [
+   "candelabra",
+   14,
+   17,
+   0
+  ],
+  [
+   "crates",
+   5,
+   16,
+   0
+  ],
+  [
+   "dining_table",
+   7,
+   21,
+   0
+  ],
+  [
+   "cabinet",
+   5,
+   27,
+   0
+  ],
+  [
+   "cabinet",
+   12,
+   27,
+   0
+  ],
+  [
+   "candelabra",
+   5,
+   19,
+   0
+  ],
+  [
+   "grandfather_clock",
+   14,
+   19,
+   0
+  ],
+  [
+   "fireplace",
+   11,
+   19,
+   0
+  ],
+  [
+   "bookshelf",
+   32,
+   4,
+   0
+  ],
+  [
+   "bookshelf",
+   39,
+   4,
+   0
+  ],
+  [
+   "desk",
+   34,
+   6,
+   0
+  ],
+  [
+   "chair",
+   35,
+   8,
+   2
+  ],
+  [
+   "armchair",
+   40,
+   7,
+   0
+  ],
+  [
+   "floor_lamp",
+   42,
+   9,
+   0
+  ],
+  [
+   "stove",
+   32,
+   11,
+   0
+  ],
+  [
+   "counter",
+   34,
+   11,
+   0
+  ],
+  [
+   "sink_kitchen",
+   39,
+   11,
+   0
+  ],
+  [
+   "icebox",
+   42,
+   11,
+   0
+  ],
+  [
+   "counter",
+   35,
+   14,
+   0
+  ],
+  [
+   "counter",
+   37,
+   14,
+   0
+  ],
+  [
+   "barrel",
+   42,
+   17,
+   0
+  ],
+  [
+   "chair",
+   33,
+   16,
+   0
+  ],
+  [
+   "bed_single",
+   36,
+   23,
+   2
+  ],
+  [
+   "nightstand",
+   34,
+   27,
+   0
+  ],
+  [
+   "wardrobe",
+   32,
+   19,
+   0
+  ],
+  [
+   "rug_rect",
+   32,
+   20,
+   0
+  ],
+  [
+   "trunk",
+   36,
+   27,
+   0
+  ],
+  [
+   "bathtub",
+   41,
+   25,
+   0
+  ],
+  [
+   "toilet",
+   39,
+   27,
+   0
+  ],
+  [
+   "washbasin",
+   42,
+   19,
+   0
+  ],
+  [
+   "wall_mirror",
+   42,
+   20,
+   1
+  ],
+  [
+   "gravestone",
+   5,
+   30,
+   0
+  ],
+  [
+   "gravestone",
+   8,
+   31,
+   0
+  ],
+  [
+   "gravestone",
+   13,
+   30,
+   0
+  ],
+  [
+   "gravestone",
+   30,
+   30,
+   0
+  ],
+  [
+   "gravestone",
+   39,
+   31,
+   0
+  ],
+  [
+   "gravestone",
+   42,
+   30,
+   0
+  ],
+  [
+   "tree",
+   1,
+   10,
+   0
+  ],
+  [
+   "tree",
+   44,
+   24,
+   0
+  ],
+  [
+   "gravestone",
+   2,
+   17,
+   0
+  ],
+  [
+   "gravestone",
+   45,
+   19,
+   0
+  ],
+  [
+   "tree",
+   17,
+   30,
+   0
+  ],
+  [
+   "tree",
+   26,
+   30,
+   0
+  ],
+  [
+   "hedge",
+   28,
+   1,
+   0
+  ],
+  [
+   "hedge",
+   14,
+   1,
+   0
+  ]
+ ]
+}

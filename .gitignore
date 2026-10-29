@@ -1,0 +1,5 @@
+.godot/
+*.tmp
+/export/
+/server/*.sqlite3
+__pycache__/

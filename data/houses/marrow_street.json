@@ -1,0 +1,732 @@
+{
+ "id": "marrow_street",
+ "name": "Marrow Street Townhouse",
+ "blurb": "Three generations lived here. One of them never left.",
+ "size": [
+  40,
+  34
+ ],
+ "spawn": [
+  19,
+  31
+ ],
+ "npcs": 3,
+ "rooms": [
+  {
+   "id": "street",
+   "name": "Marrow Street",
+   "floor": "stone",
+   "kind": "yard",
+   "lit": false,
+   "outdoor": true,
+   "rects": [
+    [
+     1,
+     29,
+     38,
+     4
+    ]
+   ]
+  },
+  {
+   "id": "alley",
+   "name": "Back Alley",
+   "floor": "gravel",
+   "kind": "yard",
+   "lit": false,
+   "outdoor": true,
+   "rects": [
+    [
+     1,
+     1,
+     38,
+     2
+    ],
+    [
+     1,
+     3,
+     2,
+     26
+    ],
+    [
+     37,
+     3,
+     2,
+     26
+    ]
+   ]
+  },
+  {
+   "id": "entry",
+   "name": "Entry Hall",
+   "floor": "wood_dark",
+   "kind": "hall",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     16,
+     20,
+     8,
+     8
+    ]
+   ]
+  },
+  {
+   "id": "front_parlor",
+   "name": "Front Parlor",
+   "floor": "carpet_red",
+   "kind": "living",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     4,
+     20,
+     11,
+     8
+    ]
+   ]
+  },
+  {
+   "id": "drawing_room",
+   "name": "Drawing Room",
+   "floor": "carpet_blue",
+   "kind": "living",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     25,
+     20,
+     11,
+     8
+    ]
+   ]
+  },
+  {
+   "id": "stair_hall",
+   "name": "Stair Hall",
+   "floor": "parquet",
+   "kind": "hall",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     4,
+     15,
+     32,
+     4
+    ]
+   ]
+  },
+  {
+   "id": "dining",
+   "name": "Dining Room",
+   "floor": "parquet",
+   "kind": "dining",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     4,
+     9,
+     10,
+     5
+    ]
+   ]
+  },
+  {
+   "id": "kitchen",
+   "name": "Kitchen",
+   "floor": "tile_checker",
+   "kind": "kitchen",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     15,
+     9,
+     10,
+     5
+    ]
+   ]
+  },
+  {
+   "id": "scullery",
+   "name": "Scullery",
+   "floor": "stone",
+   "kind": "pantry",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     26,
+     9,
+     4,
+     5
+    ]
+   ]
+  },
+  {
+   "id": "bedroom",
+   "name": "Bedroom",
+   "floor": "carpet_green",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     31,
+     9,
+     5,
+     5
+    ]
+   ]
+  },
+  {
+   "id": "courtyard",
+   "name": "Courtyard",
+   "floor": "stone",
+   "kind": "yard",
+   "lit": false,
+   "outdoor": true,
+   "rects": [
+    [
+     4,
+     4,
+     14,
+     4
+    ]
+   ]
+  },
+  {
+   "id": "coal_shed",
+   "name": "Coal Shed",
+   "floor": "dirt",
+   "kind": "shed",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     19,
+     4,
+     5,
+     4
+    ]
+   ]
+  },
+  {
+   "id": "bathroom",
+   "name": "Bathroom",
+   "floor": "tile_white",
+   "kind": "bathroom",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     25,
+     4,
+     5,
+     4
+    ]
+   ]
+  },
+  {
+   "id": "box_room",
+   "name": "Box Room",
+   "floor": "wood_light",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     31,
+     4,
+     5,
+     4
+    ]
+   ]
+  }
+ ],
+ "doors": [
+  [
+   19,
+   28
+  ],
+  [
+   20,
+   28
+  ],
+  [
+   9,
+   28
+  ],
+  [
+   30,
+   28
+  ],
+  [
+   3,
+   17
+  ],
+  [
+   36,
+   17
+  ],
+  [
+   3,
+   23
+  ],
+  [
+   36,
+   23
+  ],
+  [
+   3,
+   11
+  ],
+  [
+   8,
+   3
+  ],
+  [
+   21,
+   3
+  ],
+  [
+   33,
+   3
+  ],
+  [
+   15,
+   24
+  ],
+  [
+   24,
+   24
+  ],
+  [
+   19,
+   19
+  ],
+  [
+   20,
+   19
+  ],
+  [
+   9,
+   19
+  ],
+  [
+   30,
+   19
+  ],
+  [
+   9,
+   14
+  ],
+  [
+   20,
+   14
+  ],
+  [
+   28,
+   14
+  ],
+  [
+   33,
+   14
+  ],
+  [
+   14,
+   11
+  ],
+  [
+   25,
+   11
+  ],
+  [
+   30,
+   11
+  ],
+  [
+   10,
+   8
+  ],
+  [
+   18,
+   6
+  ],
+  [
+   22,
+   8
+  ],
+  [
+   28,
+   8
+  ],
+  [
+   33,
+   8
+  ],
+  [
+   30,
+   6
+  ],
+  [
+   24,
+   6
+  ]
+ ],
+ "furniture": [
+  [
+   "rug_rect",
+   17,
+   22,
+   0
+  ],
+  [
+   "grandfather_clock",
+   16,
+   20,
+   0
+  ],
+  [
+   "side_table",
+   23,
+   20,
+   0
+  ],
+  [
+   "potted_plant",
+   16,
+   27,
+   0
+  ],
+  [
+   "potted_plant",
+   23,
+   27,
+   0
+  ],
+  [
+   "wall_mirror",
+   23,
+   25,
+   1
+  ],
+  [
+   "fireplace",
+   6,
+   20,
+   0
+  ],
+  [
+   "rug_round",
+   7,
+   22,
+   0
+  ],
+  [
+   "sofa",
+   4,
+   26,
+   2
+  ],
+  [
+   "armchair",
+   12,
+   21,
+   0
+  ],
+  [
+   "piano",
+   11,
+   25,
+   0
+  ],
+  [
+   "candelabra",
+   4,
+   20,
+   0
+  ],
+  [
+   "bookshelf",
+   25,
+   20,
+   0
+  ],
+  [
+   "bookshelf",
+   32,
+   20,
+   0
+  ],
+  [
+   "desk",
+   30,
+   24,
+   0
+  ],
+  [
+   "chair",
+   31,
+   26,
+   2
+  ],
+  [
+   "armchair",
+   26,
+   25,
+   0
+  ],
+  [
+   "floor_lamp",
+   35,
+   27,
+   0
+  ],
+  [
+   "rug_rect",
+   27,
+   22,
+   0
+  ],
+  [
+   "rug_rect",
+   12,
+   15,
+   0
+  ],
+  [
+   "rug_rect",
+   24,
+   15,
+   0
+  ],
+  [
+   "side_table",
+   4,
+   15,
+   0
+  ],
+  [
+   "potted_plant",
+   35,
+   15,
+   0
+  ],
+  [
+   "candelabra",
+   18,
+   15,
+   0
+  ],
+  [
+   "dining_table",
+   6,
+   10,
+   0
+  ],
+  [
+   "cabinet",
+   4,
+   13,
+   0
+  ],
+  [
+   "candelabra",
+   13,
+   9,
+   0
+  ],
+  [
+   "stove",
+   15,
+   9,
+   0
+  ],
+  [
+   "counter",
+   17,
+   9,
+   0
+  ],
+  [
+   "sink_kitchen",
+   20,
+   9,
+   0
+  ],
+  [
+   "icebox",
+   24,
+   13,
+   0
+  ],
+  [
+   "counter",
+   18,
+   12,
+   0
+  ],
+  [
+   "barrel",
+   15,
+   13,
+   0
+  ],
+  [
+   "wash_tub",
+   26,
+   9,
+   0
+  ],
+  [
+   "barrel",
+   29,
+   13,
+   0
+  ],
+  [
+   "cabinet",
+   26,
+   13,
+   0
+  ],
+  [
+   "bed_single",
+   34,
+   10,
+   0
+  ],
+  [
+   "nightstand",
+   31,
+   13,
+   0
+  ],
+  [
+   "dresser",
+   31,
+   9,
+   0
+  ],
+  [
+   "tree",
+   4,
+   4,
+   0
+  ],
+  [
+   "wash_tub",
+   15,
+   4,
+   0
+  ],
+  [
+   "barrel",
+   12,
+   7,
+   0
+  ],
+  [
+   "crates",
+   19,
+   4,
+   0
+  ],
+  [
+   "woodpile",
+   22,
+   4,
+   0
+  ],
+  [
+   "workbench",
+   19,
+   7,
+   2
+  ],
+  [
+   "bathtub",
+   25,
+   4,
+   1
+  ],
+  [
+   "toilet",
+   29,
+   7,
+   0
+  ],
+  [
+   "washbasin",
+   29,
+   4,
+   0
+  ],
+  [
+   "wall_mirror",
+   26,
+   7,
+   2
+  ],
+  [
+   "trunk",
+   31,
+   4,
+   0
+  ],
+  [
+   "bed_single",
+   34,
+   4,
+   0
+  ],
+  [
+   "barrel",
+   31,
+   7,
+   0
+  ],
+  [
+   "tree",
+   2,
+   30,
+   0
+  ],
+  [
+   "tree",
+   35,
+   30,
+   0
+  ],
+  [
+   "barrel",
+   12,
+   1,
+   0
+  ],
+  [
+   "crates",
+   26,
+   1,
+   0
+  ],
+  [
+   "hedge",
+   13,
+   31,
+   0
+  ],
+  [
+   "hedge",
+   25,
+   31,
+   0
+  ]
+ ]
+}
