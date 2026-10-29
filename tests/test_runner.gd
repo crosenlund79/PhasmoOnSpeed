@@ -17,7 +17,7 @@ func _ready() -> void:
 		"test_rankings", "test_persistence", "test_every_creature_every_house",
 		"test_seeded_reset_repeatable", "test_genuine_evidence_room", "test_reckless_and_harbinger",
 		"test_correct_blind_victory", "test_wound_then_death", "test_replay_is_passive",
-		"test_crucifix_blocks_ghost_hunt", "test_shapeshifter_needs_exposure",
+		"test_crucifix_blocks_ghost_hunt", "test_shapeshifter_needs_exposure", "test_full_flow_records_once",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -357,3 +357,21 @@ func test_shapeshifter_needs_exposure() -> void:
 	run.equipment._cooldown = 0.0
 	run.strike("iron_nails")
 	check(run._outcome == "vanquished", "exposed shapeshifter is banished")
+
+func test_full_flow_records_once() -> void:
+	SaveData.reset_all()
+	var run := await _start("ashgrove", "werewolf", 41)
+	run.player.add_resource("silver_stake")
+	run.player.global_position = run.creature.position + Vector2(-30, 0)
+	run.player.aim_angle = 0.0
+	run.strike("silver_stake")
+	await _frames(200)
+	var res: Dictionary = Game.last_result
+	check(not res.is_empty(), "results produced")
+	check(res["summary"]["vanquished"], "victory survives into the results summary")
+	check(res["summary"]["score"] > 0, "victory scored")
+	check(SaveData.house_record("ashgrove")["runs"] == 1, "run recorded exactly once")
+	check(get_tree().current_scene.get_script() == preload("res://scripts/ui/results.gd"), "results screen shown")
+	await _frames(120)
+	check(SaveData.house_record("ashgrove")["runs"] == 1, "results replay did not record again")
+	SaveData.reset_all()

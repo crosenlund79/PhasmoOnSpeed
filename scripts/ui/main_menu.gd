@@ -19,6 +19,16 @@ func _ready() -> void:
 	left.offset_bottom = -40
 	left.add_theme_constant_override("separation", 12)
 	add_child(left)
+	# Pale mist behind the inked logo so it reads against the night sky.
+	var mist := TextureRect.new()
+	mist.texture = Art.tex("lights/soft.png")
+	mist.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	mist.modulate = Color(0.75, 0.8, 0.95, 0.42)
+	mist.position = Vector2(-10, -40)
+	mist.size = Vector2(760, 300)
+	mist.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(mist)
+	move_child(mist, left.get_index())
 	var logo := TextureRect.new()
 	logo.texture = Art.tex("ui/title_logo.png")
 	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE

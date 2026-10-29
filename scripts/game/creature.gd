@@ -215,6 +215,8 @@ func _update_visibility(delta: float) -> void:
 			want = 1.0
 		elif exposed_t > 0.0:
 			want = 1.0
+		elif _glimpsed():
+			want = 0.5
 		manifest_t -= delta
 		if is_ghost_like() and manifest_t < 0.0:
 			if manifest_t < -1.4:
@@ -226,9 +228,20 @@ func _update_visibility(delta: float) -> void:
 		if is_ghost_like():
 			# Ghosts blink in and out while hunting: readable but unsettling.
 			want = 0.9 if fmod(state_t, 0.9) < 0.62 else 0.25
+	# A roaming flesh-and-blood creature caught in the beam shows only as a shadow.
+	var silhouette := state == "roam" and want == 0.5 and _glimpsed()
+	token.sprite.modulate = Color(0.12, 0.11, 0.13) if silhouette else Color.WHITE
 	alpha = move_toward(alpha, want, delta * 2.5)
 	modulate.a = alpha
-	glow.energy = alpha * (1.2 if state == "hunt" or state == "bound" else 0.6)
+	glow.energy = 0.0 if silhouette else alpha * (1.2 if state == "hunt" or state == "bound" else 0.6)
+
+func _glimpsed() -> bool:
+	var physical: bool = def["kind"] == "physical" and not (type_id == "shapeshifter" and form == "ghost")
+	var p: Player = run.player
+	if not physical or p == null or not p.flashlight_on:
+		return false
+	var to := position - p.global_position
+	return to.length() < 230.0 and absf(angle_difference(p.aim_angle, to.angle())) < 0.42 and map.los(p.global_position, position)
 
 func _move_along(delta: float, speed: float) -> bool:
 	if path_i >= path.size():

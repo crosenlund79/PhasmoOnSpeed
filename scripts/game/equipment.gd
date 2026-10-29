@@ -121,13 +121,17 @@ func _update_holds(delta: float) -> void:
 	elif Input.is_action_pressed("restart"):
 		action = "restart"
 		needed = 0.8
-	if action != hold_action:
+	if action == "":
+		hold_action = ""
+	elif hold_action == "done" or hold_action == "blocked":
+		pass   # wait for the key to be released before another action
+	elif action != hold_action:
 		hold_action = action
 		hold_t = 0.0
 		hold_needed = needed
 		if action == "rite" and not run.can_begin_rite():
 			hold_action = "blocked"
-		if action == "interact" and needed <= 0.0 and Input.is_action_just_pressed("interact"):
+		elif action == "interact" and needed <= 0.0:
 			run.do_interact(interact)
 			hold_action = "done"
 	if hold_action in ["interact", "rite", "restart"]:

@@ -279,7 +279,7 @@ func _tick_book(c: Creature, delta: float) -> void:
 func _mimic_voice(c: Creature) -> void:
 	# The voice comes from where the creature is, wearing an occupant's voice.
 	var pos := c.position
-	voices.append({"pos": pos, "room": c.room_id, "ttl": 9.0})
+	voices.append({"pos": pos, "room": c.room_id, "ttl": 14.0})
 	Sfx.play_at("whisper_mimic", pos, run.world, 2.0, rng.randf_range(0.9, 1.1), 1100.0)
 	run.record_event("voice", {"x": pos.x, "y": pos.y})
 

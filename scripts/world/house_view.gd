@@ -6,7 +6,7 @@ extends Node2D
 
 const C := Defs.CELL
 const ART_SCALE := 0.5   # world art is authored at 64 px per 32 px cell
-const DARKNESS := Color(0.20, 0.21, 0.29)
+const DARKNESS := Color(0.23, 0.24, 0.32)
 const DARKNESS_HUNT := Color(0.13, 0.10, 0.14)
 const DARKNESS_HARBINGER := Color(0.12, 0.13, 0.19)
 
@@ -132,7 +132,7 @@ func _build_lights() -> void:
 			extent = maxf(extent, center.distance_to(HouseMap.cell_center(c)))
 		if r["outdoor"]:
 			# Pale moonlight washes over gardens and streets.
-			_light(center, Color(0.55, 0.65, 0.9), 0.55, clampf(extent / 180.0, 1.0, 4.0), "lights/soft.png", 0.0, "moon", false)
+			_light(center, Color(0.55, 0.65, 0.9), 0.55, clampf(extent / 200.0, 0.9, 3.2), "lights/soft.png", 0.0, "moon", true)
 		elif r["lit"]:
 			_light(center, Color(1.0, 0.78, 0.5), 0.75, clampf(extent / 200.0, 0.8, 2.6), "lights/soft.png", 0.03, "room", true)
 		else:

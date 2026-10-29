@@ -38,7 +38,6 @@ var light_pivot: Node2D
 var flashlight: PointLight2D
 var uv_light: PointLight2D
 var ambient: PointLight2D
-var hurt_light: PointLight2D
 
 func _init() -> void:
 	collision_layer = 4
@@ -56,6 +55,7 @@ func _init() -> void:
 	flashlight = _cone_light(Color(1.0, 0.92, 0.75), 1.25, 0.62)
 	uv_light = _cone_light(Color(0.55, 0.3, 1.0), 1.0, 0.42)
 	uv_light.visible = false
+	uv_light.range_item_cull_mask = 1 | 2   # layer 2 = UV handprints (light-only material)
 	ambient = PointLight2D.new()
 	ambient.texture = Art.tex("lights/soft.png")
 	ambient.texture_scale = 0.42

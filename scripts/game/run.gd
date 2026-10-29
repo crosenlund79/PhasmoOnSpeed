@@ -110,10 +110,10 @@ func _spawn_player() -> void:
 	camera.position_smoothing_speed = 9.0
 	# Centre the investigator in the area left of the journal panel.
 	camera.offset = Vector2(145.0 / CAMERA_ZOOM, 0.0)
-	camera.limit_left = -200
-	camera.limit_top = -200
-	camera.limit_right = int(map.world_size().x) + 200 + 300
-	camera.limit_bottom = int(map.world_size().y) + 200
+	camera.limit_left = -60
+	camera.limit_top = -60
+	camera.limit_right = int(map.world_size().x) + 60 + int(300.0 / CAMERA_ZOOM)
+	camera.limit_bottom = int(map.world_size().y) + 110
 	player.add_child(camera)
 	recorder.register_actor(player.actor_id, "player", "tokens/investigator.png", 34.0)
 
@@ -828,9 +828,9 @@ func _finish() -> void:
 	if _outcome == "":
 		return
 	var outcome := _outcome
-	_outcome = ""
 	Sfx.stop_all_loops()
 	var summary := build_summary()
+	_outcome = ""
 	var replay := recorder.finish(elapsed, outcome)
 	Game.finish_run(summary, replay)
 

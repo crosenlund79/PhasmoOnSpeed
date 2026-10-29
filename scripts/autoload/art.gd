@@ -28,6 +28,10 @@ func _ready() -> void:
 	font_italic = _load_font("res://assets/fonts/IMFellEnglish-Italic.ttf")
 	theme = _build_theme()
 	get_tree().root.theme = theme
+	# CanvasLayers do not inherit the root theme, so also merge it into the
+	# engine default theme used by every Control.
+	ThemeDB.get_default_theme().merge_with(theme)
+	ThemeDB.fallback_font = font_body
 
 func _load_font(path: String) -> Font:
 	if ResourceLoader.exists(path):
@@ -81,6 +85,9 @@ func stylebox(path: String, margin: int, fallback_bg: Color, fallback_border: Co
 		sb.texture_margin_right = margin
 		sb.texture_margin_top = margin
 		sb.texture_margin_bottom = margin
+		# Tile (not stretch) the illustrated centre so parchment grain stays crisp.
+		sb.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
+		sb.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
 		sb.content_margin_left = margin * 0.6
 		sb.content_margin_right = margin * 0.6
 		sb.content_margin_top = margin * 0.45

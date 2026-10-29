@@ -198,7 +198,7 @@ func _build_hotbar(root: Control) -> void:
 	hold_bar.add_theme_stylebox_override("background", bg)
 	hold_bar.modulate.a = 0.0
 	holder.add_child(hold_bar)
-	readout_label = Art.label("", 17, BONE)
+	readout_label = Art.label("", 17, BONE, Art.font_heading)
 	readout_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	readout_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	readout_label.add_theme_constant_override("outline_size", 5)
@@ -368,7 +368,7 @@ func on_discovered(entry: Dictionary) -> void:
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
 	v.add_child(Art.label(entry["name"], 17, INK, Art.font_heading))
-	v.add_child(Art.label("%s · %s" % [Journal.format_time(entry["time"]), entry["room_name"]], 14, INK_SOFT))
+	v.add_child(Art.label("%s · %s" % [Journal.format_time(entry["time"]), entry["room_name"]], 14, INK_SOFT, Art.font_heading))
 	entries_box.add_child(row)
 	_entry_count += 1
 	row.modulate = Color(1.6, 1.3, 0.8)
