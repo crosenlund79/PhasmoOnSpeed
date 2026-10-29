@@ -42,16 +42,19 @@ func _shot(s: String) -> void:
 		var creature := parts[1] if parts.size() > 1 else "shade"
 		var run: Run = Game.start_run(house, 5, creature)
 		await _wait(30)
-		run.journal.record("emf5", 43.0, "living", "Living Room")
-		run.journal.record("freezing", 81.0, "kitchen", "Kitchen")
-		run.journal.record("footprints", 128.0, "hallway", "Hallway")
+		run.player.journal.record("emf5", 43.0, "living", "Living Room")
+		run.player.journal.record("freezing", 81.0, "kitchen", "Kitchen")
+		run.player.equipment.select(1)
 		run.elapsed = 151.3
-		await _wait(90)
+		await _wait(50)
+		run.player.journal.record("footprints", 128.0, "hallway", "Hallway")
+		await _wait(25)
 		await _save(s.replace(":", "_"))
 	elif s.begins_with("overview_"):
 		var run: Run = Game.start_run(s.substr(9), 5, "shade")
 		await _wait(10)
 		run.hud.visible = false
+		run.world_text.visible = false
 		for c in run.hud.get_children():
 			c.visible = false
 		run.camera.zoom = Vector2(0.62, 0.62)
@@ -73,8 +76,8 @@ func _shot(s: String) -> void:
 	elif s == "harbinger":
 		var run: Run = Game.start_run("blackwood", 9, "vampire")
 		await _wait(20)
-		run.attempt_vanquish("shade", "rite")
-		run.attempt_vanquish("werewolf", "silver_stake")
+		run.attempt_vanquish(run.player, "shade", "rite")
+		run.attempt_vanquish(run.player, "werewolf", "silver_stake")
 		await _wait(100)
 		await _save("harbinger")
 	elif s == "gallery":
@@ -108,10 +111,10 @@ func _shot(s: String) -> void:
 	elif s == "results":
 		var run: Run = Game.start_run("ashgrove", 5, "poltergeist")
 		await _wait(200)
-		run.journal.record("uv", 20.0, "kitchen", "Kitchen")
+		run.player.journal.record("uv", 20.0, "kitchen", "Kitchen")
 		run.player.global_position = run.creature.position + Vector2(20, 0)
 		run.player.room_id = run.creature.lair_room
-		run.attempt_vanquish("poltergeist", "rite")
+		run.attempt_vanquish(run.player, "poltergeist", "rite")
 		await _wait(60)
 		await _save("victory_moment")
 		await _wait(200)

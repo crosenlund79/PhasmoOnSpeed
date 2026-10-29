@@ -86,8 +86,8 @@ func _build(d: Dictionary) -> void:
 					blocked[Vector2i(x, y)] = true
 	spawn_cell = Vector2i(int(d["spawn"][0]), int(d["spawn"][1]))
 	for r in rooms:
-		var f := int(r.get("floor", 0))
-		r["floor"] = f
+		var f := int(r.get("level", 0))   # 0 = main floor, -1 = basement ("floor" is the floor texture)
+		r["level"] = f
 		for c in r["cells"]:
 			var cur: Rect2i = _floor_rects.get(f, Rect2i(c, Vector2i.ONE))
 			_floor_rects[f] = cur.expand(c).expand(c + Vector2i.ONE)
@@ -118,7 +118,7 @@ static func _v(a: Array) -> Vector2i:
 func floor_of_cell(c: Vector2i) -> int:
 	var v := at(c)
 	if v >= 0:
-		return int(rooms[v]["floor"])
+		return int(rooms[v]["level"])
 	for f in _floor_rects:
 		if (_floor_rects[f] as Rect2i).has_point(c):
 			return f

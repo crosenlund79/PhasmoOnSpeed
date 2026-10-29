@@ -226,7 +226,7 @@ func client_send_input(pos: Vector2, aim: float, flags: int, mask: int, counters
 	if is_online() and not multiplayer.is_server():
 		c_input.rpc_id(1, pos, aim, flags, mask, counters)
 
-@rpc("any_peer", "unreliable_ordered")
+@rpc("any_peer", "unreliable_ordered", "call_remote", 1)
 func c_input(pos: Vector2, aim: float, flags: int, mask: int, counters: PackedByteArray) -> void:
 	if multiplayer.is_server() and host_run and in_match:
 		host_run.apply_remote_input(multiplayer.get_remote_sender_id(), pos, aim, flags, mask, counters)
@@ -255,7 +255,7 @@ func host_hud_state(peer_id: int, data: Dictionary) -> void:
 	if is_host() and in_match and lobby.has(peer_id):
 		s_hud.rpc_id(peer_id, data)
 
-@rpc("authority", "unreliable_ordered")
+@rpc("authority", "unreliable_ordered", "call_remote", 1)
 func s_snapshot(t: float, threat: float, actors: Array, sigils_lit: int, harbinger: bool, hunting: bool) -> void:
 	if client_run:
 		client_run.apply_snapshot(t, threat, actors, sigils_lit, harbinger, hunting)
@@ -270,7 +270,8 @@ func s_private(kind: String, data: Dictionary) -> void:
 	if client_run:
 		client_run.apply_private(kind, data)
 
-@rpc("authority", "unreliable_ordered")
+# Small and important (slots, prompts, readings): reliable on its own channel.
+@rpc("authority", "reliable", "call_remote", 2)
 func s_hud(data: Dictionary) -> void:
 	if client_run:
 		client_run.apply_hud(data)

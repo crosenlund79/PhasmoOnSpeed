@@ -428,7 +428,7 @@ func _build_help(root: Control) -> void:
 
 func _build_follow_layers() -> void:
 	reading_label = Label.new()
-	reading_label.add_theme_font_override("font", Art.font_heading)
+	reading_label.add_theme_font_override("font", Art.font_numeric)
 	reading_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
 	reading_label.add_theme_constant_override("outline_size", 6)
 	reading_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
@@ -637,7 +637,7 @@ func _update_reading(eq, p, _delta: float) -> void:
 	reading_label.visible = show
 	if not show:
 		return
-	var px: float = clampf(float(s.get("equip_hud_size", 18)), 10.0, 34.0)
+	var px: float = clampf(float(s.get("equip_hud_size", 20)), 10.0, 36.0)
 	reading_label.add_theme_font_size_override("font_size", int(round(px / run.CAMERA_ZOOM * 1.6)))
 	reading_label.scale = Vector2.ONE / 1.6
 	reading_label.text = eq.reading
@@ -646,7 +646,7 @@ func _update_reading(eq, p, _delta: float) -> void:
 	col.a *= opacity * (1.0 if eq.reading_active else 0.65)
 	reading_label.add_theme_color_override("font_color", col)
 	var w := reading_label.size.x / 1.6
-	var below: Vector2 = p.global_position + Vector2(-w * 0.5, 22.0)
+	var below: Vector2 = p.global_position + Vector2(-w * 0.5, 25.0)
 	# Flip above the investigator when the hotbar would cover it.
 	var screen: Vector2 = get_viewport().get_canvas_transform() * p.global_position
 	if screen.y > get_viewport().get_visible_rect().size.y - 230.0:

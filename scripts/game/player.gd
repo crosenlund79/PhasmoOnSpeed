@@ -71,6 +71,7 @@ var stunned := 0.0
 var shoves_given := 0
 var shoves_taken := 0
 var name_label: Label
+var aim_override := NAN   # tests / bots: fixed aim instead of the mouse
 
 var light_pivot: Node2D
 var flashlight: PointLight2D
@@ -173,7 +174,9 @@ func _physics_process(delta: float) -> void:
 	var dir := Vector2.ZERO
 	if input_enabled and stunned <= 0.0:
 		dir = input.move
-	if input_enabled and is_local:
+	if not is_nan(aim_override):
+		aim_angle = aim_override
+	elif input_enabled and is_local:
 		var mouse := get_global_mouse_position()
 		if mouse.distance_to(global_position) > 4.0:
 			aim_angle = (mouse - global_position).angle()

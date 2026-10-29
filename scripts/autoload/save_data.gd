@@ -19,7 +19,7 @@ func _defaults() -> Dictionary:
 		"version": SAVE_VERSION,
 		"settings": {"master": 0.8, "music": 0.6, "ui_scale": 1.0, "fullscreen": false,
 			"player_name": "Investigator", "dev_mode": true,
-			"equip_hud": true, "equip_hud_opacity": 0.9, "equip_hud_size": 18,
+			"equip_hud": true, "equip_hud_opacity": 0.9, "equip_hud_size": 20,
 			"ev_notify": true, "ev_notify_opacity": 0.95, "ev_notify_size": 1.0,
 			"npc_names": true, "last_address": "127.0.0.1", "last_port": 24680},
 		"records": {"best_score": 0, "best_score_time": 0.0, "best_score_house": "", "houses": {}},

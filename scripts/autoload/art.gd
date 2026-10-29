@@ -17,6 +17,7 @@ const AMBER := Color(1.0, 0.72, 0.38)
 var font_heading: Font
 var font_body: Font
 var font_italic: Font
+var font_numeric: Font   # lining numerals for instant-read equipment values
 var theme: Theme
 
 var _cache := {}
@@ -26,6 +27,11 @@ func _ready() -> void:
 	font_heading = _load_font("res://assets/fonts/IMFellEnglishSC-Regular.ttf")
 	font_body = _load_font("res://assets/fonts/IMFellEnglish-Regular.ttf")
 	font_italic = _load_font("res://assets/fonts/IMFellEnglish-Italic.ttf")
+	var bask := _load_font("res://assets/fonts/LibreBaskerville-Variable.ttf")
+	var fv := FontVariation.new()
+	fv.base_font = bask
+	fv.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): 700}
+	font_numeric = fv
 	theme = _build_theme()
 	get_tree().root.theme = theme
 	# CanvasLayers do not inherit the root theme, so also merge it into the
