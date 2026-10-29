@@ -5,15 +5,34 @@ extends Control
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 
-func add_backdrop(path: String = "ui/menu_background.png", dim: float = 0.35) -> void:
+## The same world as the houses and the menu desk: candlelit, grimy floorboards.
+func add_backdrop(_path: String = "", dim: float = 0.35) -> void:
 	var bg := TextureRect.new()
-	bg.texture = Art.tex(path)
+	bg.texture = Art.tex("floors/wood_dark.png")
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	bg.stretch_mode = TextureRect.STRETCH_TILE
+	bg.modulate = Color(0.42, 0.4, 0.44)
 	add_child(bg)
+	if Art.has("decor/grime.png"):
+		var g := TextureRect.new()
+		g.texture = Art.tex("decor/grime.png")
+		g.set_anchors_preset(Control.PRESET_FULL_RECT)
+		g.stretch_mode = TextureRect.STRETCH_TILE
+		g.modulate = Color(1, 1, 1, 0.8)
+		add_child(g)
+	var warm := TextureRect.new()
+	warm.texture = Art.tex("lights/soft.png")
+	warm.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	warm.set_anchors_preset(Control.PRESET_FULL_RECT)
+	warm.offset_left = 200
+	warm.offset_right = -200
+	warm.offset_top = -120
+	warm.offset_bottom = 120
+	warm.modulate = Color(1.0, 0.72, 0.4, 0.22)
+	warm.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(warm)
 	var shade := ColorRect.new()
-	shade.color = Color(0, 0, 0, dim)
+	shade.color = Color(0, 0, 0, dim * 0.6)
 	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(shade)
 	var vig := TextureRect.new()

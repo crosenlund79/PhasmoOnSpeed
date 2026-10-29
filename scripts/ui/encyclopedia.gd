@@ -127,13 +127,14 @@ func show_entry(id: String) -> void:
 ## Facts computed from the same numbers the game uses.
 func _derived_hunt_facts(d: Dictionary) -> String:
 	var spd: float = d["hunt_speed"]
-	var speed_text := "slower than a walking investigator" if spd < Player.WALK_SPEED else ("faster than walking, slower than sprinting" if spd < Player.SPRINT_SPEED else "faster than a sprint")
+	var speed_text := "slower than a walking investigator" if spd < Player.WALK_SPEED else ("faster than walking but slower than sprinting" if spd < Player.SPRINT_SPEED else "faster than a sprint")
+	var lead := "Hunts at a pace %s." % speed_text
 	if d["name"] == "Werewolf":
-		speed_text = "starts %s, then speeds up to %s while it sees you" % [speed_text, "outrun walking"]
+		lead = "Starts a hunt %s and speeds up while it sees you." % speed_text
 	var how_often := "often" if float(d["hunt_cooldown"]) <= 22.0 else ("regularly" if float(d["hunt_cooldown"]) <= 28.0 else "rarely")
 	if d["kind"] == "harbinger":
 		how_often = "relentlessly"
-	return "Moves %s. Hunts %s, for about %d seconds at a time." % [speed_text, how_often, int(d["hunt_duration"])]
+	return "%s Hunts %s, for about %d seconds at a time." % [lead, how_often, int(d["hunt_duration"])]
 
 func _show_equipment() -> void:
 	page.add_child(Art.heading("Equipment", 40))

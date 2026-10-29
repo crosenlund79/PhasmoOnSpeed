@@ -125,8 +125,8 @@ func _join() -> void:
 
 func _refresh() -> void:
 	var online := Net.is_online()
-	connect_box.visible = not online
-	room_box.visible = online
+	connect_box.get_parent().visible = not online
+	room_box.get_parent().visible = online
 	if not online:
 		return
 	for c in players_box.get_children():
