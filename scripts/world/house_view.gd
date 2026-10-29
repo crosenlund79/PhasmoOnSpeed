@@ -398,7 +398,12 @@ class WallDrawer extends Node2D:
 				if v == HouseMap.WALL:
 					var outdoor_only := _outdoor_only(c)
 					var src := Rect2(Vector2(posmod(x, 4), posmod(y, 4)) * 32.0, Vector2(32, 32))
-					draw_texture_rect_region(cap, Rect2(p, cs), src, Color(0.55, 0.62, 0.5) if outdoor_only else Color.WHITE)
+					var tint := Color.WHITE
+					if outdoor_only:
+						tint = Color(0.55, 0.62, 0.5)
+					elif map.floor_of_cell(c) < 0:
+						tint = Color(0.42, 0.4, 0.44)   # basement walls read clearly darker than stone floors
+					draw_texture_rect_region(cap, Rect2(p, cs), src, tint)
 					_maybe_window(c, p)
 				elif v == HouseMap.DOOR:
 					_draw_door(c, p)

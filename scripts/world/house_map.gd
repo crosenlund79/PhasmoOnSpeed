@@ -24,6 +24,7 @@ var astar := AStarGrid2D.new()
 var spawn_cell := Vector2i.ZERO
 var stairs: Array = []            # [{name, a, a_land, b, b_land}] cells; a is on the upper floor
 var _stair_cells := {}            # stair cell -> landing cell on the other floor
+var _own_landing := {}            # stair cell -> its landing on the same floor
 var _floor_rects := {}            # floor index -> Rect2i (cells, including walls)
 
 static func from_data(d: Dictionary) -> HouseMap:
@@ -98,6 +99,8 @@ func _build(d: Dictionary) -> void:
 		stairs.append(e)
 		_stair_cells[e["a"]] = e["b_land"]
 		_stair_cells[e["b"]] = e["a_land"]
+		_own_landing[e["a"]] = e["a_land"]
+		_own_landing[e["b"]] = e["b_land"]
 	astar.region = Rect2i(0, 0, w, h)
 	astar.cell_size = Vector2(C, C)
 	astar.offset = Vector2(C, C) * 0.5
@@ -140,11 +143,18 @@ func floor_bounds(f: int) -> Rect2:
 func is_stair(c: Vector2i) -> bool:
 	return _stair_cells.has(c)
 
-## World position of the landing on the other floor when `pos` stands on a stair cell.
-func stair_destination(pos: Vector2, locked: Vector2i = Vector2i(-99, -99)) -> Vector2:
+## World position of the landing on the other floor when `pos` stands on a stair
+## cell and the mover is heading onto the steps (away from that stair's own
+## landing). Crossing a staircase sideways never takes you to another floor.
+## move_dir == Vector2.ZERO skips the direction test (host-side validation).
+func stair_destination(pos: Vector2, locked: Vector2i = Vector2i(-99, -99), move_dir: Vector2 = Vector2.ZERO) -> Vector2:
 	var c := to_cell(pos)
 	if c == locked or not _stair_cells.has(c):
 		return Vector2.INF
+	if move_dir != Vector2.ZERO:
+		var down := Vector2(c - _own_landing[c]).normalized()
+		if move_dir.normalized().dot(down) < 0.35:
+			return Vector2.INF
 	return cell_center(_stair_cells[c])
 
 func at(c: Vector2i) -> int:

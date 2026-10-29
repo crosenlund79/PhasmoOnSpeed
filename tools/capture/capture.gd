@@ -108,6 +108,18 @@ func _shot(s: String) -> void:
 		run.player.aim_angle = spot[1]
 		await _wait(60)
 		await _save(s)
+	elif s.begins_with("basement_"):
+		var run: Run = Game.start_run(s.substr(9), 5, "werewolf")
+		await _wait(5)
+		run.creature.set_process(false)
+		var st: Dictionary = run.map.stairs[0]
+		run.player.global_position = HouseMap.cell_center(st["b_land"]) + Vector2(40, 30)
+		run._apply_camera_limits(run.player.global_position)
+		run._on_local_floor(-1)
+		run.camera.reset_smoothing()
+		run.player.aim_override = 0.3
+		await _wait(60)
+		await _save(s)
 	elif s == "results":
 		var run: Run = Game.start_run("ashgrove", 5, "poltergeist")
 		await _wait(200)

@@ -517,7 +517,9 @@ func shake_furniture_near(pos: Vector2) -> void:
 func _check_stairs(h: Player) -> void:
 	if h.remote or h.dead:
 		return
-	var dest := map.stair_destination(h.global_position, h.get_meta("stair_lock", Vector2i(-99, -99)))
+	if h.velocity.length() < 20.0:
+		return
+	var dest := map.stair_destination(h.global_position, h.get_meta("stair_lock", Vector2i(-99, -99)), h.velocity)
 	if dest == Vector2.INF:
 		if h.has_meta("stair_lock") and HouseMap.to_cell(h.global_position) != h.get_meta("stair_lock"):
 			h.remove_meta("stair_lock")

@@ -409,7 +409,14 @@ func test_basements() -> void:
 func test_stairs_and_basement_evidence() -> void:
 	var run := await _start("blackwood", "werewolf", 13)
 	var st: Dictionary = run.map.stairs[0]
+	# Crossing the staircase sideways does nothing; heading down the steps does.
+	var down := Vector2(st["a"] - st["a_land"])
 	run.player.global_position = HouseMap.cell_center(st["a"])
+	run.player.velocity = down.orthogonal() * 200.0
+	run._check_stairs(run.player)
+	check(run.map.floor_at(run.player.global_position) == 0, "sideways across the stairs stays upstairs")
+	run.player.velocity = down * 200.0
+	run._check_stairs(run.player)
 	await _frames(3)
 	check(run.map.floor_at(run.player.global_position) == -1, "stepping on the stairs took the hunter down")
 	check(run.map.room(run.player.room_id).get("level", 0) == -1, "basement room recognised (%s)" % run.player.room_id)

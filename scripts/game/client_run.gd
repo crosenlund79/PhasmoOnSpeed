@@ -130,7 +130,9 @@ func _process(delta: float) -> void:
 	_update_puppets(delta)
 
 func _local_stairs() -> void:
-	var dest := map.stair_destination(player.global_position, player.get_meta("stair_lock", Vector2i(-99, -99)))
+	if player.velocity.length() < 20.0:
+		return
+	var dest := map.stair_destination(player.global_position, player.get_meta("stair_lock", Vector2i(-99, -99)), player.velocity)
 	if dest == Vector2.INF:
 		if player.has_meta("stair_lock") and HouseMap.to_cell(player.global_position) != player.get_meta("stair_lock"):
 			player.remove_meta("stair_lock")

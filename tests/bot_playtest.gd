@@ -66,6 +66,10 @@ func _step_along(speed: float) -> void:
 	var d := speed / 60.0
 	while _pi < _path.size() and d > 0.0:
 		var to := _path[_pi] - p.global_position
+		if to.length() > 90.0:
+			p.global_position = _path[_pi]   # take the staircase
+			_pi += 1
+			continue
 		if to.length() <= d:
 			p.global_position = _path[_pi]
 			d -= to.length()
@@ -203,7 +207,7 @@ func _play(house: String, cr: String, sd: int) -> void:
 						run.player.aim_angle = (u["pos"] - run.player.global_position).angle()
 					await _wait(0.5)
 					t += 0.5
-				var book := (run.placed_books()[0] if not run.placed_books().is_empty() else null)
+				var book: Node2D = (run.placed_books()[0] if not run.placed_books().is_empty() else null)
 				if book:
 					await _walk_to(book.position + Vector2(30, 0), 8.0)
 				run.player.suspect = "poltergeist"
