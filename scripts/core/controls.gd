@@ -5,8 +5,9 @@ extends RefCounted
 const HELP := [
 	["WASD / Arrows", "Move"], ["Shift", "Sprint"], ["Mouse", "Aim / facing"], ["F", "Flashlight"],
 	["1 – 9", "Equipment"], ["Q / Mouse wheel", "Cycle items"], ["Left click", "Use item"],
-	["E (hold)", "Interact / pick up / retrieve / melt / light"], ["Tab", "Choose suspected ghost"],
-	["V (hold)", "Perform banishing rite"], ["R (hold)", "Restart run"], ["H", "Controls"], ["Esc", "Pause"],
+	["E (hold)", "Interact / pick up / retrieve / melt / light"],
+	["Tab / Shift+Tab", "Choose suspected entity"], ["V (hold)", "Perform banishing rite"],
+	["Space", "Shove a rival (multiplayer)"], ["R (hold)", "Restart run (solo)"], ["H", "Controls"], ["Esc", "Pause / menu"],
 ]
 
 static func register() -> void:
@@ -19,6 +20,8 @@ static func register() -> void:
 	_key("interact", [KEY_E])
 	_key("rite", [KEY_V])
 	_key("suspect", [KEY_TAB])
+	_key("shove", [KEY_SPACE])
+	_key("suspect_prev", [])   # synthesised from Shift+Tab by PlayerInput
 	_key("cycle", [KEY_Q])
 	_key("restart", [KEY_R])
 	_key("help", [KEY_H])

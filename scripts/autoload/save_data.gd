@@ -18,11 +18,17 @@ func _defaults() -> Dictionary:
 	return {
 		"version": SAVE_VERSION,
 		"settings": {"master": 0.8, "music": 0.6, "ui_scale": 1.0, "fullscreen": false,
-			"player_name": "Investigator", "dev_mode": true},
+			"player_name": "Investigator", "dev_mode": true,
+			"equip_hud": true, "equip_hud_opacity": 0.9, "equip_hud_size": 18,
+			"ev_notify": true, "ev_notify_opacity": 0.95, "ev_notify_size": 1.0,
+			"npc_names": true, "last_address": "127.0.0.1", "last_port": 24680},
 		"records": {"best_score": 0, "best_score_time": 0.0, "best_score_house": "", "houses": {}},
 		"stats": {},
 		"history": [],
 		"runs_started": 0,
+		# Competitive multiplayer is kept completely separate from solo records.
+		"mp": {"matches": 0, "wins": 0, "best_score": 0, "vanquishes": 0, "deaths": 0, "shoves_given": 0,
+			"shoves_taken": 0, "history": []},
 	}
 
 func load_data() -> void:
@@ -38,9 +44,12 @@ func load_data() -> void:
 		return
 	for k in parsed:
 		data[k] = parsed[k]
+	# Older saves gain any new keys without losing existing records.
 	for k in _defaults()["settings"]:
 		if not data["settings"].has(k):
 			data["settings"][k] = _defaults()["settings"][k]
+	if not data.has("mp"):
+		data["mp"] = _defaults()["mp"]
 
 func save() -> void:
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
@@ -139,6 +148,37 @@ func _update_stats(s: Dictionary) -> void:
 			times[e["id"]] = [0, 0.0]
 		times[e["id"]][0] += 1
 		times[e["id"]][1] += float(e["time"])
+
+## Records one finished competitive match for the local hunter (never touches solo records).
+func record_match(results: Dictionary, my_actor: String) -> Dictionary:
+	var mp: Dictionary = data["mp"]
+	var me := {}
+	for r in results.get("rows", []):
+		if r["actor"] == my_actor:
+			me = r
+	var out := {"new_best": false, "prev_best": int(mp["best_score"])}
+	if me.is_empty():
+		return out
+	mp["matches"] = int(mp["matches"]) + 1
+	if int(me["rank"]) == 1:
+		mp["wins"] = int(mp["wins"]) + 1
+	if me["vanquisher"]:
+		mp["vanquishes"] = int(mp["vanquishes"]) + 1
+	if not me["alive"]:
+		mp["deaths"] = int(mp["deaths"]) + 1
+	mp["shoves_given"] = int(mp["shoves_given"]) + int(me["shoves_given"])
+	mp["shoves_taken"] = int(mp["shoves_taken"]) + int(me["shoves_taken"])
+	if int(me["score"]) > int(mp["best_score"]):
+		mp["best_score"] = int(me["score"])
+		out["new_best"] = true
+	var hist: Array = mp["history"]
+	hist.append({"house": results["house"], "creature": results["creature"], "outcome": results["outcome"],
+		"time": results["time"], "score": me["score"], "rank": me["rank"], "players": results["rows"].size(),
+		"rules": results["rules_version"], "date": Time.get_datetime_string_from_system()})
+	while hist.size() > HISTORY_LIMIT:
+		hist.pop_front()
+	save()
+	return out
 
 func save_replay(replay: Dictionary) -> void:
 	var f := FileAccess.open(replay_path, FileAccess.WRITE)

@@ -5,7 +5,7 @@ extends RefCounted
 ## reads this data; it never runs gameplay logic.
 
 const HZ := 15.0
-const FORMAT_VERSION := 1
+const FORMAT_VERSION := 2   # 2: multi-hunter, floors, recorded flicker/darkness
 
 var data := {}
 var _acc := 0.0

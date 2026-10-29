@@ -371,6 +371,11 @@ def lights():
     out[..., :3] = 255
     out[..., 3] = np.clip(a * 255, 0, 255).astype(np.uint8)
     save(Image.fromarray(out, "RGBA"), "lights/cone.png")
+    # Same cone with its origin at the exact centre of the image, so a light node
+    # placed at the holder casts shadows from the holder (no texture offset needed).
+    centred = np.zeros((H, W * 2, 4), np.uint8)
+    centred[:, W:, :] = out
+    save(Image.fromarray(centred, "RGBA"), "lights/cone_centered.png")
     # candle: warm, slightly irregular radial
     S = 256
     yy, xx = np.mgrid[0:S, 0:S].astype(np.float32)

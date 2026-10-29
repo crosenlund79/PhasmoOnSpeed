@@ -234,52 +234,52 @@ func test_seeded_reset_repeatable() -> void:
 	var b := await _start("blackwood", "", 4242)
 	var sig_b := [b.creature.type_id, b.creature.lair_room, b.pickups.map(func(p): return p["pos"])]
 	check(str(sig_a) == str(sig_b), "same seed gives the same encounter")
-	check(b.elapsed < 1.0 and b.journal.entries.is_empty() and b.player.wounds == 0, "fresh state after reset")
+	check(b.elapsed < 1.0 and b.player.journal.entries.is_empty() and b.player.wounds == 0, "fresh state after reset")
 
 func test_genuine_evidence_room() -> void:
 	var run := await _start("ashgrove", "shade", 99)
 	var lair := run.creature.lair_room
 	run.player.global_position = HouseMap.cell_center(run.map.free_cells(lair)[0])
-	run.equipment.select(Defs.BASE_LOADOUT.find("thermometer"))
+	run.player.equipment.select(Defs.BASE_LOADOUT.find("thermometer"))
 	await _frames(120)
-	check(run.journal.has("freezing"), "freezing found in the Shade's lair")
-	if run.journal.has("freezing"):
-		check(run.journal.entries[0]["room_id"] == lair, "room recorded is the lair (%s vs %s)" % [run.journal.entries[0]["room_id"], lair])
-		check(run.journal.entries[0]["room_name"] == run.map.room_name(lair), "room name")
+	check(run.player.journal.has("freezing"), "freezing found in the Shade's lair")
+	if run.player.journal.has("freezing"):
+		check(run.player.journal.entries[0]["room_id"] == lair, "room recorded is the lair (%s vs %s)" % [run.player.journal.entries[0]["room_id"], lair])
+		check(run.player.journal.entries[0]["room_name"] == run.map.room_name(lair), "room name")
 	# Evidence that does not belong to the entity is never accepted.
-	run.discover("spirit_box", lair)
-	run.discover("claw_marks", lair)
-	check(not run.journal.has("spirit_box") and not run.journal.has("claw_marks"), "foreign evidence rejected")
-	var n := run.journal.entries.size()
-	run.discover("freezing", "kitchen")
-	check(run.journal.entries.size() == n, "no duplicate entries")
+	run.discover(run.player, "spirit_box", lair)
+	run.discover(run.player, "claw_marks", lair)
+	check(not run.player.journal.has("spirit_box") and not run.player.journal.has("claw_marks"), "foreign evidence rejected")
+	var n := run.player.journal.entries.size()
+	run.discover(run.player, "freezing", "kitchen")
+	check(run.player.journal.entries.size() == n, "no duplicate entries")
 
 func test_reckless_and_harbinger() -> void:
 	var run := await _start("marrow_street", "werewolf", 5)
-	run.suspect = "shade"
-	run.attempt_vanquish("shade", "rite")
-	check(run.reckless_attempts == 1 and run.wrong_attempts == 1, "uninvestigated wrong attempt is reckless")
+	run.player.suspect = "shade"
+	run.attempt_vanquish(run.player, "shade", "rite")
+	check(run.player.reckless_attempts == 1 and run.player.wrong_attempts == 1, "uninvestigated wrong attempt is reckless")
 	check(run.occupants.all(func(o): return o.state == "flee" or o.state == "gone"), "occupants flee on severe reaction")
 	check(not run.harbinger_summoned, "not yet the Harbinger")
-	run.journal.record("fur", 10.0, "kitchen", "Kitchen")
-	run.attempt_vanquish("vampire", "wooden_stake")
-	check(run.reckless_attempts == 1, "investigated wrong attempt is not reckless")
-	run.attempt_vanquish("poltergeist", "rite")
+	run.player.journal.record("fur", 10.0, "kitchen", "Kitchen")
+	run.attempt_vanquish(run.player, "vampire", "wooden_stake")
+	check(run.player.reckless_attempts == 1, "investigated wrong attempt is not reckless")
+	run.attempt_vanquish(run.player, "poltergeist", "rite")
 	check(run.harbinger_summoned, "third wrong attempt summons the Harbinger")
 	await _frames(2)
 	check(run.creature.type_id == "harbinger", "entity replaced")
-	check(run.journal.active_entries().is_empty(), "old evidence voided")
-	run.discover("fur", "kitchen")
-	check(not run.journal.has("fur"), "old entity's evidence no longer accepted")
+	check(run.player.journal.active_entries().is_empty(), "old evidence voided")
+	run.discover(run.player, "fur", "kitchen")
+	check(not run.player.journal.has("fur"), "old entity's evidence no longer accepted")
 	check(run.sigils.size() == 3, "three sigil candles")
 	for s in run.sigils:
 		check(run.map.reachable_from_spawn().has(HouseMap.to_cell(s["pos"])), "sigil reachable")
 	for s in run.sigils.duplicate():
-		run._light_sigil(s)
+		run._light_sigil(run.player, s)
 	check(run.creature.state == "bound", "Harbinger bound after three sigils")
 	run.player.global_position = run.creature.position + Vector2(40, 0)
-	check(run.can_begin_rite(), "final rite available")
-	run.perform_rite()
+	check(run.can_begin_rite(run.player), "final rite available")
+	run.perform_rite(run.player)
 	check(run._outcome == "vanquished", "Harbinger banished")
 	var s := run.build_summary()
 	check(s["harbinger"] and s["creature"] == "harbinger" and s["original_creature"] == "werewolf", "summary records replacement")
@@ -291,7 +291,7 @@ func test_correct_blind_victory() -> void:
 	run.player.add_resource("wooden_stake")
 	run.player.global_position = run.creature.position + Vector2(-30, 0)
 	run.player.aim_angle = 0.0
-	run.strike("wooden_stake")
+	run.strike(run.player, "wooden_stake")
 	check(run._outcome == "vanquished", "stake + garlic vanquishes a vampire")
 	var s := run.build_summary()
 	check(s["blind"], "completely blind victory recorded")
@@ -314,7 +314,7 @@ func test_replay_is_passive() -> void:
 	SaveData.reset_all()
 	var run := await _start("ashgrove", "poltergeist", 21)
 	await _frames(300)
-	run.attempt_vanquish("poltergeist", "rite")
+	run.attempt_vanquish(run.player, "poltergeist", "rite")
 	var summary := run.build_summary()
 	var replay: Dictionary = run.recorder.finish(run.elapsed, "test")
 	check(replay["tracks"]["player_1"].size() >= 5 * 40, "player track recorded")
@@ -335,13 +335,13 @@ func test_replay_is_passive() -> void:
 
 func test_crucifix_blocks_ghost_hunt() -> void:
 	var run := await _start("blackwood", "shade", 8)
-	run.place_item("crucifix", run.creature.position)
+	run.place_item(run.player, "crucifix", run.creature.position)
 	run.trigger_hunt(false)
 	check(not run.creature.is_hunting(), "crucifix prevented the ghost hunt")
 	_cleanup_scene()
 	await get_tree().process_frame
 	var run2 := await _start("blackwood", "vampire", 8)
-	run2.place_item("crucifix", run2.creature.position)
+	run2.place_item(run2.player, "crucifix", run2.creature.position)
 	run2.trigger_hunt(false)
 	check(run2.creature.is_hunting(), "crucifix has no power over a vampire")
 
@@ -350,12 +350,12 @@ func test_shapeshifter_needs_exposure() -> void:
 	run.player.add_resource("iron_nails")
 	run.player.global_position = run.creature.position + Vector2(-30, 0)
 	run.player.aim_angle = 0.0
-	run.strike("iron_nails")
-	check(run._outcome == "" and run.incomplete_attempts == 1, "unexposed shapeshifter resists")
-	check(run.wrong_attempts == 0, "right identity is not counted as wrong")
+	run.strike(run.player, "iron_nails")
+	check(run._outcome == "" and run.player.incomplete_attempts == 1, "unexposed shapeshifter resists")
+	check(run.player.wrong_attempts == 0, "right identity is not counted as wrong")
 	run.creature.expose(10.0)
-	run.equipment._cooldown = 0.0
-	run.strike("iron_nails")
+	run.player.equipment._cooldown = 0.0
+	run.strike(run.player, "iron_nails")
 	check(run._outcome == "vanquished", "exposed shapeshifter is banished")
 
 func test_full_flow_records_once() -> void:
@@ -364,7 +364,7 @@ func test_full_flow_records_once() -> void:
 	run.player.add_resource("silver_stake")
 	run.player.global_position = run.creature.position + Vector2(-30, 0)
 	run.player.aim_angle = 0.0
-	run.strike("silver_stake")
+	run.strike(run.player, "silver_stake")
 	await _frames(200)
 	var res: Dictionary = Game.last_result
 	check(not res.is_empty(), "results produced")

@@ -36,7 +36,9 @@ FURNITURE = {
 }
 FLOORS = ["wood_dark", "wood_light", "parquet", "carpet_red", "carpet_blue", "carpet_green", "tile_checker",
           "tile_white", "stone", "dirt", "grass", "gravel"]
-TOKENS = ["investigator", "occupant_a", "occupant_b", "occupant_c", "occupant_bitten", "shade", "poltergeist",
+TOKENS = ["investigator", "occupant_a", "occupant_b", "occupant_c", "occupant_bitten", "occupant_d", "occupant_e",
+          "occupant_f", "occupant_a_bitten", "occupant_b_bitten", "occupant_c_bitten", "occupant_d_bitten",
+          "occupant_e_bitten", "occupant_f_bitten", "shade", "poltergeist",
           "vampire", "werewolf", "shapeshifter", "cat", "harbinger"]
 ITEMS = ["garlic", "wooden_stake", "silverware", "silver_stake", "hand_mirror", "iron_nails", "ghost_book",
          "ghost_book_written", "salt_pile", "crucifix_placed", "sigil_candle_unlit", "sigil_candle_lit",
@@ -51,7 +53,7 @@ UI = {"parchment": (512, 512), "panel_frame": (96, 96), "panel_dark": (96, 96), 
       "button_hover": (96, 48), "button_pressed": (96, 48), "title_logo": (1200, 300),
       "menu_background": (1920, 1080), "banner_vanquished": (1000, 220), "banner_perished": (1000, 220),
       "vignette": (1024, 1024), "slot": (64, 64), "slot_selected": (64, 64)}
-LIGHTS = {"soft": (512, 512), "cone": (1024, 512), "candle": (256, 256)}
+LIGHTS = {"soft": (512, 512), "cone": (1024, 512), "cone_centered": (2048, 512), "candle": (256, 256)}
 OPAQUE_OK = {"parchment", "menu_background"}
 
 

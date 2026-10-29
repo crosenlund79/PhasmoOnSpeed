@@ -126,7 +126,8 @@ func _light(pos: Vector2, color: Color, energy: float, scale: float, tex_path: S
 
 func _build_lights() -> void:
 	for r in map.rooms:
-		var center := map.room_center(r["id"])
+		# Never place a light inside a wall (L-shaped rooms): shadows break.
+		var center := HouseMap.cell_center(map.nearest_floor(HouseMap.to_cell(map.room_center(r["id"])), r["id"]))
 		var extent := 0.0
 		for c in r["cells"]:
 			extent = maxf(extent, center.distance_to(HouseMap.cell_center(c)))
@@ -201,7 +202,9 @@ func _build_occluders() -> void:
 	for rect in _merged_rects(func(c): return map.is_wall(c)):
 		var occ := LightOccluder2D.new()
 		var poly := OccluderPolygon2D.new()
-		var r: Rect2 = rect.grow(-2.0)
+		# Exact cell bounds: shrinking each piece left hairline gaps between
+		# neighbouring occluders that light leaked through.
+		var r: Rect2 = rect
 		poly.polygon = PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)])
 		occ.occluder = poly
 		add_child(occ)
@@ -232,6 +235,21 @@ func _process(delta: float) -> void:
 			if n > 0.6 * (1.0 - _flicker_strength * 0.5):
 				e *= 0.08
 		light.energy = e
+
+## Brief rattle of a furniture sprite (poltergeist activity; replay and clients too).
+func shake_furniture(index: int) -> void:
+	if index < 0 or index >= map.furniture.size() or not map.furniture[index].has("sprite"):
+		return
+	var s: Sprite2D = map.furniture[index]["sprite"]
+	if s.has_meta("shaking"):
+		return
+	s.set_meta("shaking", true)
+	var base_rot := s.rotation
+	var tw := create_tween()
+	for i in 4:
+		tw.tween_property(s, "rotation", base_rot + randf_range(-0.08, 0.08), 0.05)
+	tw.tween_property(s, "rotation", base_rot, 0.05)
+	tw.tween_callback(func(): s.remove_meta("shaking"))
 
 func show_mirror_overlay(index: int, tex: Texture2D, visible_alpha: float) -> void:
 	if index < 0 or index >= mirrors.size():

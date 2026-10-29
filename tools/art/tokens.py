@@ -227,6 +227,38 @@ def occupant_bitten():
     return occupant("occupant_bitten", "#7a3a22", "#b0633a", "#4b5d74", "#d8d2c2", "a", pale=True, bitten=True)
 
 
+# Additional occupants (more distinct looks; the shapeshifter's human disguise
+# borrows an unused one, so it never duplicates a real occupant).
+OCCUPANT_LOOKS = {
+    "occupant_d": ("#2e2a28", "#5a514a", "#7a6a3e", "#8c2f2a", "b"),
+    "occupant_e": ("#5b3f2b", "#8a6446", "#3f5a4a", "#c9b98e", "a"),
+    "occupant_f": ("#a9a49b", "#d6d0c4", "#5a3c5e", "#7d6b3b", "c"),
+}
+BASE_LOOKS = {
+    "occupant_a": ("#7a3a22", "#b0633a", "#4b5d74", "#d8d2c2", "a"),
+    "occupant_b": ("#8a8580", "#c0bab2", "#5a5248", "#6a3a26", "b"),
+    "occupant_c": ("#c9a35c", "#e6cb8a", "#6e4a5a", "#4f5d3a", "c"),
+}
+
+
+def occupant_d():
+    return occupant("occupant_d", *OCCUPANT_LOOKS["occupant_d"])
+
+
+def occupant_e():
+    return occupant("occupant_e", *OCCUPANT_LOOKS["occupant_e"])
+
+
+def occupant_f():
+    return occupant("occupant_f", *OCCUPANT_LOOKS["occupant_f"])
+
+
+def occupant_bitten_variants():
+    # A bitten occupant keeps their own clothes and hair: only pallor and wounds change.
+    for name, look in list(BASE_LOOKS.items()) + list(OCCUPANT_LOOKS.items()):
+        occupant(name + "_bitten", *look, pale=True, bitten=True)
+
+
 # --------------------------------------------------------------------------
 # entities
 # --------------------------------------------------------------------------
@@ -659,8 +691,8 @@ def harbinger():
     save(cv.image(), "tokens/harbinger.png")
 
 
-ALL = [investigator, occupant_a, occupant_b, occupant_c, occupant_bitten, shade, poltergeist, vampire, werewolf,
-       shapeshifter, cat, harbinger]
+ALL = [investigator, occupant_a, occupant_b, occupant_c, occupant_bitten, occupant_d, occupant_e, occupant_f,
+       occupant_bitten_variants, shade, poltergeist, vampire, werewolf, shapeshifter, cat, harbinger]
 
 
 def build_all(only=None):

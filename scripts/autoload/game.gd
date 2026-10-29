@@ -57,6 +57,44 @@ func goto_stats() -> void:
 func goto_rankings() -> void:
 	_switch(preload("res://scripts/ui/rankings_screen.gd").new())
 
+func goto_encyclopedia() -> void:
+	_switch(preload("res://scripts/ui/encyclopedia.gd").new())
+
+func goto_lobby(message: String = "") -> void:
+	var l = preload("res://scripts/ui/lobby.gd").new()
+	l.message = message
+	_switch(l)
+
+## Host: build the authoritative run for a competitive match.
+func start_match_host(house_id: String, run_seed: int, creature_override: String, roster: Array) -> Node:
+	var run = preload("res://scripts/game/run.gd").new()
+	run.setup(house_id, run_seed, creature_override, roster)
+	_switch(run)
+	return run
+
+## Client: build the mirrored view of the host's match.
+func start_match_client(house_id: String, run_seed: int, roster: Array, my_peer: int) -> Node:
+	var cr = preload("res://scripts/game/client_run.gd").new()
+	cr.setup(house_id, run_seed, roster, my_peer)
+	_switch(cr)
+	return cr
+
+## Host: the match ended. Send everyone the results and the replay.
+func finish_match(results: Dictionary, replay: Dictionary) -> void:
+	Net.host_send_results(results, replay)
+	show_match_results(results, replay)
+
+func show_match_results(results: Dictionary, replay: Dictionary) -> void:
+	var me := ""
+	for r in results.get("rows", []):
+		if int(r["peer_id"]) == Net.my_peer_id():
+			me = r["actor"]
+	var records := SaveData.record_match(results, me)
+	last_result = {"match": results, "replay": replay, "records": records, "me": me}
+	var res = preload("res://scripts/ui/match_results.gd").new()
+	res.setup(last_result)
+	_switch(res)
+
 ## Starts a run. creature_override is only for tests/dev; normal play is random.
 func start_run(house_id: String, run_seed: int = -1, creature_override: String = "") -> Node:
 	var run = preload("res://scripts/game/run.gd").new()

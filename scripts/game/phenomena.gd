@@ -25,7 +25,8 @@ var orbs: Array = []           # Sprite2D on the unlit layer
 var mirror_ttl := {}           # mirror index -> seconds remaining
 var voices: Array = []         # {pos, room, ttl}
 var book_write_t := -1.0
-var book_written := false
+var book_written := false     # any book written (books keep their pages when moved)
+var written_books := {}        # book Sprite2D -> true
 var _interact_t := 0.0
 var _drop_t := 0.0
 var _fur_t := 0.0
@@ -86,6 +87,7 @@ func clear() -> void:
 	for o in orbs:
 		o.queue_free()
 	orbs.clear()
+	run.record_event("orb_clear", {})
 	hotspots.clear()
 	voices.clear()
 	for idx in mirror_ttl:
@@ -93,6 +95,7 @@ func clear() -> void:
 	mirror_ttl.clear()
 	temps.clear()
 	book_write_t = -1.0
+	written_books.clear()
 	_bite_t = -1.0
 	source = ""
 	evidence = []
@@ -102,7 +105,7 @@ const CLUE_SPRITES := {
 	"footprints": "items/paw_print.png", "blood_drops": "items/blood_drops.png", "shed_skin": "items/shed_skin.png",
 }
 
-func _decal(sprite_path: String, pos: Vector2, rot: float, size: float) -> Sprite2D:
+func _decal(sprite_path: String, pos: Vector2, rot: float, size: float, uv: bool = false) -> Sprite2D:
 	var s := Sprite2D.new()
 	s.texture = Art.tex(sprite_path)
 	s.position = pos
@@ -111,7 +114,10 @@ func _decal(sprite_path: String, pos: Vector2, rot: float, size: float) -> Sprit
 	s.scale = Vector2(k, k)
 	s.name = "decal_%d" % run.next_uid()
 	run.view.decal_layer.add_child(s)
-	run.record_event("decal", {"id": s.name, "sprite": sprite_path, "x": pos.x, "y": pos.y, "rot": rot, "size": size})
+	if uv:
+		s.material = _uv_material
+		s.light_mask = 2
+	run.record_event("decal", {"id": s.name, "sprite": sprite_path, "x": pos.x, "y": pos.y, "rot": rot, "size": size, "uv": uv})
 	return s
 
 func _add_clue(ev: String, room_id: String, wall_side: bool, at: Vector2 = Vector2.INF, rot: float = INF) -> void:
@@ -158,6 +164,7 @@ func _add_orb(room_id: String) -> void:
 	s.set_meta("room", room_id)
 	run.world_text.add_child(s)
 	orbs.append(s)
+	run.record_event("orb", {"x": s.position.x, "y": s.position.y, "phase": s.get_meta("phase")})
 
 func _add_uv_print(c: Creature) -> void:
 	if uv_prints.size() >= 10:
@@ -169,9 +176,7 @@ func _add_uv_print(c: Creature) -> void:
 	if near.is_empty():
 		return
 	var pos := HouseMap.cell_center(near[rng.randi_range(0, near.size() - 1)])
-	var s := _decal("items/uv_handprint.png", pos, rng.randf() * TAU, 30.0)
-	s.material = _uv_material
-	s.light_mask = 2
+	var s := _decal("items/uv_handprint.png", pos, rng.randf() * TAU, 30.0, true)
 	uv_prints.append({"pos": pos, "node": s, "room": c.room_id})
 
 # --- Entity-driven production ------------------------------------------------------
@@ -191,6 +196,7 @@ func creature_tick(c: Creature, delta: float) -> void:
 		if mirror_ttl[idx] <= 0.0:
 			mirror_ttl.erase(idx)
 			run.view.show_mirror_overlay(idx, null, 0.0)
+			run.record_event("mirror", {"index": idx, "on": false})
 	var indoors: bool = not map.room(c.room_id).get("outdoor", true)
 	match source:
 		"shade", "poltergeist":
@@ -254,33 +260,37 @@ func _ghost_interaction(c: Creature) -> void:
 	if "uv" in evidence and rng.randf() < 0.55:
 		_add_uv_print(c)
 	if source == "poltergeist":
-		Sfx.play_at("poltergeist_bang" if rng.randf() < 0.6 else "door_creak", c.position, run.world, -3.0)
+		run.sound_at("poltergeist_bang" if rng.randf() < 0.6 else "door_creak", c.position, -3.0)
+		run.disturbance(c.position)
 		run.shake_furniture_near(c.position)
 	elif rng.randf() < 0.3:
-		Sfx.play_at("door_creak", c.position, run.world, -8.0)
+		run.sound_at("door_creak", c.position, -8.0)
 
 func _tick_book(c: Creature, delta: float) -> void:
-	if book_written or not ("writing" in evidence):
+	if not ("writing" in evidence):
 		return
-	var book: Node2D = run.placed_book()
-	if book == null:
-		book_write_t = -1.0
+	# The ghost writes in the first unwritten book laid near it.
+	for book in run.placed_books():
+		if written_books.has(book):
+			continue
+		var near: bool = map.room_at(book.position) == c.lair_room or book.position.distance_to(c.position) < 140.0
+		if not near:
+			continue
+		if book_write_t < 0.0:
+			book_write_t = rng.randf_range(6.0, 13.0)
+		book_write_t -= delta
+		if book_write_t <= 0.0:
+			book_write_t = -1.0
+			written_books[book] = true
+			book_written = true
+			run.on_book_written(book)
 		return
-	var near: bool = map.room_at(book.position) == c.lair_room or book.position.distance_to(c.position) < 140.0
-	if not near:
-		return
-	if book_write_t < 0.0:
-		book_write_t = rng.randf_range(6.0, 13.0)
-	book_write_t -= delta
-	if book_write_t <= 0.0:
-		book_written = true
-		run.on_book_written(book)
 
 func _mimic_voice(c: Creature) -> void:
 	# The voice comes from where the creature is, wearing an occupant's voice.
 	var pos := c.position
 	voices.append({"pos": pos, "room": c.room_id, "ttl": 14.0})
-	Sfx.play_at("whisper_mimic", pos, run.world, 2.0, rng.randf_range(0.9, 1.1), 1100.0)
+	run.sound_at("whisper_mimic", pos, 2.0, rng.randf_range(0.9, 1.1), 1100.0)
 	run.record_event("voice", {"x": pos.x, "y": pos.y})
 
 # --- Readings for equipment ---------------------------------------------------------
@@ -298,24 +308,34 @@ func emf_at(pos: Vector2) -> Array:
 				room = hs["room"]
 	return [best, room]
 
+## Continuous EMF value (1.0 – 5.0) for the near-player readout.
+func emf_value(pos: Vector2) -> float:
+	var v := 1.0 + 0.15 * sin(_t * 3.1 + pos.x * 0.01)
+	for hs in hotspots:
+		var d: float = pos.distance_to(hs["pos"])
+		v = maxf(v, float(hs["level"]) * clampf(1.2 - d / 120.0, 0.0, 1.0))
+	return clampf(v, 1.0, 5.0)
+
 func temperature(room_id: String) -> float:
 	return float(temps.get(room_id, 14.0)) + sin(_t * 1.7) * 0.4
 
 # --- Observation ---------------------------------------------------------------------
 
 func _process(delta: float) -> void:
-	var p: Player = run.player
 	for o in orbs:
 		var ph: float = o.get_meta("phase")
 		o.position = o.get_meta("base") + Vector2(sin(_t * 0.7 + ph) * 18.0, cos(_t * 0.5 + ph * 2.0) * 14.0)
 		o.modulate.a = 0.55 + 0.35 * sin(_t * 2.0 + ph)
-	if p == null or p.dead or source == "":
+	if source == "":
 		return
 	_detect_acc += delta
 	if _detect_acc < 1.0 / DETECT_HZ:
 		return
 	_detect_acc = 0.0
-	_observe(p)
+	# Every living hunter observes for themselves (private journals).
+	for p: Player in run.hunters:
+		if not p.dead:
+			_observe(p)
 
 func is_lit(pos: Vector2, p: Player) -> bool:
 	var pp := p.global_position
@@ -341,35 +361,34 @@ static func _in_cone(origin: Vector2, angle: float, pos: Vector2, rng_len: float
 func _observe(p: Player) -> void:
 	var pp := p.global_position
 	for c in clues:
-		if run.journal.has(c["evidence"]):
+		if p.journal.has(c["evidence"]):
 			continue
 		if pp.distance_to(c["pos"]) < CLUE_RANGE and map.los(pp, c["pos"]) and is_lit(c["pos"], p):
-			run.discover(c["evidence"], c["room"])
+			run.discover(p, c["evidence"], c["room"])
 	if p.uv_light.visible:
 		for u in uv_prints:
 			if _in_cone(pp, p.aim_angle, u["pos"], UV_RANGE, UV_HALF_ANGLE) and map.los(pp, u["pos"]):
-				run.discover("uv", u["room"])
+				run.discover(p, "uv", u["room"])
 				break
 	if source == "vampire":
 		for o in run.occupants:
 			if o.bitten and o.state != "gone" and pp.distance_to(o.position) < 135.0 and map.los(pp, o.position) and is_lit(o.position, p):
-				run.discover("bite_marks", o.room_id)
+				run.discover(p, "bite_marks", o.room_id)
 	for idx in mirror_ttl:
 		var m: Dictionary = run.view.mirrors[idx]
 		var mp: Vector2 = m["furniture"]["rect"].get_center()
 		if pp.distance_to(mp) < 175.0 and map.los(pp, mp) and is_lit(mp, p):
-			run.discover("wrong_reflection", m["furniture"]["room_id"])
+			run.discover(p, "wrong_reflection", m["furniture"]["room_id"])
 	for v in voices:
 		if p.room_id == v["room"] or pp.distance_to(v["pos"]) < 210.0:
-			run.discover("mimic_voice", v["room"])
-	if book_written:
-		var book: Node2D = run.placed_book()
-		if book and pp.distance_to(book.position) < 170.0 and map.los(pp, book.position) and is_lit(book.position, p):
-			run.discover("writing", map.room_at(book.position))
-	if run.equipment.current() == "orb_camera":
+			run.discover(p, "mimic_voice", v["room"])
+	for book in written_books:
+		if is_instance_valid(book) and pp.distance_to(book.position) < 170.0 and map.los(pp, book.position) and is_lit(book.position, p):
+			run.discover(p, "writing", map.room_at(book.position))
+	if p.equipment and p.equipment.current() == "orb_camera":
 		for o in orbs:
 			if _in_cone(pp, p.aim_angle, o.position, 280.0, 0.6) and map.los(pp, o.position):
-				run.discover("orbs", o.get_meta("room"))
+				run.discover(p, "orbs", o.get_meta("room"))
 				break
 
 func set_orbs_visible(v: bool) -> void:

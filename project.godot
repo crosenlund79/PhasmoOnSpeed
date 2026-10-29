@@ -16,6 +16,7 @@ Art="*res://scripts/autoload/art.gd"
 Sfx="*res://scripts/autoload/sfx.gd"
 SaveData="*res://scripts/autoload/save_data.gd"
 Online="*res://scripts/autoload/online.gd"
+Net="*res://scripts/autoload/net.gd"
 Game="*res://scripts/autoload/game.gd"
 
 [display]

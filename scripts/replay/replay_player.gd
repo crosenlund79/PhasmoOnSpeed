@@ -1,8 +1,8 @@
 class_name ReplayPlayer
 extends Node2D
-## Plays back a recorded run (ReplayRecorder data) at a fixed speed and loops.
-## Purely visual: it rebuilds the house view and moves puppet tokens. It never
-## creates gameplay nodes, never touches SaveData and never records statistics.
+## Plays back a recorded run or match (ReplayRecorder data) at a fixed speed and
+## loops. Purely visual: it rebuilds the house view and moves puppet tokens. It
+## never creates gameplay nodes, never touches SaveData and never records stats.
 
 const SPEED := 4.0
 const LOOP_PAUSE := 1.6
@@ -11,16 +11,16 @@ var replay := {}
 var map: HouseMap
 var view: HouseView
 var camera: Camera2D
+var fx: WorldFx
+var text_layer: CanvasLayer
 var t := 0.0
 var duration := 0.0
 var _hold := 0.0
 var _tokens := {}        # actor id -> TokenSprite
 var _idx := {}           # actor id -> sample index (5 floats per sample)
 var _event_i := 0
-var _decals := {}
-var _flashlight: PointLight2D
-var _ambient: PointLight2D
-var _flash_on := true
+var _lights := {}        # player actor id -> {cone, ambient, on}
+var _labels := {}        # actor id -> Label (names in multiplayer)
 var follow := "player_1"
 var zoom := 1.25
 var camera_offset := Vector2.ZERO
@@ -33,26 +33,41 @@ func _ready() -> void:
 	view = HouseView.new()
 	view.build(map, false, true)
 	add_child(view)
+	text_layer = CanvasLayer.new()
+	text_layer.layer = 1
+	text_layer.follow_viewport_enabled = true
+	add_child(text_layer)
+	fx = WorldFx.new(view, text_layer)
 	duration = float(replay.get("duration", 0.0))
+	var mp: bool = replay.get("multiplayer", false)
 	for aid in replay.get("actors", {}):
 		var a: Dictionary = replay["actors"][aid]
 		var tk := TokenSprite.new(a["token"], float(a.get("size", 32.0)))
 		tk.modulate.a = 0.0
 		view.actor_layer.add_child(tk)
 		_tokens[aid] = tk
-	_ambient = PointLight2D.new()
-	_ambient.texture = Art.tex("lights/soft.png")
-	_ambient.texture_scale = 0.45
-	_ambient.energy = 0.6
-	add_child(_ambient)
-	_flashlight = PointLight2D.new()
-	var cone := Art.tex("lights/cone.png")
-	_flashlight.texture = cone
-	_flashlight.texture_scale = 0.62
-	_flashlight.energy = 1.2
-	_flashlight.color = Color(1.0, 0.92, 0.75)
-	_flashlight.shadow_enabled = true
-	add_child(_flashlight)
+		if a["kind"] == "player":
+			var cone := Lighting.make_cone(Color(1.0, 0.92, 0.75), 1.2, 0.62)
+			add_child(cone)
+			var amb := PointLight2D.new()
+			amb.texture = Art.tex("lights/soft.png")
+			amb.texture_scale = 0.45
+			amb.energy = 0.6
+			add_child(amb)
+			_lights[aid] = {"cone": cone, "ambient": amb, "on": true}
+		if mp and a.has("name"):
+			var l := Label.new()
+			l.text = a["name"]
+			l.add_theme_font_override("font", Art.font_heading)
+			l.add_theme_font_size_override("font_size", 13)
+			var idx := int(a.get("index", 0))
+			l.add_theme_color_override("font_color", Player.COLORS[idx % 4] if a["kind"] == "player" else SpeechTag.NAME_COLOR)
+			l.add_theme_color_override("font_outline_color", Color.BLACK)
+			l.add_theme_constant_override("outline_size", 5)
+			l.size = Vector2(160, 18)
+			l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			text_layer.add_child(l)
+			_labels[aid] = l
 	camera = Camera2D.new()
 	camera.zoom = Vector2(zoom, zoom)
 	camera.position_smoothing_enabled = true
@@ -69,11 +84,12 @@ func _restart() -> void:
 		_idx[aid] = 0
 		_tokens[aid].set_token(replay["actors"][aid]["token"])
 		_tokens[aid].modulate = Color(1, 1, 1, 0)
-	for k in _decals:
-		if is_instance_valid(_decals[k]):
-			_decals[k].queue_free()
-	_decals.clear()
-	_flash_on = true
+		_tokens[aid].sprite.modulate = Color.WHITE
+	for aid in _lights:
+		_lights[aid]["on"] = true
+	fx.clear()
+	for i in view.mirrors.size():
+		view.show_mirror_overlay(i, null, 0.0)
 	view.set_darkness(HouseView.DARKNESS, 0.01)
 	_apply(0.0)
 	if camera and _tokens.has(follow):
@@ -81,6 +97,7 @@ func _restart() -> void:
 		camera.reset_smoothing()
 
 func _process(delta: float) -> void:
+	fx.tick(delta * SPEED)
 	if duration <= 0.0:
 		return
 	if _hold > 0.0:
@@ -114,63 +131,50 @@ func _apply(now: float) -> void:
 		if float(tr[i]) > now:
 			alpha = 0.0
 		elif i + 5 < tr.size():
-			var t0 := float(tr[i])
-			var t1 := float(tr[i + 5])
-			var k := clampf((now - t0) / maxf(0.001, t1 - t0), 0.0, 1.0)
-			a = a.lerp(Vector2(tr[i + 6], tr[i + 7]), k)
-			rot = lerp_angle(rot, float(tr[i + 8]), k)
-			alpha = lerpf(alpha, float(tr[i + 9]), k)
+			var b := Vector2(tr[i + 6], tr[i + 7])
+			# Never smear a staircase jump across the void between floors.
+			if a.distance_to(b) < 140.0:
+				var t0 := float(tr[i])
+				var t1 := float(tr[i + 5])
+				var k := clampf((now - t0) / maxf(0.001, t1 - t0), 0.0, 1.0)
+				a = a.lerp(b, k)
+				rot = lerp_angle(rot, float(tr[i + 8]), k)
+				alpha = lerpf(alpha, float(tr[i + 9]), k)
 		tk.position = a
 		tk.face_now(rot)
 		tk.modulate.a = alpha
+		if _lights.has(aid):
+			var L: Dictionary = _lights[aid]
+			L["cone"].position = a
+			L["cone"].rotation = rot
+			L["cone"].visible = L["on"] and alpha > 0.5
+			L["ambient"].position = a
+		if _labels.has(aid):
+			_labels[aid].position = a + Vector2(-80, -40)
+			_labels[aid].modulate.a = alpha
 	if _tokens.has(follow):
 		var p: TokenSprite = _tokens[follow]
+		if camera.position.distance_to(p.position) > 400.0:
+			camera.position = p.position
+			camera.reset_smoothing()
 		camera.position = p.position
-		_ambient.position = p.position
-		_flashlight.visible = _flash_on and p.modulate.a > 0.1
-		_flashlight.rotation = p.facing
-		_flashlight.position = p.position + Vector2.RIGHT.rotated(p.facing) * _flashlight.texture.get_size().x * 0.5 * _flashlight.texture_scale
 
 func _event(ev: Array) -> void:
 	var type: String = ev[1]
 	var d: Dictionary = ev[2]
+	if fx.apply(type, d):
+		return
 	match type:
-		"decal":
-			var s := Sprite2D.new()
-			s.texture = Art.tex(d["sprite"])
-			s.position = Vector2(d["x"], d["y"])
-			s.rotation = float(d.get("rot", 0.0))
-			var k := float(d.get("size", 28.0)) / maxf(1.0, s.texture.get_size().x)
-			s.scale = Vector2(k, k)
-			if str(d["sprite"]).contains("uv_handprint"):
-				s.modulate = Color(0.7, 0.5, 1.0, 0.8)
-			view.decal_layer.add_child(s)
-			_decals[d["id"]] = s
-		"decal_remove":
-			if _decals.has(d["id"]) and is_instance_valid(_decals[d["id"]]):
-				_decals[d["id"]].queue_free()
-			_decals.erase(d["id"])
-		"decal_swap":
-			if _decals.has(d["id"]) and is_instance_valid(_decals[d["id"]]):
-				_decals[d["id"]].texture = Art.tex(d["sprite"])
 		"token":
 			if _tokens.has(d["actor"]):
 				_tokens[d["actor"]].set_token(d["token"])
 		"flashlight":
-			_flash_on = d.get("on", true)
-		"hunt_start":
-			view.flicker(3.5 / SPEED + 0.5, 1.0)
-			view.set_darkness(HouseView.DARKNESS_HUNT, 0.3)
-		"hunt_end":
-			view.set_darkness(HouseView.DARKNESS, 0.4)
-		"harbinger":
-			view.flicker(2.0, 1.0)
-			view.set_darkness(HouseView.DARKNESS_HARBINGER, 0.4)
-		"reckless":
-			view.flicker(1.0, 1.0)
-		"mirror":
-			view.show_mirror_overlay(int(d["index"]), Art.tex(Defs.FORM_TOKENS["true"]), 0.85 if d.get("on", true) else 0.0)
+			var aid: String = d.get("actor", "player_1")
+			if _lights.has(aid):
+				_lights[aid]["on"] = d.get("on", true)
 		"death":
-			view.set_darkness(Color(0.06, 0.02, 0.02), 0.5)
+			var aid: String = d.get("actor", "player_1")
+			if _tokens.has(aid):
+				_tokens[aid].sprite.modulate = Color(0.6, 0.1, 0.1)
 		"vanquish":
 			view.set_darkness(Color(0.42, 0.42, 0.5), 0.6)

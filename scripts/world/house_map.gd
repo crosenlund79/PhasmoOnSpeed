@@ -22,6 +22,9 @@ var furniture: Array = []         # [{type, cell: Vector2i, size: Vector2i, rot,
 var doors: Array = []             # Vector2i
 var astar := AStarGrid2D.new()
 var spawn_cell := Vector2i.ZERO
+var stairs: Array = []            # [{name, a, a_land, b, b_land}] cells; a is on the upper floor
+var _stair_cells := {}            # stair cell -> landing cell on the other floor
+var _floor_rects := {}            # floor index -> Rect2i (cells, including walls)
 
 static func from_data(d: Dictionary) -> HouseMap:
 	var m := HouseMap.new()
@@ -82,6 +85,19 @@ func _build(d: Dictionary) -> void:
 				for x in range(cell.x, cell.x + size.x):
 					blocked[Vector2i(x, y)] = true
 	spawn_cell = Vector2i(int(d["spawn"][0]), int(d["spawn"][1]))
+	for r in rooms:
+		var f := int(r.get("floor", 0))
+		r["floor"] = f
+		for c in r["cells"]:
+			var cur: Rect2i = _floor_rects.get(f, Rect2i(c, Vector2i.ONE))
+			_floor_rects[f] = cur.expand(c).expand(c + Vector2i.ONE)
+	for f in _floor_rects:
+		_floor_rects[f] = (_floor_rects[f] as Rect2i).grow(1)
+	for st in d.get("stairs", []):
+		var e := {"name": st.get("name", "Stairs"), "a": _v(st["a"]), "a_land": _v(st["a_land"]), "b": _v(st["b"]), "b_land": _v(st["b_land"])}
+		stairs.append(e)
+		_stair_cells[e["a"]] = e["b_land"]
+		_stair_cells[e["b"]] = e["a_land"]
 	astar.region = Rect2i(0, 0, w, h)
 	astar.cell_size = Vector2(C, C)
 	astar.offset = Vector2(C, C) * 0.5
@@ -92,6 +108,44 @@ func _build(d: Dictionary) -> void:
 	for y in h:
 		for x in w:
 			astar.set_point_solid(Vector2i(x, y), not walkable(Vector2i(x, y)))
+
+static func _v(a: Array) -> Vector2i:
+	return Vector2i(int(a[0]), int(a[1]))
+
+# --- Floors ----------------------------------------------------------------------------
+
+## 0 = main floor, -1 = basement. Walls/void resolve by the floor rectangle they lie in.
+func floor_of_cell(c: Vector2i) -> int:
+	var v := at(c)
+	if v >= 0:
+		return int(rooms[v]["floor"])
+	for f in _floor_rects:
+		if (_floor_rects[f] as Rect2i).has_point(c):
+			return f
+	return 0
+
+func floor_at(p: Vector2) -> int:
+	return floor_of_cell(to_cell(p))
+
+func floors() -> Array:
+	var out := _floor_rects.keys()
+	out.sort()
+	out.reverse()
+	return out
+
+func floor_bounds(f: int) -> Rect2:
+	var r: Rect2i = _floor_rects.get(f, Rect2i(0, 0, w, h))
+	return Rect2(Vector2(r.position) * C, Vector2(r.size) * C)
+
+func is_stair(c: Vector2i) -> bool:
+	return _stair_cells.has(c)
+
+## World position of the landing on the other floor when `pos` stands on a stair cell.
+func stair_destination(pos: Vector2, locked: Vector2i = Vector2i(-99, -99)) -> Vector2:
+	var c := to_cell(pos)
+	if c == locked or not _stair_cells.has(c):
+		return Vector2.INF
+	return cell_center(_stair_cells[c])
 
 func at(c: Vector2i) -> int:
 	if c.x < 0 or c.y < 0 or c.x >= w or c.y >= h:
@@ -197,6 +251,17 @@ func wall_adjacent_cells(room_id: String) -> Array:
 func furniture_with(flag: String) -> Array:
 	return furniture.filter(func(f): return f["def"].get(flag, false))
 
+## Nearest floor cell belonging to `room_id` (furniture allowed).
+func nearest_floor(c: Vector2i, room_id: String) -> Vector2i:
+	var best := c
+	var bd := INF
+	for cell in room(room_id).get("cells", []):
+		var d := Vector2(cell - c).length_squared()
+		if d < bd:
+			bd = d
+			best = cell
+	return best
+
 func nearest_walkable(c: Vector2i) -> Vector2i:
 	if walkable(c):
 		return c
@@ -209,9 +274,33 @@ func nearest_walkable(c: Vector2i) -> Vector2i:
 	return spawn_cell
 
 ## World-space path between two points (cell centres), empty if unreachable.
+## Paths that change floor include an instant jump from a staircase cell to the
+## landing on the other floor (consecutive points far apart = take the stairs).
 func path(from: Vector2, to: Vector2) -> PackedVector2Array:
 	var a := nearest_walkable(to_cell(from))
 	var b := nearest_walkable(to_cell(to))
+	var fa := floor_of_cell(a)
+	var fb := floor_of_cell(b)
+	if fa != fb and not stairs.is_empty():
+		var best := PackedVector2Array()
+		var best_len := INF
+		for st in stairs:
+			var top_first: bool = floor_of_cell(st["a"]) == fa
+			var enter: Vector2i = st["a"] if top_first else st["b"]
+			var land: Vector2i = st["b_land"] if top_first else st["a_land"]
+			var p1 := _grid_path(a, enter)
+			var p2 := _grid_path(land, b)
+			if (p1.is_empty() and a != enter) or (p2.is_empty() and land != b):
+				continue
+			var length := float(p1.size() + p2.size())
+			if length < best_len:
+				best_len = length
+				best = p1 if not p1.is_empty() else PackedVector2Array([cell_center(enter)])
+				best.append_array(p2 if not p2.is_empty() else PackedVector2Array([cell_center(land)]))
+		return best
+	return _grid_path(a, b)
+
+func _grid_path(a: Vector2i, b: Vector2i) -> PackedVector2Array:
 	if a == b:
 		return PackedVector2Array([cell_center(b)])
 	return astar.get_point_path(a, b)
@@ -232,8 +321,10 @@ func reachable_from_spawn() -> Dictionary:
 	var stack: Array = [spawn_cell]
 	while not stack.is_empty():
 		var c: Vector2i = stack.pop_back()
-		for o in [Vector2i(0, -1), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(1, 0)]:
-			var n: Vector2i = c + o
+		var nexts: Array = [c + Vector2i(0, -1), c + Vector2i(-1, 0), c + Vector2i(0, 1), c + Vector2i(1, 0)]
+		if _stair_cells.has(c):
+			nexts.append(_stair_cells[c])
+		for n in nexts:
 			if walkable(n) and not seen.has(n):
 				seen[n] = true
 				stack.append(n)

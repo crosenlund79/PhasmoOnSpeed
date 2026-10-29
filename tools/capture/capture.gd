@@ -93,6 +93,18 @@ func _shot(s: String) -> void:
 			run._item_sprite(items[i], base + Vector2(i * 30 - 10, 45), 26.0)
 		await _wait(40)
 		await _save("gallery")
+	elif s.begins_with("flash_"):
+		# Flashlight integrity: stand near walls/doorways and aim along them.
+		var run: Run = Game.start_run("ashgrove", 5, "shade")
+		await _wait(5)
+		run.creature.set_process(false)
+		var spots := {"flash_wall": [Vector2(10, 15), 0.15], "flash_door": [Vector2(9, 15), -1.45], "flash_corner": [Vector2(6, 11), -0.6]}
+		var spot: Array = spots.get(s, spots["flash_wall"])
+		run.player.global_position = HouseMap.cell_center(spot[0])
+		run.player.input_enabled = false
+		run.player.aim_angle = spot[1]
+		await _wait(60)
+		await _save(s)
 	elif s == "results":
 		var run: Run = Game.start_run("ashgrove", 5, "poltergeist")
 		await _wait(200)

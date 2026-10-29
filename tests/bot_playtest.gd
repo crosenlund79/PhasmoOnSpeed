@@ -101,11 +101,11 @@ func _flee() -> void:
 		await get_tree().process_frame
 
 func _equip(id: String) -> void:
-	run.equipment.select(run.equipment.slots.find(id))
+	run.player.equipment.select(run.player.equipment.slots.find(id))
 
 func _use() -> void:
-	run.equipment._cooldown = 0.0
-	run.equipment.use_current()
+	run.player.equipment._cooldown = 0.0
+	run.player.equipment.use_current()
 
 func _wait(seconds: float) -> bool:
 	var t := 0.0
@@ -124,7 +124,7 @@ func _collect(res: String) -> bool:
 		var it: Dictionary = items[0]
 		if not await _walk_to(it["pos"], 12.0):
 			return false
-		run.do_interact(it)
+		run.do_interact(run.player, it)
 	return false
 
 func _lair_point() -> Vector2:
@@ -140,10 +140,10 @@ func _approach_and_strike(item: String) -> bool:
 			run.player.aim_angle = to.angle()
 			if item == "iron_nails" and c.exposed_t <= 0.0:
 				_equip("hand_mirror")
-				run.equipment._mirror_check()
+				run.player.equipment._mirror_check()
 				_equip(item)
-			run.equipment._cooldown = 0.0
-			run.strike(item)
+			run.player.equipment._cooldown = 0.0
+			run.strike(run.player, item)
 			await _frames(30)
 			continue
 		if c.is_hunting():
@@ -173,7 +173,7 @@ func _play(house: String, cr: String, sd: int) -> void:
 					await _wait(0.5)
 				_equip("emf")
 				var t := 0.0
-				while _alive() and not run.journal.has("emf5") and t < 45.0:
+				while _alive() and not run.player.journal.has("emf5") and t < 45.0:
 					var hs: Array = run.phenomena.hotspots.filter(func(h): return h["level"] == 5)
 					if not hs.is_empty():
 						await _walk_to(hs[0]["pos"], 10.0)
@@ -182,33 +182,33 @@ func _play(house: String, cr: String, sd: int) -> void:
 				await _walk_to(_lair_point())
 				_equip("salt")
 				_use()
-				run.suspect = "shade"
+				run.player.suspect = "shade"
 				await _wait(1.5)
-				run.perform_rite()
+				run.perform_rite(run.player)
 		"poltergeist":
 			if await _walk_to(_lair_point()):
 				_equip("ghost_book")
 				_use()
 				_equip("spirit_box")
 				var t := 0.0
-				while _alive() and not run.journal.has("spirit_box") and t < 30.0:
+				while _alive() and not run.player.journal.has("spirit_box") and t < 30.0:
 					_use()
 					await _wait(2.2)
 					t += 2.2
 				_equip("uv")
-				while _alive() and not run.journal.has("writing") and t < 60.0:
-					if not run.phenomena.uv_prints.is_empty() and not run.journal.has("uv"):
+				while _alive() and not run.player.journal.has("writing") and t < 60.0:
+					if not run.phenomena.uv_prints.is_empty() and not run.player.journal.has("uv"):
 						var u: Dictionary = run.phenomena.uv_prints[0]
 						await _walk_to(u["pos"] + Vector2(40, 0), 8.0)
 						run.player.aim_angle = (u["pos"] - run.player.global_position).angle()
 					await _wait(0.5)
 					t += 0.5
-				var book := run.placed_book()
+				var book := (run.placed_books()[0] if not run.placed_books().is_empty() else null)
 				if book:
 					await _walk_to(book.position + Vector2(30, 0), 8.0)
-				run.suspect = "poltergeist"
+				run.player.suspect = "poltergeist"
 				await _wait(1.5)
-				run.perform_rite()
+				run.perform_rite(run.player)
 		"vampire":
 			if await _collect("garlic") and await _collect("wooden_stake"):
 				await _approach_and_strike("wooden_stake")
@@ -216,10 +216,10 @@ func _play(house: String, cr: String, sd: int) -> void:
 			if await _collect("silverware"):
 				var st: Dictionary = run.map.furniture_with("melt")[0]
 				await _walk_to(HouseMap.cell_center(run.map.nearest_walkable(HouseMap.to_cell((st["rect"] as Rect2).get_center() + Vector2(0, 40)))), 6.0)
-				var it := run.find_interactable(run.player.global_position)
+				var it := run.find_interactable(run.player, run.player.global_position)
 				if it.get("kind", "") == "melt":
 					await _wait(2.0)
-					run.do_interact(it)
+					run.do_interact(run.player, it)
 				await _approach_and_strike("silver_stake")
 		"shapeshifter":
 			if await _collect("hand_mirror") and await _collect("iron_nails"):
@@ -227,7 +227,7 @@ func _play(house: String, cr: String, sd: int) -> void:
 	await _frames(5)
 	var won := run._outcome == "vanquished" or (is_instance_valid(run) and run.state == "ending" and not run.player.dead)
 	var r := {"house": house, "creature": cr, "seed": sd, "won": won, "time": run.elapsed, "wounds": run.player.wounds,
-		"evidence": run.journal.active_entries().size(), "hunts": run.hunts_total}
+		"evidence": run.player.journal.active_entries().size(), "hunts": run.hunts_total}
 	results.append(r)
 	print("%-14s %-13s %s %s wounds=%d ev=%d hunts=%d" % [house, cr, "WON " if won else "LOST", Journal.format_time(run.elapsed), r["wounds"], r["evidence"], r["hunts"]])
 	run.queue_free()

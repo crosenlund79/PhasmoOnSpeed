@@ -153,4 +153,5 @@ UI: `ui_heart`, `ui_heart_wounded`, `ui_skull`, `ui_clock`, `ui_quill`,
 |---|---|---|
 | `soft.png` | 512×512 | white radial falloff for PointLight2D |
 | `cone.png` | 1024×512 | flashlight cone; origin at the **left-centre** pixel, pointing +X |
+| `cone_centered.png` | 2048×512 | the same cone with its origin at the **image centre** (used in game: the light sits at the holder so shadows are cast from the holder) |
 | `candle.png` | 256×256 | warm, slightly irregular radial |

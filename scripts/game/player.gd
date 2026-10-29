@@ -1,8 +1,13 @@
 class_name Player
 extends CharacterBody2D
-## The investigator. Movement, aim, lights, wounds and inventory. Equipment
-## behaviour lives in EquipmentController. One Player per participant; the actor
-## id keeps replay and (future) cooperative play unambiguous.
+## A hunter (investigator). Movement, aim, lights, wounds, inventory and the
+## per-hunter investigation record (journal, suspect, attempts). Equipment
+## behaviour lives in EquipmentController.
+##
+## Modes:
+##  * local  — driven by this machine's keyboard/mouse (solo, the host, a client's own hunter)
+##  * remote — on the host, a client's hunter: position/aim arrive from the network
+##  * puppet — on a client, another hunter: purely visual, fed by snapshots
 
 const WALK_SPEED := 235.0
 const SPRINT_SPEED := 335.0
@@ -11,8 +16,20 @@ const STAMINA_REGEN := 1.0 / 2.4
 const RADIUS := 10.0
 const INVULN_AFTER_HIT := 3.0
 
+const COLORS := [Color(0.95, 0.82, 0.5), Color(0.55, 0.8, 1.0), Color(0.85, 0.55, 0.95), Color(0.6, 0.95, 0.6)]
+const SHOVE_COOLDOWN := 5.0
+const SHOVE_RANGE := 48.0
+const SHOVE_IMMUNITY := 1.6
+
 var actor_id := "player_1"
-var run: Run
+var peer_id := 1
+var index := 0
+var display_name := "Investigator"
+var is_local := true
+var remote := false
+var puppet := false
+var run   # Run on the host / solo, ClientRun on clients
+var input := PlayerInput.new()
 var token: TokenSprite
 var aim_angle := 0.0
 var stamina := 1.0
@@ -33,6 +50,27 @@ var charges := {"salt": 3, "crucifix": 1, "holy_water": 3}
 var resources := {}   # id -> count
 var book_placed := false
 var crucifix_burns := 2
+
+# Personal investigation record (each hunter has a private journal).
+var journal := Journal.new()
+var suspect := ""
+var investigation := 0
+var wrong_attempts := 0
+var reckless_attempts := 0
+var incomplete_attempts := 0
+var attempts: Array = []
+var clean_hunts := 0
+var first_finds := 0
+var equipment   # EquipmentController (host / solo) or EquipmentMirror (client)
+
+# Competitive play.
+var shove_cd := 0.0
+var shove_immune := 0.0
+var knock_vel := Vector2.ZERO
+var stunned := 0.0
+var shoves_given := 0
+var shoves_taken := 0
+var name_label: Label
 
 var light_pivot: Node2D
 var flashlight: PointLight2D
@@ -63,17 +101,46 @@ func _init() -> void:
 	ambient.color = Color(0.85, 0.8, 0.75)
 	add_child(ambient)
 
+func color() -> Color:
+	return COLORS[index % COLORS.size()]
+
+func alive() -> bool:
+	return not dead
+
+## Puppets (client view of rivals) never collide or read input.
+func make_puppet() -> void:
+	puppet = true
+	is_local = false
+	collision_layer = 0
+	collision_mask = 0
+	set_physics_process(false)
+
+## Name tag under rival hunters (multiplayer only), on the unlit text layer.
+func attach_name_label(layer: CanvasLayer) -> void:
+	name_label = Label.new()
+	name_label.text = display_name
+	name_label.add_theme_font_override("font", Art.font_heading)
+	name_label.add_theme_font_size_override("font_size", 13)
+	name_label.add_theme_color_override("font_color", color())
+	name_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	name_label.add_theme_constant_override("outline_size", 5)
+	name_label.size = Vector2(160, 18)
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	layer.add_child(name_label)
+
+func _process(_delta: float) -> void:
+	if name_label:
+		name_label.position = global_position + Vector2(-80, -40)
+		name_label.modulate.a = 0.35 if dead else 1.0
+		name_label.text = display_name + ("  †" if dead else "")
+
+## Applies a shove impulse (local hunters only; remote ones get it via the network).
+func knockback(impulse: Vector2) -> void:
+	knock_vel = impulse
+	stunned = 0.35
+
 func _cone_light(color: Color, energy: float, scale: float) -> PointLight2D:
-	var l := PointLight2D.new()
-	var tex := Art.tex("lights/cone.png")
-	l.texture = tex
-	l.texture_scale = scale
-	l.energy = energy
-	l.color = color
-	l.shadow_enabled = true
-	l.shadow_filter = Light2D.SHADOW_FILTER_PCF5
-	l.shadow_color = Color(0, 0, 0, 0.85)
-	l.position = Vector2(tex.get_size().x * 0.5 * scale, 0)
+	var l := Lighting.make_cone(color, energy, scale)
 	light_pivot.add_child(l)
 	return l
 
@@ -92,19 +159,26 @@ func facing_vector() -> Vector2:
 	return Vector2.RIGHT.rotated(aim_angle)
 
 func _physics_process(delta: float) -> void:
-	if dead:
-		velocity = Vector2.ZERO
-		return
 	invuln = maxf(0.0, invuln - delta)
 	blessed = maxf(0.0, blessed - delta)
+	shove_cd = maxf(0.0, shove_cd - delta)
+	shove_immune = maxf(0.0, shove_immune - delta)
+	stunned = maxf(0.0, stunned - delta)
+	light_pivot.rotation = aim_angle
+	flashlight.visible = flashlight_on and not dead
+	if dead or remote:
+		velocity = Vector2.ZERO
+		token.face(aim_angle, delta, 18.0)
+		return
 	var dir := Vector2.ZERO
-	if input_enabled:
-		dir = Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	if input_enabled and stunned <= 0.0:
+		dir = input.move
+	if input_enabled and is_local:
 		var mouse := get_global_mouse_position()
 		if mouse.distance_to(global_position) > 4.0:
 			aim_angle = (mouse - global_position).angle()
 	moving = dir.length() > 0.1
-	sprinting = moving and Input.is_action_pressed("sprint") and stamina > 0.02 and input_enabled
+	sprinting = moving and input.sprint and stamina > 0.02 and input_enabled
 	if sprinting:
 		stamina = maxf(0.0, stamina - STAMINA_DRAIN * delta)
 		_regen_delay = 0.6
@@ -115,11 +189,10 @@ func _physics_process(delta: float) -> void:
 	var speed := SPRINT_SPEED if sprinting else WALK_SPEED
 	if invuln > 0.0 and wounds > 0:
 		speed *= 1.12   # adrenaline after being wounded
-	velocity = dir.normalized() * speed
+	velocity = dir.normalized() * speed + knock_vel
+	knock_vel = knock_vel.move_toward(Vector2.ZERO, 1500.0 * delta)
 	move_and_slide()
 	token.face(aim_angle, delta, 18.0)
-	light_pivot.rotation = aim_angle
-	flashlight.visible = flashlight_on
 	if moving:
 		_step_t -= delta * (1.5 if sprinting else 1.0)
 		if _step_t <= 0.0:
