@@ -19,7 +19,8 @@ func _defaults() -> Dictionary:
 		"version": SAVE_VERSION,
 		"settings": {"master": 0.8, "music": 0.6, "ui_scale": 1.0, "fullscreen": false,
 			"player_name": "Investigator", "dev_mode": true,
-			"equip_hud": true, "equip_hud_opacity": 0.9, "equip_hud_size": 20,
+			"equip_labels": true, "ev_labels": true, "suspect_labels": true,
+			"equip_hud_opacity": 0.9, "hud_scale": 1.0, "difficulty": "normal",
 			"ev_notify": true, "ev_notify_opacity": 0.95, "ev_notify_size": 1.0,
 			"npc_names": true, "last_address": "127.0.0.1", "last_port": 24680},
 		"records": {"best_score": 0, "best_score_time": 0.0, "best_score_house": "", "houses": {}},
@@ -67,8 +68,12 @@ func set_setting(key: String, value) -> void:
 	data["settings"][key] = value
 	save()
 
-func house_record(house_id: String) -> Dictionary:
-	var houses: Dictionary = data["records"]["houses"]
+## Normal and Nightmare personal bests are kept apart.
+func house_record(house_id: String, difficulty: String = "normal") -> Dictionary:
+	var key := "houses" if difficulty != "nightmare" else "nightmare_houses"
+	if not data["records"].has(key):
+		data["records"][key] = {}
+	var houses: Dictionary = data["records"][key]
 	if not houses.has(house_id):
 		houses[house_id] = {"best_time": 0.0, "best_score": 0, "wins": 0, "runs": 0}
 	return houses[house_id]
@@ -79,7 +84,8 @@ func note_run_started() -> void:
 ## Records a finished run exactly once. Returns {new_best_time, new_best_score, prev_best_time, prev_best_score}.
 func record_run(summary: Dictionary) -> Dictionary:
 	var house_id: String = summary["house"]
-	var rec := house_record(house_id)
+	var nightmare: bool = summary.get("difficulty", "normal") == "nightmare"
+	var rec := house_record(house_id, summary.get("difficulty", "normal"))
 	var out := {"new_best_time": false, "new_best_score": false,
 		"prev_best_time": rec["best_time"], "prev_best_score": rec["best_score"],
 		"prev_overall_best": data["records"]["best_score"]}
@@ -92,7 +98,7 @@ func record_run(summary: Dictionary) -> Dictionary:
 		if summary["score"] > int(rec["best_score"]):
 			rec["best_score"] = summary["score"]
 			out["new_best_score"] = true
-		if summary["score"] > int(data["records"]["best_score"]):
+		if not nightmare and summary["score"] > int(data["records"]["best_score"]):
 			data["records"]["best_score"] = summary["score"]
 			data["records"]["best_score_time"] = summary["time"]
 			data["records"]["best_score_house"] = summary.get("house_name", house_id)
@@ -108,7 +114,7 @@ func _history_row(s: Dictionary) -> Dictionary:
 	return {"house": s["house"], "creature": s["original_creature"], "final": s["creature"], "won": s["vanquished"],
 		"time": snappedf(s["time"], 0.01), "score": s["score"], "evidence": s["evidence_ids"].size(),
 		"wrong": s["incorrect_attempts"], "wounds": s["wounds"], "harbinger": s["harbinger"],
-		"rules": s["rules_version"], "date": Time.get_datetime_string_from_system()}
+		"rules": s["rules_version"], "difficulty": s.get("difficulty", "normal"), "date": Time.get_datetime_string_from_system()}
 
 func _update_stats(s: Dictionary) -> void:
 	var stats: Dictionary = data["stats"]
@@ -168,13 +174,15 @@ func record_match(results: Dictionary, my_actor: String) -> Dictionary:
 		mp["deaths"] = int(mp["deaths"]) + 1
 	mp["shoves_given"] = int(mp["shoves_given"]) + int(me["shoves_given"])
 	mp["shoves_taken"] = int(mp["shoves_taken"]) + int(me["shoves_taken"])
-	if int(me["score"]) > int(mp["best_score"]):
-		mp["best_score"] = int(me["score"])
+	var best_key := "nightmare_best_score" if results.get("difficulty", "normal") == "nightmare" else "best_score"
+	out["prev_best"] = int(mp.get(best_key, 0))
+	if int(me["score"]) > int(mp.get(best_key, 0)):
+		mp[best_key] = int(me["score"])
 		out["new_best"] = true
 	var hist: Array = mp["history"]
 	hist.append({"house": results["house"], "creature": results["creature"], "outcome": results["outcome"],
 		"time": results["time"], "score": me["score"], "rank": me["rank"], "players": results["rows"].size(),
-		"rules": results["rules_version"], "date": Time.get_datetime_string_from_system()})
+		"rules": results["rules_version"], "difficulty": results.get("difficulty", "normal"), "date": Time.get_datetime_string_from_system()})
 	while hist.size() > HISTORY_LIMIT:
 		hist.pop_front()
 	save()

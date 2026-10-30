@@ -209,9 +209,45 @@ func _build_neglect() -> void:
 				var pos := HouseMap.cell_center(c) + Vector2(0, -C * 0.36).rotated(rot)
 				_neglect_decal("decor/peel.png", pos, rot, 46.0, 1.0)
 
-func _neglect_decal(path: String, pos: Vector2, rot: float, size: float, alpha: float, corner: bool = false, light: Color = Color(0, 0, 0, 0)) -> void:
+## Nightmare Mode: old blood — pools, drag smears and spatter — in every
+## indoor room, heaviest in neglected rooms and basements. Deterministic per
+## house so host, clients and replays agree. Never uses evidence sprites, so
+## it can't be mistaken for a vampire's blood droplets.
+func build_nightmare() -> void:
+	for r in map.rooms:
+		if r["outdoor"]:
+			continue
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash(map.id + ":nightmare:" + r["id"])
+		var cells: Array = r["cells"].filter(func(c): return not map.is_stair(c))
+		if cells.is_empty():
+			continue
+		var heavy: bool = r.get("condition", "") in ["neglected", "abandoned"] or int(r.get("level", 0)) < 0
+		var count := rng.randi_range(2, 4) + (3 if heavy else 0)
+		for i in count:
+			var pos := HouseMap.cell_center(cells[rng.randi_range(0, cells.size() - 1)])
+			var stain := "decor/stain_%d.png" % rng.randi_range(1, 3)
+			match rng.randi_range(0, 2):
+				0:   # a dried pool
+					_blood(stain, pos, rng.randf() * TAU, rng.randf_range(40.0, 80.0), rng.randf_range(0.7, 0.95))
+				1:   # a drag smear: a run of overlapping blots
+					var dir := Vector2.from_angle(rng.randf() * TAU)
+					var blots := rng.randi_range(4, 8)
+					for j in blots:
+						_blood(stain, pos + dir * j * 14.0, dir.angle(), 30.0 - j * 2.0, 0.8 - j * 0.06)
+				2:   # spatter
+					for j in rng.randi_range(4, 8):
+						_blood(stain, pos + Vector2(rng.randf_range(-30, 30), rng.randf_range(-30, 30)), rng.randf() * TAU, rng.randf_range(8.0, 18.0), 0.9)
+
+func _blood(path: String, pos: Vector2, rot: float, size: float, alpha: float) -> void:
+	# The stain art is near-black; its alpha masks a flat old-blood red instead.
+	var s := _neglect_decal(path, pos, rot, size * 1.2, minf(1.0, alpha + 0.1), false, Color(0.42, 0.03, 0.02))
+	if s:
+		s.reparent(decal_layer)   # above the faded floor; laid before any evidence decals
+
+func _neglect_decal(path: String, pos: Vector2, rot: float, size: float, alpha: float, corner: bool = false, light: Color = Color(0, 0, 0, 0)) -> Sprite2D:
 	if not Art.has(path):
-		return
+		return null
 	var s := Sprite2D.new()
 	if light.a > 0.0:
 		var mat := ShaderMaterial.new()
@@ -227,6 +263,7 @@ func _neglect_decal(path: String, pos: Vector2, rot: float, size: float, alpha: 
 	s.scale = Vector2(k, k)
 	s.modulate.a = alpha
 	neglect_layer.add_child(s)
+	return s
 
 ## Staircases and hatches between floors (walkable cells, drawn under actors).
 func _build_stairs() -> void:

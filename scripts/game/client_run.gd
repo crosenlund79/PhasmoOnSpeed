@@ -12,6 +12,7 @@ var run_seed := 0
 var roster: Array = []
 var my_peer := 0
 var multiplayer_match := true
+var difficulty := "normal"
 var map: HouseMap
 var world: Node2D
 var view: HouseView
@@ -35,8 +36,9 @@ var _creature_meta := {}     # actor id -> {disguise, size}
 var _send_acc := 0.0
 var _last_snapshot_t := 0.0
 
-func setup(p_house: String, p_seed: int, p_roster: Array, p_my_peer: int) -> void:
+func setup(p_house: String, p_seed: int, p_roster: Array, p_my_peer: int, p_difficulty: String = "normal") -> void:
 	house_id = p_house
+	difficulty = p_difficulty
 	run_seed = p_seed
 	roster = p_roster
 	my_peer = p_my_peer
@@ -47,6 +49,8 @@ func _ready() -> void:
 	add_child(world)
 	view = HouseView.new()
 	view.build(map, true, true)
+	if difficulty == "nightmare":
+		view.build_nightmare()
 	world.add_child(view)
 	world_text = CanvasLayer.new()
 	world_text.layer = 1
@@ -80,9 +84,14 @@ func _ready() -> void:
 	camera.zoom = Vector2(CAMERA_ZOOM, CAMERA_ZOOM)
 	camera.position_smoothing_enabled = true
 	camera.position_smoothing_speed = 9.0
-	camera.offset = Vector2(145.0 / CAMERA_ZOOM, 0.0)
+	camera.offset = Vector2.ZERO
 	player.add_child(camera)
 	_apply_camera_limits(player.global_position)
+	if difficulty == "nightmare":
+		# Cosmetic and local to this machine, like everyone's own vermin.
+		var critters := Critters.new()
+		view.actor_layer.add_child(critters)
+		critters.setup(self, run_seed)
 	hud = preload("res://scripts/ui/hud.gd").new()
 	add_child(hud)
 	hud.setup(self)
@@ -92,10 +101,11 @@ func _ready() -> void:
 
 func _apply_camera_limits(pos: Vector2) -> void:
 	var b := map.floor_bounds(map.floor_at(pos))
-	camera.limit_left = int(b.position.x) - 60
-	camera.limit_top = int(b.position.y) - 60
-	camera.limit_right = int(b.end.x) + 60 + int(300.0 / CAMERA_ZOOM)
-	camera.limit_bottom = int(b.end.y) + 110
+	# Room to scroll past the edges so the corner HUD panels never hide the house.
+	camera.limit_left = int(b.position.x) - 60 - int(180.0 / CAMERA_ZOOM)
+	camera.limit_top = int(b.position.y) - 60 - int(100.0 / CAMERA_ZOOM)
+	camera.limit_right = int(b.end.x) + 60 + int(180.0 / CAMERA_ZOOM)
+	camera.limit_bottom = int(b.end.y) + 60 + int(110.0 / CAMERA_ZOOM)
 
 # --- HUD read interface (mirrors Run) ---------------------------------------------------
 
@@ -105,8 +115,13 @@ func is_harbinger() -> bool:
 func sigils_lit() -> int:
 	return _sigils_lit
 
-func set_paused(_p: bool) -> void:
-	pass   # the world never stops in a match
+func set_paused(p: bool) -> void:
+	Net.request_pause(p)   # only the host can pause the match
+
+## The host paused or resumed the match for everyone.
+func apply_shared_pause(on: bool, who: String, remaining: float) -> void:
+	get_tree().paused = on
+	hud.show_shared_pause(on, who, remaining)
 
 func restart() -> void:
 	pass

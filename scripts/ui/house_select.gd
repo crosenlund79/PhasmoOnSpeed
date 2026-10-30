@@ -12,6 +12,7 @@ func _ready() -> void:
 	var sub := Art.label("Each visit, something different waits inside. Or so you hope.", 19, Color(0.82, 0.78, 0.7), Art.font_italic)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(sub)
+	_build_difficulty(v)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -32,12 +33,12 @@ func _ready() -> void:
 		blurb.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		blurb.custom_minimum_size = Vector2(250, 60)
 		card.add_child(blurb)
-		var rec: Dictionary = SaveData.house_record(id)
+		var rec: Dictionary = SaveData.house_record(id, _difficulty())
 		# No exact occupant count: a shapeshifter posing as one more person
 		# must never be exposed by the menu.
 		var info := "Rooms: %d  ·  Floors: %d" % [plan.house.rooms.size(), plan.house.floors().size()]
 		card.add_child(Art.label(info, 14, Color(0.3, 0.22, 0.15)))
-		var pb := "Best: —" if rec["best_time"] <= 0.0 else "Best: %s  ·  %d pts" % [Journal.format_time_precise(rec["best_time"]), int(rec["best_score"])]
+		var pb := ("Nightmare best: —" if _difficulty() == "nightmare" else "Best: —") if rec["best_time"] <= 0.0 else "Best: %s  ·  %d pts" % [Journal.format_time_precise(rec["best_time"]), int(rec["best_score"])]
 		card.add_child(Art.label(pb, 15, Color(0.3, 0.22, 0.15), Art.font_heading))
 		card.add_child(Art.label("Entity: unknown", 15, Art.BLOOD, Art.font_heading))
 		var hid: String = id
@@ -52,6 +53,34 @@ func _ready() -> void:
 	back_button(bottom)
 	if first:
 		first.grab_focus()
+
+func _difficulty() -> String:
+	return str(SaveData.settings().get("difficulty", "normal"))
+
+## Normal / Nightmare, chosen before entering. Remembered between visits.
+func _build_difficulty(v: VBoxContainer) -> void:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 10)
+	v.add_child(row)
+	var group := ButtonGroup.new()
+	var desc := Art.label("", 16, Color(0.82, 0.78, 0.7), Art.font_italic)
+	for d in [["normal", "Normal"], ["nightmare", "Nightmare"]]:
+		var did: String = d[0]
+		var b := Art.button(d[1], func():
+			SaveData.set_setting("difficulty", did)
+			Game.goto_house_select(), 200)
+		b.toggle_mode = true
+		b.button_group = group
+		b.button_pressed = _difficulty() == did
+		if did == "nightmare":
+			b.add_theme_color_override("font_color", Color(0.75, 0.1, 0.07))
+			b.add_theme_color_override("font_pressed_color", Color(0.85, 0.12, 0.08))
+		row.add_child(b)
+	desc.text = "The suspect panel shows only a name and a description. Terrified occupants, vermin underfoot, blood and noises in the walls. Records kept separately." if _difficulty() == "nightmare" else "The suspect panel shows each entity's evidence and what it takes to vanquish it."
+	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(desc)
 
 
 ## Inked miniature floorplan drawn from the house data.

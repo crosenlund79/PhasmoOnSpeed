@@ -4,7 +4,8 @@ extends Node
 ##   godot --headless --path . res://tests/net_test.tscn -- host <clients> <port> [scenario]
 ##   godot --headless --path . res://tests/net_test.tscn -- client <index> <port> [scenario]
 ## Scenarios: "full" (join, sync, shove, death/spectate, client vanquish, results,
-## replay) and "drop" (a client disconnects mid-match, then the host shuts down).
+## replay), "drop" (a client disconnects mid-match, then the host shuts down) and
+## "pause" (client 1 opens its menu: the host pauses everyone for at most 10 s).
 
 var role := ""
 var index := 0
@@ -62,6 +63,8 @@ func _host() -> void:
 	var all_in := await _until(func(): return Net.lobby.size() == clients + 1, 20.0)
 	check(all_in, "all %d clients joined (lobby %d)" % [clients, Net.lobby.size()])
 	Net.set_ready(true)
+	if scenario == "pause":
+		Net.set_option("difficulty", "nightmare")
 	await _until(func(): return Net.can_start(), 10.0)
 	check(Net.can_start(), "everyone ready")
 	Net.start_match("werewolf", 777)
@@ -71,8 +74,11 @@ func _host() -> void:
 	var spawn := HouseMap.cell_center(run.map.spawn_cell)
 	await _wait(3.0)
 	for h in run.hunters:
-		if h.remote:
+		if h.remote and scenario != "pause":
 			check(h.global_position.distance_to(spawn) > 60.0, "%s moved on the host (%s)" % [h.display_name, h.global_position])
+	if scenario == "pause":
+		await _host_pause(run)
+		return
 	if scenario == "shot":
 		# Keep the match alive for a rendering client to photograph: the host's
 		# hunter loiters beside the client and the entity rattles about.
@@ -144,6 +150,58 @@ func _host() -> void:
 	await _wait(2.0)
 	_done()
 
+func _host_pause(run: Run) -> void:
+	check(run.difficulty == "nightmare" and run.critters != null, "host-chosen Nightmare difficulty applied")
+	var got := await _until(func(): return Net.pause_by != 0, 15.0)
+	check(got, "client's menu paused the match")
+	var t0 := Time.get_ticks_msec()
+	check(get_tree().paused and run._paused, "host simulation frozen")
+	var e0 := run.elapsed
+	var cpos := run.creature.position
+	await _wait(3.0)   # (scene-tree timers run in real time during a pause)
+	check(is_equal_approx(run.elapsed, e0), "run clock frozen while paused (%.2f vs %.2f)" % [run.elapsed, e0])
+	check(run.creature.position == cpos, "entity frozen while paused")
+	await _until(func(): return Net.pause_by == 0, 12.0)
+	var held := (Time.get_ticks_msec() - t0) / 1000.0
+	check(Net.pause_by == 0 and not get_tree().paused, "match resumed by itself")
+	check(held > 9.0 and held < 11.5, "pause limited to ~10 s (held %.1f s)" % held)
+	await _wait(1.0)
+	check(run.elapsed > e0 + 0.5, "run clock running again")
+	# Client 1 immediately re-opens its menu: the cooldown refuses a new pause.
+	await _wait(3.0)
+	check(Net.pause_by == 0, "cannot re-pause straight away")
+	await _wait(1.0)
+	_done()
+
+func _client_pause(cr: ClientRun) -> void:
+	check(cr.difficulty == "nightmare", "client got the host's Nightmare difficulty")
+	if index != 1:
+		var seen := await _until(func(): return get_tree().paused, 15.0)
+		check(seen and cr.hud.shared_pause_panel.visible, "every client sees the pause banner")
+		await _until(func(): return not get_tree().paused, 13.0)
+		check(not cr.hud.shared_pause_panel.visible, "banner gone after resume")
+		_done()
+		return
+	cr.hud.toggle_pause()   # open the menu, as Esc does
+	var paused := await _until(func(): return get_tree().paused, 5.0)
+	check(paused, "the host paused this client")
+	check(cr.hud.shared_pause_panel.visible and cr.hud.pause_panel.visible, "pause banner and own menu shown")
+	var p0 := cr.player.global_position
+	Input.action_press("move_right")
+	await _wait(1.0)
+	Input.action_release("move_right")
+	check(cr.player.global_position.distance_to(p0) < 1.0, "no movement while paused")
+	var resumed := await _until(func(): return not get_tree().paused, 13.0)
+	check(resumed, "auto-resumed after the limit")
+	check(cr.hud.pause_panel.visible, "opener's menu may stay open after the resume")
+	cr.hud.toggle_pause()   # close…
+	await _wait(0.3)
+	cr.hud.toggle_pause()   # …and immediately reopen
+	await _wait(1.5)
+	check(not get_tree().paused, "repeat pause refused during the cooldown")
+	cr.hud.toggle_pause()
+	_done()
+
 # --- Client --------------------------------------------------------------------------------
 
 func _client() -> void:
@@ -159,6 +217,10 @@ func _client() -> void:
 		return
 	var cr: ClientRun = Net.client_run
 	await _wait(0.5)
+	if scenario == "pause":
+		await _wait(2.5)
+		await _client_pause(cr)
+		return
 	# Walk away from the spawn (different directions per client).
 	var dirs := ["move_right", "move_left", "move_right"]
 	var act: String = dirs[(index - 1) % dirs.size()]

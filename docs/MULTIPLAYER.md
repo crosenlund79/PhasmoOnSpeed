@@ -38,7 +38,7 @@ everyone on one network) and join by its address.
 |---|---|
 | Space | **Shove** the rival in front of you (close range, ~5 s cooldown) |
 | Tab / Shift+Tab | Choose your suspected entity (all entities are listed) |
-| Esc | Menu (the match keeps running — there is no pause) |
+| Esc | Menu — pauses the match for **everyone** (see below) |
 | Click / Q (when dead) | Switch which surviving hunter you spectate |
 
 Everything else is the same as solo play.
@@ -79,6 +79,23 @@ Network traffic (all on `/root/Net`, `scripts/autoload/net.gd`):
 | Private messages (evidence, toasts, knockback, death) | host → one | reliable |
 | Results + compressed replay | host → all | reliable, chunked |
 
+## Shared menu pause
+
+Opening the menu (Esc) asks the host to pause. The host alone decides: it
+freezes its simulation (entity, hunts, occupants, run clock, replay) and tells
+every client, which freeze too and show a *MATCH PAUSED — Name opened the menu*
+banner with the remaining time. The opener can use the menu normally.
+
+* **Limit Menu Pause to 10 Seconds** (lobby, host only, default On): the pause
+  ends by itself after 10 real seconds — the opener's menu may stay open — and
+  no new pause can start for the next 20 s, so the match can never be held
+  indefinitely by reopening the menu. Off: the pause lasts until the opener
+  closes their menu (or disconnects).
+* While a pause is held, other hunters may open their own menus but cannot take
+  over or extend it.
+
+The host also picks **Normal / Nightmare** difficulty for the match in the lobby.
+
 ## Testing
 
 `tests/net_test.sh` starts a real host and N client processes on localhost and
@@ -90,6 +107,7 @@ out mid-match and the host shutting down:
 ```bash
 GODOT=/path/to/godot tests/net_test.sh 3 full   # 4 hunters
 GODOT=/path/to/godot tests/net_test.sh 2 drop   # disconnects
+GODOT=/path/to/godot tests/net_test.sh 2 pause  # shared pause, 10 s limit, cooldown, Nightmare option
 ```
 
 ## Known limitations

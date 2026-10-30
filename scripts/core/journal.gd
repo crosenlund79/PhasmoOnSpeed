@@ -34,7 +34,7 @@ func active_entries() -> Array:
 func void_entries() -> Array:
 	return entries.filter(func(e): return e["void"])
 
-## Conventional evidence not yet discovered (hidden evidence is never listed).
+## Conventional evidence not yet discovered.
 func undiscovered_conventional() -> Array:
 	var out: Array = []
 	for id in Defs.CONVENTIONAL_EVIDENCE:

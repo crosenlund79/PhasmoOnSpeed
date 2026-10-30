@@ -108,7 +108,7 @@ func show_entry(id: String) -> void:
 		row.add_child(Art.icon_rect(Defs.EVIDENCE[ev]["icon"], 32))
 		row.add_child(Art.label(Defs.EVIDENCE[ev]["name"], 19, Art.INK, Art.font_heading))
 		if Defs.EVIDENCE[ev]["hidden"]:
-			row.add_child(Art.label("(not listed in the journal until found)", 14, Color(0.35, 0.27, 0.2), Art.font_italic))
+			row.add_child(Art.label("(only some entities leave this)", 14, Color(0.35, 0.27, 0.2), Art.font_italic))
 		page.add_child(row)
 	_section("Behaviour")
 	page.add_child(_para(d["behaviour"]))

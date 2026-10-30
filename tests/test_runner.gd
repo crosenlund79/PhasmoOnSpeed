@@ -20,6 +20,7 @@ func _ready() -> void:
 		"test_crucifix_blocks_ghost_hunt", "test_shapeshifter_needs_exposure", "test_full_flow_records_once",
 		"test_basements", "test_stairs_and_basement_evidence", "test_encyclopedia_matches_game",
 		"test_all_entities_selectable", "test_occupant_identities", "test_mp_scoring",
+		"test_hud_layout", "test_nightmare",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -517,3 +518,48 @@ func test_mp_scoring() -> void:
 	var ranked := MpScoring.rank(rows)
 	check(ranked[0]["score"] == 300 and ranked[1]["vanquisher"] and ranked[2]["rank"] == 3, "highest score wins; ties to the vanquisher")
 	check(MpScoring.RULES_VERSION != Scoring.RULES_VERSION, "separate rule versions")
+
+# --- Revision 3 -----------------------------------------------------------------------
+
+func test_hud_layout() -> void:
+	var run := await _start("ashgrove", "vampire", 7)
+	var hud = run.hud
+	check(hud._ev_discs.size() == Defs.EVIDENCE.size(), "every evidence type is shown from the start")
+	check(hud.equip_grid.get_child_count() == run.player.equipment.slots.size(), "one equipment disc per slot")
+	run.cycle_suspect(run.player, 1)
+	await _frames(2)
+	var sus: String = run.player.suspect
+	check(sus != "", "a suspect was chosen")
+	check(hud.REQUIREMENTS.has(sus), "suspect has vanquishing requirements")
+	run.discover(run.player, "bite_marks", run.player.room_id)
+	check(run.player.journal.has("bite_marks") and hud._ev_discs["bite_marks"].ring == Art.GOLD, "discovered evidence is highlighted")
+	check(hud._ev_discs["fur"].ring != Art.GOLD, "undiscovered evidence stays greyed")
+	check(run.player.suspect == sus, "discovering evidence never changes the suspect")
+
+func test_nightmare() -> void:
+	SaveData.reset_all()
+	var run: Run = Game.start_run("blackwood", 5, "werewolf", "nightmare")
+	await get_tree().process_frame
+	check(run.difficulty == "nightmare" and run.critters != null, "nightmare run has critters")
+	check(run.critters.list.size() > 0 and run.critters.list.size() <= Critters.MAX_CRITTERS, "critter count bounded (%d)" % run.critters.list.size())
+	check(run.occupants.all(func(o): return o.fear > 1.0), "occupants are frightened")
+	var c: Dictionary = run.critters.list[0]
+	var threat := run.threat
+	var evidence := run.player.journal.entries.size()
+	run.creature.set_process(false)
+	run.player.global_position = c["node"].position
+	await _frames(3)
+	check(not c["alive"], "stepping on a critter kills it")
+	var corpse: Vector2 = c["node"].position
+	await _frames(30)
+	check(c["node"].position == corpse, "the corpse no longer moves")
+	check(run.player.journal.entries.size() == evidence and run.player.wounds == 0 and run.threat <= threat + 1.0, "critters have no gameplay effect")
+	# Records are kept apart from Normal.
+	run.player.add_resource("silver_stake")
+	run.player.global_position = run.creature.position + Vector2(-30, 0)
+	run.player.aim_angle = 0.0
+	run.strike(run.player, "silver_stake")
+	await _frames(200)
+	check(SaveData.house_record("blackwood", "nightmare")["runs"] == 1, "nightmare run recorded as nightmare")
+	check(SaveData.house_record("blackwood")["runs"] == 0, "normal records untouched")
+	SaveData.reset_all()

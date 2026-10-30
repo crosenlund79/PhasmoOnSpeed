@@ -1479,6 +1479,52 @@ def s_music_menu():
     return remove_dc(y, circular=True)
 
 
+# --- Nightmare Mode ---------------------------------------------------------
+
+def s_critter_squish():
+    """A brief wet crunch underfoot: brittle clicks over a short damp squelch."""
+    rng = rng_for(301)
+    dur = 0.32
+    n = N(dur)
+    y = np.zeros(n)
+    for k in range(9):
+        tc = abs(rng.normal(0.0, 0.012))
+        place(y, burst(N(0.01), rng, 2500, 9000, 0.0002, 0.0015) * rng.uniform(0.4, 1.0), tc)
+    m = N(0.22)
+    sq = bp(rng.standard_normal(m), 250, 1800) * env_ad(m, 0.004, 0.05)
+    sq *= 1.0 + 0.6 * np.sin(2 * np.pi * 38 * tt(m))
+    place(y, sq * 0.8, 0.008)
+    place(y, thump(0.12, 160, 70, 0.03, rng, 0.4, 500) * 0.5, 0.0)
+    return fades(remove_dc(fit(y, dur)), 0.0005, 0.06)
+
+
+def s_nm_knock():
+    """Three slow knocks somewhere behind the walls."""
+    rng = rng_for(302)
+    dur = 2.4
+    y = np.zeros(N(dur))
+    for i, tc in enumerate([0.05, 0.62, 1.12]):
+        k = thump(0.3, 140, 85, 0.05, rng, 0.5, 900)
+        k += 0.4 * modes(N(0.3), [210, 390, 640], [0.05, 0.03, 0.02], [1, 0.5, 0.3], rng)
+        place(y, k * (1.0 - 0.15 * i), tc)
+    y = lp(y, 1400)
+    y = reverb(y, 1.8, 0.45, rng, 2500)
+    return fades(remove_dc(fit(y, dur)), 0.002, 0.4)
+
+
+def s_nm_drag():
+    """Something heavy dragged across floorboards above or below."""
+    rng = rng_for(303)
+    dur = 2.6
+    n = N(dur)
+    y = creak(dur, [(0, 18), (1.2, 26), (2.6, 14)], rng, (300, 700, 1500), 0.35,
+              [(0, 0), (0.3, 0.9), (2.0, 0.7), (2.6, 0)])
+    y += 0.25 * lp(rng.standard_normal(n), 220) * interp_keys([(0, 0), (0.3, 1), (2.2, 0.8), (2.6, 0)], tt(n))
+    y = lp(y, 1800)
+    y = reverb(y, 1.4, 0.4, rng, 2200)
+    return fades(remove_dc(fit(y, dur)), 0.05, 0.3)
+
+
 # name -> (generator, kind, expected duration (approx))
 SOUNDS = {
     "pencil_scribble": (s_pencil_scribble, "oneshot"),
@@ -1526,6 +1572,9 @@ SOUNDS = {
     "results_lose": (s_results_lose, "oneshot"),
     "ambience_house": (s_ambience_house, "loop"),
     "music_menu": (s_music_menu, "loop"),
+    "critter_squish": (s_critter_squish, "oneshot"),
+    "nm_knock": (s_nm_knock, "oneshot"),
+    "nm_drag": (s_nm_drag, "oneshot"),
 }
 
 

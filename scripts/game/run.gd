@@ -23,6 +23,7 @@ var run_seed := 0
 var creature_override := ""
 var roster: Array = []             # [{peer_id, name}] — empty means solo
 var multiplayer_match := false
+var difficulty := "normal"         # "normal" or "nightmare"
 var rng := RandomNumberGenerator.new()
 var map: HouseMap
 var world: Node2D
@@ -62,10 +63,13 @@ var _paused := false
 var _snap_acc := 0.0
 var _priv_acc := 0.0
 var _quip_t := 0.0
+var critters: Critters = null
+var _dread_noise_t := 12.0
 
 ## roster empty → solo. Otherwise [{peer_id, name}], the host first.
-func setup(p_house: String, p_seed: int, p_override: String, p_roster: Array = []) -> void:
+func setup(p_house: String, p_seed: int, p_override: String, p_roster: Array = [], p_difficulty: String = "normal") -> void:
 	house_id = p_house
+	difficulty = p_difficulty
 	run_seed = p_seed if p_seed >= 0 else int(Time.get_unix_time_from_system() * 1000.0) % 2147483647
 	creature_override = p_override
 	roster = p_roster
@@ -80,11 +84,14 @@ func _ready() -> void:
 	map = HouseMap.from_data(Game.house(house_id))
 	recorder = ReplayRecorder.new(house_id, run_seed)
 	recorder.data["multiplayer"] = multiplayer_match
+	recorder.data["difficulty"] = difficulty
 	world = Node2D.new()
 	world.name = "World"
 	add_child(world)
 	view = HouseView.new()
 	view.build(map, true, true)
+	if difficulty == "nightmare":
+		view.build_nightmare()
 	world.add_child(view)
 	world_text = CanvasLayer.new()
 	world_text.layer = 1
@@ -99,6 +106,10 @@ func _ready() -> void:
 	_choose_creature()
 	_place_resources()
 	_spawn_occupants()
+	if difficulty == "nightmare":
+		critters = Critters.new()
+		view.actor_layer.add_child(critters)
+		critters.setup(self, run_seed)
 	hud = preload("res://scripts/ui/hud.gd").new()
 	add_child(hud)
 	hud.setup(self)
@@ -152,7 +163,7 @@ func _spawn_hunters() -> void:
 	camera.position_smoothing_enabled = true
 	camera.position_smoothing_speed = 9.0
 	# Centre the investigator in the area left of the journal panel.
-	camera.offset = Vector2(145.0 / CAMERA_ZOOM, 0.0)
+	camera.offset = Vector2.ZERO
 	_apply_camera_limits(player.global_position)
 	player.add_child(camera)
 
@@ -163,10 +174,11 @@ func _on_local_floor(level: int) -> void:
 
 func _apply_camera_limits(pos: Vector2) -> void:
 	var b := map.floor_bounds(map.floor_at(pos))
-	camera.limit_left = int(b.position.x) - 60
-	camera.limit_top = int(b.position.y) - 60
-	camera.limit_right = int(b.end.x) + 60 + int(300.0 / CAMERA_ZOOM)
-	camera.limit_bottom = int(b.end.y) + 110
+	# Room to scroll past the edges so the corner HUD panels never hide the house.
+	camera.limit_left = int(b.position.x) - 60 - int(180.0 / CAMERA_ZOOM)
+	camera.limit_top = int(b.position.y) - 60 - int(100.0 / CAMERA_ZOOM)
+	camera.limit_right = int(b.end.x) + 60 + int(180.0 / CAMERA_ZOOM)
+	camera.limit_bottom = int(b.end.y) + 60 + int(110.0 / CAMERA_ZOOM)
 
 func _choose_creature() -> void:
 	# Uniform choice from the run seed only — statistics never influence it.
@@ -244,6 +256,7 @@ func _spawn_occupants() -> void:
 		var o := Occupant.new()
 		var r: Dictionary = rooms[rng.randi_range(0, rooms.size() - 1)]
 		o.setup(self, "npc_%d" % (i + 1), cast[i], HouseMap.cell_center(map.random_free_cell(r["id"], rng)))
+		o.fear = 2.0 if difficulty == "nightmare" else 1.0
 		view.actor_layer.add_child(o)
 		occupants.append(o)
 		recorder.register_actor(o.actor_id, "npc", o.token_path, 36.0)
@@ -308,9 +321,32 @@ func _process(delta: float) -> void:
 			camera.reset_smoothing()
 	_update_threat(delta)
 	_update_defences(delta)
+	if difficulty == "nightmare":
+		_nightmare_noises(delta)
 	_record(delta)
 	if multiplayer_match:
 		_net_tick(delta)
+
+## Nightmare: strange noises somewhere in the house every few seconds. Heard by
+## everyone (and by the occupants, who do not take it well). Never evidence.
+const NIGHTMARE_NOISES := [["nm_knock", -8.0, 1.0], ["nm_drag", -8.0, 1.0], ["door_creak", -10.0, 0.8],
+	["footstep", -6.0, 0.6], ["nm_knock", -12.0, 0.75], ["scream_2", -24.0, 0.7]]
+
+func _nightmare_noises(delta: float) -> void:
+	_dread_noise_t -= delta
+	if _dread_noise_t > 0.0:
+		return
+	_dread_noise_t = rng.randf_range(7.0, 16.0)
+	var who: Player = hunters[rng.randi_range(0, hunters.size() - 1)]
+	var rooms: Array = map.indoor_rooms()
+	var r: Dictionary = rooms[rng.randi_range(0, rooms.size() - 1)]
+	var pos := HouseMap.cell_center(map.random_free_cell(r["id"], rng))
+	if pos.distance_to(who.global_position) < 200.0:
+		pos = who.global_position + (pos - who.global_position).normalized() * 260.0
+	var n: Array = NIGHTMARE_NOISES[rng.randi_range(0, NIGHTMARE_NOISES.size() - 1)]
+	sound_at(n[0], pos, n[1], n[2] * rng.randf_range(0.9, 1.1), 1100.0)
+	for o in occupants:
+		o.react(pos)
 
 func _record(delta: float) -> void:
 	recorder.tick(elapsed, delta, _actor_states())
@@ -1126,7 +1162,7 @@ func build_summary(p: Player = null) -> Dictionary:
 				transformations += 1
 	var won := _outcome == "vanquished" and not p.dead
 	var summary := {
-		"house": house_id, "house_name": map.name, "seed": run_seed,
+		"house": house_id, "house_name": map.name, "seed": run_seed, "difficulty": difficulty,
 		"original_creature": original_creature, "creature": final_creature,
 		"vanquished": won, "time": snappedf(elapsed, 0.01),
 		"evidence": all_entries, "evidence_ids": entries.map(func(e): return e["id"]),
@@ -1165,7 +1201,7 @@ func build_match_results() -> Dictionary:
 		facts["score_lines"] = sc["lines"]
 		rows.append(facts)
 	var ranked := MpScoring.rank(rows)
-	return {"house": house_id, "house_name": map.name, "seed": run_seed, "outcome": _outcome,
+	return {"house": house_id, "house_name": map.name, "seed": run_seed, "difficulty": difficulty, "outcome": _outcome,
 		"creature": creature.type_id, "original_creature": original_creature, "time": snappedf(elapsed, 0.01),
 		"harbinger": harbinger_summoned, "rows": ranked, "rules_version": MpScoring.RULES_VERSION}
 
@@ -1200,9 +1236,17 @@ func restart() -> void:
 
 func set_paused(p: bool) -> void:
 	if multiplayer_match:
-		return   # the world never stops for one rival
+		Net.request_pause(p)   # the host decides for everyone
+		return
 	_paused = p
 	get_tree().paused = p
+
+## Multiplayer: the host froze (or resumed) the whole match. Simulation, timers,
+## hunts, the run clock and the replay all stop together and resume together.
+func apply_shared_pause(on: bool, who: String, remaining: float) -> void:
+	_paused = on
+	get_tree().paused = on
+	hud.show_shared_pause(on, who, remaining)
 
 # --- Network (host side) -----------------------------------------------------------------
 
@@ -1231,8 +1275,8 @@ func hud_state(h: Player) -> Dictionary:
 ## rejects impossible jumps (teleports, speed hacks) and corrects the client.
 func apply_remote_input(peer: int, pos: Vector2, aim: float, flags: int, mask: int, counters: PackedByteArray) -> void:
 	var h := hunter_by_peer(peer)
-	if h == null or h.dead:
-		return
+	if h == null or h.dead or _paused:
+		return   # (press counters are cumulative, so nothing is lost)
 	var last: float = h.get_meta("last_input_t", elapsed)
 	var dt := maxf(elapsed - last, 1.0 / 60.0)
 	h.set_meta("last_input_t", elapsed)

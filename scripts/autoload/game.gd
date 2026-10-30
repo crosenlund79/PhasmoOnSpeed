@@ -66,16 +66,16 @@ func goto_lobby(message: String = "") -> void:
 	_switch(l)
 
 ## Host: build the authoritative run for a competitive match.
-func start_match_host(house_id: String, run_seed: int, creature_override: String, roster: Array) -> Node:
+func start_match_host(house_id: String, run_seed: int, creature_override: String, roster: Array, difficulty: String = "normal") -> Node:
 	var run = preload("res://scripts/game/run.gd").new()
-	run.setup(house_id, run_seed, creature_override, roster)
+	run.setup(house_id, run_seed, creature_override, roster, difficulty)
 	_switch(run)
 	return run
 
 ## Client: build the mirrored view of the host's match.
-func start_match_client(house_id: String, run_seed: int, roster: Array, my_peer: int) -> Node:
+func start_match_client(house_id: String, run_seed: int, roster: Array, my_peer: int, difficulty: String = "normal") -> Node:
 	var cr = preload("res://scripts/game/client_run.gd").new()
-	cr.setup(house_id, run_seed, roster, my_peer)
+	cr.setup(house_id, run_seed, roster, my_peer, difficulty)
 	_switch(cr)
 	return cr
 
@@ -96,9 +96,12 @@ func show_match_results(results: Dictionary, replay: Dictionary) -> void:
 	_switch(res)
 
 ## Starts a run. creature_override is only for tests/dev; normal play is random.
-func start_run(house_id: String, run_seed: int = -1, creature_override: String = "") -> Node:
+## Difficulty defaults to the one last chosen on the house screen.
+func start_run(house_id: String, run_seed: int = -1, creature_override: String = "", difficulty: String = "") -> Node:
+	if difficulty == "":
+		difficulty = str(SaveData.settings().get("difficulty", "normal"))
 	var run = preload("res://scripts/game/run.gd").new()
-	run.setup(house_id, run_seed, creature_override)
+	run.setup(house_id, run_seed, creature_override, [], difficulty)
 	SaveData.note_run_started()
 	_switch(run)
 	return run
@@ -107,7 +110,9 @@ func start_run(house_id: String, run_seed: int = -1, creature_override: String =
 func finish_run(summary: Dictionary, replay: Dictionary) -> void:
 	var records := SaveData.record_run(summary)
 	SaveData.save_replay(replay)
-	Online.submit(summary, SaveData.settings().get("player_name", "Investigator"))
+	# The global leaderboard ranks Normal runs only; Nightmare records stay local and separate.
+	if summary.get("difficulty", "normal") == "normal":
+		Online.submit(summary, SaveData.settings().get("player_name", "Investigator"))
 	last_result = {"summary": summary, "replay": replay, "records": records}
 	var res = preload("res://scripts/ui/results.gd").new()
 	res.setup(last_result)

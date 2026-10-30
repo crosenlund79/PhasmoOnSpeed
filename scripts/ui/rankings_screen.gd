@@ -52,6 +52,10 @@ func _ready() -> void:
 			Journal.format_time_precise(hr["best_time"]) if hr["best_time"] > 0.0 else "—",
 			str(hr["best_score"]) if hr["best_score"] > 0 else "—", int(hr["wins"]), int(hr["runs"])]
 		pbs.add_child(Art.label(line, 16))
+		var nr: Dictionary = SaveData.house_record(id, "nightmare")
+		if int(nr["runs"]) > 0:
+			pbs.add_child(Art.label("      Nightmare — %s · %s pts · %d/%d won" % [Journal.format_time_precise(nr["best_time"]) if nr["best_time"] > 0.0 else "—",
+				str(nr["best_score"]) if nr["best_score"] > 0 else "—", int(nr["wins"]), int(nr["runs"])], 15, Art.BLOOD))
 	# Competitive results are kept apart from solo rankings and legends.
 	var mp: Dictionary = SaveData.data.get("mp", {})
 	var comp := parchment_box(right, Vector2(560, 0))
@@ -59,7 +63,7 @@ func _ready() -> void:
 	if int(mp.get("matches", 0)) == 0:
 		comp.add_child(Art.label("No competitive matches yet. Rules %s." % MpScoring.RULES_VERSION, 15, Color(0.35, 0.27, 0.2), Art.font_italic))
 	else:
-		comp.add_child(Art.label("Matches %d  ·  Wins %d  ·  Vanquishes %d  ·  Best %d pts" % [int(mp["matches"]), int(mp["wins"]), int(mp["vanquishes"]), int(mp["best_score"])], 16))
+		comp.add_child(Art.label("Matches %d  ·  Wins %d  ·  Vanquishes %d  ·  Best %d pts  ·  Nightmare best %d" % [int(mp["matches"]), int(mp["wins"]), int(mp["vanquishes"]), int(mp["best_score"]), int(mp.get("nightmare_best_score", 0))], 16))
 		comp.add_child(Art.label("Shoves given %d  ·  taken %d  ·  deaths %d" % [int(mp["shoves_given"]), int(mp["shoves_taken"]), int(mp["deaths"])], 15, Color(0.3, 0.22, 0.15)))
 	global_box = parchment_box(right, Vector2(560, 0))
 	global_box.add_child(Art.heading("Global Leaderboard", 26))

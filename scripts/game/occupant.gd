@@ -22,6 +22,9 @@ var bitten := false
 var tag: SpeechTag
 var room_id := ""
 var _jitter := 0.0
+var fear := 1.0           # Nightmare Mode: 2.0 — more panic, talk and reactions
+var _panic_t := 0.0
+var _distress_t := 25.0
 
 func setup(p_run: Run, id: String, p_person: Dictionary, start: Vector2) -> void:
 	run = p_run
@@ -38,14 +41,14 @@ func setup(p_run: Run, id: String, p_person: Dictionary, start: Vector2) -> void
 	tag = SpeechTag.new(run.world_text, person["name"])
 	wait_t = rng.randf_range(0.5, 3.0)
 	talk_t = rng.randf_range(6.0, 14.0)
+	_distress_t = rng.randf_range(15.0, 30.0)
 
 func say(text: String) -> void:
 	tag.say(text)
 	run.on_say(actor_id, text)
 
 func _line(kind: String) -> String:
-	var lines: Array = traits[kind]
-	return lines[rng.randi_range(0, lines.size() - 1)]
+	return Occupants.pick_line(person["personality"], kind, rng, fear)
 
 func bite() -> void:
 	if bitten:
@@ -66,11 +69,14 @@ func flee() -> void:
 
 ## A disturbance nearby (a bang, a scream, a rattle). Personality decides the response.
 func react(at: Vector2) -> void:
-	if state == "flee" or state == "gone" or react_cd > 0.0 or position.distance_to(at) > 320.0:
+	if state == "flee" or state == "gone" or react_cd > 0.0 or position.distance_to(at) > 320.0 * fear:
 		return
-	react_cd = 9.0
-	if rng.randf() < 0.75:
+	react_cd = 9.0 / fear
+	if rng.randf() < 0.75 * fear:
 		say(_line("react"))
+	if fear > 1.0 and not (traits["approach"] and rng.randf() < 0.3):
+		_panic(at)
+		return
 	if traits["approach"] and rng.randf() < 0.6:
 		path = map.path(position, at)
 		path_i = 0
@@ -79,21 +85,46 @@ func react(at: Vector2) -> void:
 		_jitter = 0.0
 		wait_t = maxf(wait_t, 1.5)
 
+## Bolt away from a fright, into another room, faster than they ever walk.
+func _panic(from: Vector2) -> void:
+	var rooms := map.indoor_rooms().filter(func(r): return r["id"] != room_id)
+	if rooms.is_empty():
+		return
+	var best: Dictionary = rooms[rng.randi_range(0, rooms.size() - 1)]
+	var away := HouseMap.cell_center(map.random_free_cell(best["id"], rng))
+	if away.distance_to(from) < position.distance_to(from):
+		best = rooms[rng.randi_range(0, rooms.size() - 1)]
+		away = HouseMap.cell_center(map.random_free_cell(best["id"], rng))
+	path = map.path(position, away)
+	path_i = 0
+	state = "wander"
+	_panic_t = rng.randf_range(2.0, 3.5)
+
 func _process(delta: float) -> void:
 	if state == "gone":
 		return
 	room_id = map.room_at(position, room_id)
 	react_cd = maxf(0.0, react_cd - delta)
+	_panic_t = maxf(0.0, _panic_t - delta)
+	if fear > 1.0 and (state == "wander" or state == "idle"):
+		_distress_t -= delta
+		if _distress_t <= 0.0:
+			# Fits of distress, unprompted: a gasp, a cry and a dash.
+			_distress_t = rng.randf_range(18.0, 36.0)
+			run.sound_at("npc_gasp", position, -8.0, rng.randf_range(0.9, 1.15))
+			say(_line("react"))
+			if rng.randf() < 0.5:
+				_panic(position)
 	tag.update(position, modulate.a, delta)
 	match state:
 		"wander":
-			if not _step(delta, traits["speed"]):
+			if not _step(delta, 175.0 if _panic_t > 0.0 else float(traits["speed"]) * (1.15 if fear > 1.0 else 1.0)):
 				state = "idle"
 				wait_t = rng.randf_range(traits["idle"][0], traits["idle"][1])
 		"idle":
 			wait_t -= delta
 			_jitter += delta
-			token.face(token.facing + sin(_jitter * 3.0) * 0.6 * float(traits["jitter"]), delta, 3.0)
+			token.face(token.facing + sin(_jitter * 3.0 * fear) * 0.6 * minf(1.6, float(traits["jitter"]) * fear + (0.4 if fear > 1.0 else 0.0)), delta, 3.0 * fear)
 			if wait_t <= 0.0:
 				_new_destination()
 		"flee":
@@ -106,7 +137,7 @@ func _process(delta: float) -> void:
 	if state == "wander" or state == "idle":
 		talk_t -= delta
 		if talk_t <= 0.0:
-			talk_t = rng.randf_range(traits["talk"][0], traits["talk"][1])
+			talk_t = Occupants.talk_delay(person["personality"], rng, fear)
 			say(Occupants.BITTEN_LINES[rng.randi_range(0, 2)] if bitten and rng.randf() < 0.6 else _line("lines"))
 
 func _new_destination() -> void:

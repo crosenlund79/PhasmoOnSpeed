@@ -13,6 +13,8 @@ var port_edit: LineEdit
 var ready_button: Button
 var start_button: Button
 var house_buttons := {}
+var difficulty_buttons := {}
+var pause_limit_check: CheckBox
 var _ready_state := false
 
 func _ready() -> void:
@@ -94,6 +96,28 @@ func _build_room() -> void:
 		b.toggle_mode = true
 		houses.add_child(b)
 		house_buttons[id] = b
+	# Match options — the host decides for everyone.
+	var opts := HBoxContainer.new()
+	opts.add_theme_constant_override("separation", 8)
+	room_box.add_child(opts)
+	opts.add_child(Art.heading("Difficulty", 22))
+	for d in [["normal", "Normal"], ["nightmare", "Nightmare"]]:
+		var did: String = d[0]
+		var b := Art.button(d[1], func(): Net.set_option("difficulty", did), 170)
+		b.add_theme_font_size_override("font_size", 16)
+		b.toggle_mode = true
+		opts.add_child(b)
+		difficulty_buttons[did] = b
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(24, 0)
+	opts.add_child(gap)
+	pause_limit_check = CheckBox.new()
+	pause_limit_check.text = "Limit Menu Pause to %d Seconds" % int(Net.PAUSE_LIMIT)
+	for c in ["font_color", "font_pressed_color", "font_hover_color", "font_hover_pressed_color", "font_focus_color"]:
+		pause_limit_check.add_theme_color_override(c, Color(0.93, 0.85, 0.65))
+	pause_limit_check.add_theme_color_override("font_disabled_color", Color(0.7, 0.64, 0.52))
+	pause_limit_check.toggled.connect(func(on): Net.set_option("pause_limit", on))
+	opts.add_child(pause_limit_check)
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 10)
 	room_box.add_child(actions)
@@ -141,6 +165,12 @@ func _refresh() -> void:
 		var b: Button = house_buttons[hid]
 		b.button_pressed = hid == Net.house
 		b.disabled = not Net.is_host()
+	for did in difficulty_buttons:
+		var db: Button = difficulty_buttons[did]
+		db.button_pressed = Net.options.get("difficulty", "normal") == did
+		db.disabled = not Net.is_host()
+	pause_limit_check.set_pressed_no_signal(Net.options.get("pause_limit", true))
+	pause_limit_check.disabled = not Net.is_host()
 	ready_button.text = "Not ready" if _ready_state else "Ready"
 	start_button.visible = Net.is_host()
 	start_button.disabled = not Net.can_start()

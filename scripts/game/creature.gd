@@ -256,10 +256,10 @@ func _update_disguise(delta: float) -> void:
 	tag.update(position, alpha, delta)
 	_talk_t -= delta
 	if _talk_t <= 0.0 and state == "roam":
-		var traits: Dictionary = Occupants.PERSONALITIES[run.disguise["personality"]]
-		_talk_t = rng.randf_range(traits["talk"][0], traits["talk"][1])
-		var lines: Array = traits["lines"]
-		var line: String = lines[rng.randi_range(0, lines.size() - 1)]
+		# Talks exactly like an occupant would — terrified, too, in Nightmare.
+		var fear := 2.0 if run.difficulty == "nightmare" else 1.0
+		_talk_t = Occupants.talk_delay(run.disguise["personality"], rng, fear)
+		var line := Occupants.pick_line(run.disguise["personality"], "lines", rng, fear)
 		tag.say(line)
 		run.on_say(run._creature_actor_id(), line)
 

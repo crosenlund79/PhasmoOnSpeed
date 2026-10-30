@@ -77,8 +77,27 @@ old entity's evidence types are no longer accepted.
   (the hotspot's / clue's room; the thermometer's room; the voice's source).
   Every occurrence is also stored for analytics.
 * Pencil-scribble sound + one small toast per new entry; duplicates are silent.
-* Fixed width (288 px at 1600×900), discovered list scrolls and auto-scrolls to
-  the newest; the unconfirmed list is a single wrapped line.
+* Shown as the EVIDENCE panel (top-right): every evidence type is listed from
+  the start, greyed until discovered, then gold. The rest of the HUD sits on the
+  edges too — EQUIPMENT top-left, readings / time / health top-centre, the
+  SUSPECTED panel bottom-centre — keeping the centre of the screen clear.
+
+## Nightmare Mode
+
+Chosen on the house screen (solo) or by the host in the lobby. Scoring rules
+are unchanged, but personal bests are kept separately and Nightmare runs are
+not sent to the global leaderboard.
+
+* The SUSPECTED panel shows only the entity's name and description — no
+  evidence or requirement icons.
+* Occupants are terrified (`fear` 2.0): they talk and react more, panic-run
+  between rooms, have fits of distress and use frightened lines.
+* Strange noises (knocks, dragging, creaks, distant screams) every 7–16 s,
+  which the occupants react to. Old blood in every room.
+* Spiders, cockroaches and rats (`scripts/game/critters.gd`), more of them in
+  neglected rooms and basements, at most 36. Step on one and it dies with a
+  crunch and a little blood. They have no gameplay effect and are simulated
+  locally on each machine.
 
 ## Basements
 

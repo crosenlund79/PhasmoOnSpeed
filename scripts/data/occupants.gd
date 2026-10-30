@@ -50,6 +50,27 @@ const PERSONALITIES := {
 		"flee": ["Right. Everyone out, calmly.", "Time to leave — single file, please."],
 	},
 }
+## Nightmare Mode: what everyone says once the house has truly got to them.
+## Mixed in with each personality's own lines, so voices stay recognisable.
+const FRIGHT_LINES := {
+	"lines": ["Something touched my hand. Something COLD.", "Please. Please let's just go.", "I can't breathe in here.",
+		"It's in the walls. It's in the WALLS.", "Don't leave me alone in here!", "I keep hearing my name.",
+		"There's blood on the floor. Whose blood is that?", "Something's crawling on me — get it off!"],
+	"react": ["No — no, no, NO!", "Oh God, what was that?!", "It's coming closer!", "Make it stop!", "Did it move? It moved!"],
+}
+
+## A line for a personality; in Nightmare (fear > 1) often a frightened one.
+static func pick_line(personality: String, kind: String, rng: RandomNumberGenerator, fear: float = 1.0) -> String:
+	var lines: Array = PERSONALITIES[personality][kind]
+	if fear > 1.0 and FRIGHT_LINES.has(kind) and rng.randf() < 0.55:
+		lines = FRIGHT_LINES[kind]
+	return lines[rng.randi_range(0, lines.size() - 1)]
+
+## Seconds until the next idle remark; frightened people talk more.
+static func talk_delay(personality: String, rng: RandomNumberGenerator, fear: float = 1.0) -> float:
+	var t: Array = PERSONALITIES[personality]["talk"]
+	return rng.randf_range(t[0], t[1]) / fear
+
 const BITTEN_LINES := ["My neck... itches.", "I feel so terribly tired.", "Why is it so bright in here?"]
 
 ## A distinct cast for a house: no repeated names or looks, varied personalities.

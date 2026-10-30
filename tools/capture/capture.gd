@@ -32,6 +32,12 @@ func _shot(s: String) -> void:
 		Game.goto_menu()
 		await _wait(20)
 		await _save("menu")
+	elif s == "settings":
+		Game.goto_menu()
+		await _wait(10)
+		get_tree().current_scene.settings_panel.visible = true
+		await _wait(10)
+		await _save("settings")
 	elif s == "houses":
 		Game.goto_house_select()
 		await _wait(20)
@@ -50,6 +56,51 @@ func _shot(s: String) -> void:
 		run.player.journal.record("footprints", 128.0, "hallway", "Hallway")
 		await _wait(25)
 		await _save(s.replace(":", "_"))
+	elif s.begins_with("suspect_"):
+		# SUSPECTED panel with a chosen entity, some evidence and one requirement held.
+		var parts := s.substr(8).split(":")
+		var run: Run = Game.start_run(parts[0], 5, "shade", parts[2] if parts.size() > 2 else "normal")
+		await _wait(20)
+		run.creature.set_process(false)
+		run.player.suspect = parts[1] if parts.size() > 1 else "vampire"
+		run.player.journal.record("bite_marks", 64.0, "kitchen", "Kitchen")
+		run.player.journal.record("emf5", 90.0, "living", "Living Room")
+		run.player.add_resource("garlic")
+		run.player.equipment.rebuild_slots()
+		run.elapsed = 97.6
+		run.hud.refresh()
+		run.hud.show_suspect_picker()
+		await _wait(30)
+		await _save(s.replace(":", "_"))
+	elif s.begins_with("nightmare_"):
+		# Nightmare atmosphere: blood, vermin (one freshly squashed), a frightened occupant.
+		var run: Run = Game.start_run(s.substr(10), 5, "werewolf", "nightmare")
+		await _wait(5)
+		run.creature.set_process(false)
+		var grim: Array = run.map.rooms.filter(func(r): return not r["outdoor"] and int(r.get("level", 0)) == 0 and r.get("condition", "") in ["neglected", "abandoned"])
+		var room: Dictionary = grim[0] if not grim.is_empty() else run.map.indoor_rooms()[0]
+		run.player.global_position = run.map.room_center(room["id"])
+		run._apply_camera_limits(run.player.global_position)
+		run.camera.reset_smoothing()
+		run.player.flashlight_on = true
+		run.player.aim_override = 0.3
+		run.player.input_enabled = false
+		run.player.suspect = "werewolf"
+		run.hud.refresh()
+		var live: Array = run.critters.list
+		for i in mini(5, live.size()):
+			live[i]["node"].position = run.player.global_position + Vector2(60 + i * 26, -40 + (i % 2) * 70)
+			live[i]["room"] = run.map.room_at(live[i]["node"].position)
+		if run.occupants.size() > 0:
+			var o: Occupant = run.occupants[0]
+			o.position = run.player.global_position + Vector2(-90, -30)
+			o.say("Something's crawling on me — get it off!")
+		await _wait(20)
+		if live.size() > 0:
+			run.critters._squash(live[0])
+		run.elapsed = 212.4
+		await _wait(40)
+		await _save(s)
 	elif s.begins_with("overview_"):
 		var run: Run = Game.start_run(s.substr(9), 5, "shade")
 		await _wait(10)
@@ -70,8 +121,14 @@ func _shot(s: String) -> void:
 		await _wait(20)
 		var c := run.creature
 		c.position = run.player.global_position + Vector2(140, -20)
+		run.player.invuln = 999.0   # keep the hunt going for the photograph
 		c.begin_hunt(c.position, false)
-		await _wait(200)
+		for i in 400:
+			if c.is_hunting() and run.hud._hunting:
+				break
+			await get_tree().process_frame
+		print("hunting: ", c.is_hunting(), " state ", c.state)
+		await _wait(40)
 		await _save(s.replace(":", "_"))
 	elif s == "harbinger":
 		var run: Run = Game.start_run("blackwood", 9, "vampire")
@@ -160,6 +217,10 @@ func _shot(s: String) -> void:
 		cr.player.journal.record("claw_marks", 41.0, cr.player.room_id, cr.map.room_name(cr.player.room_id))
 		await _wait(20)
 		await _save("multiplayer_client")
+		if s.ends_with(":pause"):
+			cr.hud.toggle_pause()   # as Esc: the host pauses everyone
+			await _wait(45)
+			await _save("multiplayer_pause")
 		Net.leave()
 	elif s == "lobby":
 		Net.host(24799, "Host")

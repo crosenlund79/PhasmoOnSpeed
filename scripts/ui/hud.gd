@@ -1,36 +1,85 @@
 extends CanvasLayer
-## Gameplay HUD for the hunter on this machine: the compact automatic journal on
-## the right (timer, survival, discoveries, unconfirmed evidence, suspect), the
-## hotbar, the character-following equipment reading, evidence notifications,
-## prompts, toasts, dramatic messages, hunt/wound overlays, spectating and the
-## pause / controls panels.
+## Gameplay HUD for the hunter on this machine, organised around the screen edges
+## so the centre stays free for movement and encounters:
+##   top-left    EQUIPMENT  — circular slots, selected one highlighted
+##   top-right   EVIDENCE   — every evidence type, greyed until discovered
+##   top-centre  readings / contextual feedback, then time, health, dread
+##   bottom      SUSPECTED  — chosen entity, its evidence and requirements
+## plus the "HUNTING!" warning, evidence cards, toasts (bottom-left), dramatic
+## messages, spectating, the pause / controls panels and the shared
+## multiplayer pause banner.
 ##
 ## `run` is a Run (solo / host) or a ClientRun (multiplayer client); both expose
 ## the same small read interface (elapsed, threat, map, player, hunters, …).
 
-const JOURNAL_WIDTH := 288.0
 const INK := Color(0.09, 0.07, 0.06)
 const INK_SOFT := Color(0.27, 0.2, 0.14)
 const BONE := Color(0.93, 0.88, 0.76)
+const PANEL_BG := Color(0.06, 0.05, 0.05, 0.74)
+const DISC_BG := Color(0.1, 0.08, 0.07, 0.9)
+const RING_OFF := Color(0.42, 0.36, 0.28, 0.55)
+const EQ_SHORT := {"emf": "EMF", "thermometer": "Thermo", "uv": "UV Light", "spirit_box": "Spirit Box",
+	"ghost_book": "Book", "orb_camera": "Orb Cam", "salt": "Salt", "crucifix": "Crucifix",
+	"holy_water": "Holy Water", "garlic": "Garlic", "wooden_stake": "Stake", "silverware": "Silverware",
+	"silver_stake": "Silver Stake", "hand_mirror": "Mirror", "iron_nails": "Iron Nails"}
+## What each entity needs to be vanquished (items shown as icons, method as text).
+const REQUIREMENTS := {
+	"shade": {"items": ["salt"], "method": "Salt its room · Rite of Stillness there (hold V)"},
+	"poltergeist": {"items": ["ghost_book"], "method": "Book in its room · Rite of Binding there (hold V)"},
+	"vampire": {"items": ["garlic", "wooden_stake"], "method": "Carry garlic · strike with the wooden stake"},
+	"werewolf": {"items": ["silverware", "silver_stake"], "method": "Melt silverware · strike with the silver stake"},
+	"shapeshifter": {"items": ["hand_mirror", "iron_nails"], "method": "Unmask it in the mirror · strike with iron nails"},
+}
+
+## A circular icon slot. Styled by state; drawn, so it scales cleanly.
+class Disc extends Control:
+	var icon: TextureRect
+	var fill := DISC_BG
+	var ring := RING_OFF
+	var ring_w := 2.0
+	var glow := 0.0
+
+	func _init(path: String, d: float) -> void:
+		custom_minimum_size = Vector2(d, d)
+		size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon = Art.icon_rect(path, d * 0.64)
+		icon.position = Vector2(d * 0.18, d * 0.18)
+		icon.size = Vector2(d * 0.64, d * 0.64)
+		add_child(icon)
+
+	func set_state(on: bool, strong: bool = false) -> void:
+		ring = Art.GOLD if on else RING_OFF
+		ring_w = 3.0 if strong else (2.0 if on else 1.5)
+		glow = 0.4 if strong else (0.16 if on else 0.0)
+		fill = Color(0.2, 0.14, 0.07, 0.95) if strong else DISC_BG
+		icon.modulate = Color.WHITE if on else Color(0.42, 0.4, 0.38, 0.55)
+		queue_redraw()
+
+	func _draw() -> void:
+		var c := size * 0.5
+		var r := minf(size.x, size.y) * 0.5
+		if glow > 0.0:
+			draw_circle(c, r + 3.0, Color(Art.GOLD.r, Art.GOLD.g, Art.GOLD.b, glow))
+		draw_circle(c, r - 1.0, fill)
+		draw_arc(c, r - ring_w * 0.5 - 0.5, 0.0, TAU, 48, ring, ring_w, true)
 
 var run
+var k := 1.0                    # HUD scale setting
+var equip_panel: PanelContainer
+var equip_grid: GridContainer
+var evidence_panel: PanelContainer
+var evidence_grid: GridContainer
+var info_main: Label
+var info_sub: Label
+var hold_bar: ProgressBar
 var timer_label: Label
-var pb_label: Label
 var hearts: Array = []
 var dread_fill: ColorRect
-var entries_box: VBoxContainer
-var entries_scroll: ScrollContainer
-var void_label: Label
-var unconfirmed_label: Label
-var unconfirmed_title: Label
-var suspect_label: Label
-var rivals_label: Label
-var location_label: Label
-var hotbar: HBoxContainer
 var stamina_fill: ColorRect
-var hint_label: Label
-var prompt_label: Label
-var hold_bar: ProgressBar
+var status_line: Label
+var hunt_label: Label
+var suspect_box: VBoxContainer
 var toast_box: VBoxContainer
 var big_title: Label
 var big_sub: Label
@@ -39,17 +88,18 @@ var hunt_overlay: TextureRect
 var wound_overlay: ColorRect
 var pause_panel: Control
 var help_panel: Control
+var shared_pause_panel: Control
+var shared_pause_title: Label
+var shared_pause_sub: Label
 var spectate_label: Label
 var suspect_picker: HBoxContainer
-# Character-following layers (world-space, on the unlit text layer).
-var reading_label: Label
 var notify_root: Node2D
 var _notifications: Array = []
+var _ev_discs := {}            # evidence id -> Disc
 var _hunting := false
 var _t := 0.0
 var _shake := 0.0
 var _toast_recent := {}
-var _entry_rows := {}       # evidence id -> row PanelContainer
 var _equipment = null
 var _picker_t := 0.0
 var spectating := false
@@ -59,27 +109,39 @@ func setup(p_run) -> void:
 	run = p_run
 	layer = 10
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	k = clampf(float(_settings().get("hud_scale", 1.0)), 0.7, 1.5)
 	var root := Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 	_build_overlays(root)
-	_build_journal(root)
-	_build_hotbar(root)
+	_build_equipment(root)
+	_build_evidence(root)
+	_build_centre(root)
+	_build_suspect(root)
 	_build_toasts(root)
 	_build_big_message(root)
 	_build_suspect_picker(root)
 	_build_spectate(root)
 	_build_pause(root)
+	_build_shared_pause(root)
 	_build_help(root)
-	_build_follow_layers()
+	notify_root = Node2D.new()
+	notify_root.z_index = 40
+	run.world_text.add_child(notify_root)
 	_equipment = run.player.equipment
-	_equipment.changed.connect(_rebuild_hotbar)
-	_rebuild_hotbar()
+	_equipment.changed.connect(_on_equipment_changed)
+	_rebuild_equipment()
 	refresh()
 
 func _settings() -> Dictionary:
 	return SaveData.settings()
+
+func _px(v: float) -> int:
+	return int(round(v * k))
+
+func nightmare() -> bool:
+	return str(run.get("difficulty")) == "nightmare"
 
 # --- Construction ------------------------------------------------------------------------
 
@@ -111,111 +173,156 @@ func _small(text: String, size: int, color: Color = INK, font: Font = null) -> L
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return l
 
-func _rule() -> ColorRect:
-	var r := ColorRect.new()
-	r.color = Color(0.2, 0.14, 0.08, 0.55)
-	r.custom_minimum_size = Vector2(0, 2)
-	return r
+func _outlined(text: String, size: int, color: Color, font: Font = null, outline: int = 4) -> Label:
+	var l := Art.label(text, size, color, font)
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	l.add_theme_constant_override("outline_size", outline)
+	return l
 
-func _build_journal(root: Control) -> void:
-	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", Art.parchment_panel())
-	panel.anchor_left = 1.0
-	panel.anchor_right = 1.0
-	panel.anchor_top = 0.0
-	panel.anchor_bottom = 1.0
-	panel.offset_left = -JOURNAL_WIDTH - 10
-	panel.offset_right = -10
-	panel.offset_top = 10
-	panel.offset_bottom = -10
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(panel)
+## The shared ink-and-gold panel used by every HUD box.
+func _panel_style() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = PANEL_BG
+	sb.border_color = Color(Art.GOLD.r, Art.GOLD.g, Art.GOLD.b, 0.55)
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(_px(7))
+	sb.content_margin_left = _px(8)
+	sb.content_margin_right = _px(8)
+	sb.content_margin_top = _px(5)
+	sb.content_margin_bottom = _px(6)
+	return sb
+
+func _panel(root: Control) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", _panel_style())
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(p)
+	return p
+
+## EQUIPMENT and EVIDENCE share this exact heading.
+func _corner_heading(text: String) -> Label:
+	var l := _outlined(text, _px(15), Art.GOLD, Art.font_heading, 3)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	return l
+
+func _grid() -> GridContainer:
+	var g := GridContainer.new()
+	g.columns = 2
+	g.add_theme_constant_override("h_separation", _px(4))
+	g.add_theme_constant_override("v_separation", _px(3))
+	return g
+
+## One grid cell: disc + small label beneath.
+func _cell(icon: String, label: String, show_label: bool, d: float = 42.0) -> Array:
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 5)
-	panel.add_child(v)
-	# Timer + survival.
-	var top := HBoxContainer.new()
-	v.add_child(top)
-	top.add_child(Art.icon_rect("icons/ui_clock.png", 26))
-	timer_label = Art.label("00:00.00", 30, INK, Art.font_heading)
-	timer_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(timer_label)
-	for i in 2:
-		var h := Art.icon_rect("icons/ui_heart.png", 26)
-		top.add_child(h)
-		hearts.append(h)
-	var pb_text: String = run.map.name
-	if not run.multiplayer_match:
-		var rec: Dictionary = SaveData.house_record(run.house_id)
-		pb_text = ("No record yet" if rec["best_time"] <= 0.0 else "Best  " + Journal.format_time_precise(rec["best_time"])) + "  ·  " + run.map.name
-	else:
-		pb_text = "Competitive  ·  " + run.map.name
-	pb_label = _small(pb_text, 13, INK_SOFT, Art.font_italic)
-	v.add_child(pb_label)
-	var dread_row := HBoxContainer.new()
-	v.add_child(dread_row)
-	dread_row.add_child(Art.label("Dread", 13, INK_SOFT, Art.font_heading))
-	var bar := ColorRect.new()
-	bar.color = Color(0.2, 0.15, 0.1, 0.3)
-	bar.custom_minimum_size = Vector2(0, 7)
-	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	dread_row.add_child(bar)
-	dread_fill = ColorRect.new()
-	dread_fill.color = Color(0.5, 0.1, 0.07)
-	dread_fill.size = Vector2(0, 7)
-	bar.add_child(dread_fill)
-	rivals_label = _small("", 13, INK_SOFT, Art.font_heading)
-	rivals_label.visible = run.multiplayer_match
-	v.add_child(rivals_label)
-	v.add_child(_rule())
-	v.add_child(Art.label("Journal", 20, INK, Art.font_heading))
-	entries_scroll = ScrollContainer.new()
-	entries_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	entries_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	v.add_child(entries_scroll)
-	entries_box = VBoxContainer.new()
-	entries_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	entries_box.add_theme_constant_override("separation", 4)
-	entries_scroll.add_child(entries_box)
-	var empty := _small("Nothing confirmed yet. Observe, measure, listen.", 14, INK_SOFT, Art.font_italic)
-	empty.name = "Empty"
-	entries_box.add_child(empty)
-	void_label = _small("", 13, Color(0.35, 0.28, 0.25), Art.font_italic)
-	void_label.visible = false
-	v.add_child(void_label)
-	v.add_child(_rule())
-	unconfirmed_title = Art.label("Unconfirmed", 14, INK_SOFT, Art.font_heading)
-	v.add_child(unconfirmed_title)
-	unconfirmed_label = _small("", 15, INK)
-	v.add_child(unconfirmed_label)
-	v.add_child(_rule())
-	suspect_label = _small("", 14, INK)
-	v.add_child(suspect_label)
-	location_label = _small("", 14, INK_SOFT, Art.font_italic)
-	v.add_child(location_label)
+	v.add_theme_constant_override("separation", _px(1))
+	v.custom_minimum_size = Vector2(_px(74), 0)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var disc := Disc.new(icon, _px(d))
+	v.add_child(disc)
+	var l := _outlined(label, _px(11), BONE, Art.font_heading, 3)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	l.custom_minimum_size = Vector2(_px(74), 0)
+	l.visible = show_label
+	v.add_child(l)
+	return [v, disc, l]
 
-func _build_hotbar(root: Control) -> void:
-	var holder := VBoxContainer.new()
-	holder.anchor_left = 0.0
-	holder.anchor_right = 1.0
-	holder.anchor_top = 1.0
-	holder.anchor_bottom = 1.0
-	holder.offset_right = -JOURNAL_WIDTH - 20
-	holder.offset_top = -168
-	holder.offset_bottom = -10
-	holder.alignment = BoxContainer.ALIGNMENT_END
-	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	holder.add_theme_constant_override("separation", 3)
-	root.add_child(holder)
-	prompt_label = Art.label("", 19, Color(1.0, 0.87, 0.55), Art.font_heading)
-	prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	prompt_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	prompt_label.add_theme_constant_override("outline_size", 6)
-	holder.add_child(prompt_label)
+func _build_equipment(root: Control) -> void:
+	equip_panel = _panel(root)
+	equip_panel.position = Vector2(_px(10), _px(10))
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", _px(3))
+	equip_panel.add_child(v)
+	v.add_child(_corner_heading("EQUIPMENT"))
+	equip_grid = _grid()
+	v.add_child(equip_grid)
+	equip_panel.modulate.a = clampf(float(_settings().get("equip_hud_opacity", 0.9)), 0.2, 1.0)
+
+func _on_equipment_changed() -> void:
+	_rebuild_equipment()
+	refresh()
+
+func _rebuild_equipment() -> void:
+	for c in equip_grid.get_children():
+		c.queue_free()
+	var eq = _equipment
+	var show: bool = _settings().get("equip_labels", true)
+	for i in eq.slots.size():
+		var id: String = eq.slots[i]
+		var cell := _cell(Defs.EQUIPMENT[id]["icon"], EQ_SHORT.get(id, Defs.EQUIPMENT[id]["name"]), show)
+		var disc: Disc = cell[1]
+		disc.set_state(true, i == eq.selected)
+		if i != eq.selected:
+			disc.icon.modulate = Color(0.85, 0.82, 0.78, 0.9)
+			disc.ring = Color(0.55, 0.47, 0.34, 0.7)
+		else:
+			cell[2].add_theme_color_override("font_color", Art.GOLD)
+		var key := _outlined(str(i + 1) if i < 9 else "", _px(11), Color(0.95, 0.85, 0.6), Art.font_heading, 3)
+		key.position = Vector2(-_px(2), -_px(3))
+		disc.add_child(key)
+		var ch: String = eq.charge_text(id)
+		if ch != "":
+			var cl := _outlined(ch, _px(11), BONE, null, 3)
+			cl.position = Vector2(_px(28), _px(27))
+			disc.add_child(cl)
+		equip_grid.add_child(cell[0])
+
+func _build_evidence(root: Control) -> void:
+	evidence_panel = _panel(root)
+	evidence_panel.anchor_left = 1.0
+	evidence_panel.anchor_right = 1.0
+	evidence_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	evidence_panel.offset_left = -_px(10)
+	evidence_panel.offset_right = -_px(10)
+	evidence_panel.offset_top = _px(10)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", _px(3))
+	evidence_panel.add_child(v)
+	v.add_child(_corner_heading("EVIDENCE"))
+	evidence_grid = _grid()
+	v.add_child(evidence_grid)
+	var show: bool = _settings().get("ev_labels", true)
+	# Every evidence type is listed from the start — the six conventional ones first.
+	var order: Array = Defs.CONVENTIONAL_EVIDENCE.duplicate()
+	for id in Defs.EVIDENCE:
+		if not id in order:
+			order.append(id)
+	for id in order:
+		var cell := _cell(Defs.EVIDENCE[id]["icon"], Defs.EVIDENCE[id]["short"], show)
+		evidence_grid.add_child(cell[0])
+		_ev_discs[id] = cell[1]
+
+func _build_centre(root: Control) -> void:
+	var col := VBoxContainer.new()
+	col.anchor_left = 0.5
+	col.anchor_right = 0.5
+	col.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	col.offset_left = -_px(220)
+	col.offset_right = _px(220)
+	col.offset_top = _px(10)
+	col.add_theme_constant_override("separation", _px(4))
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(col)
+	# Upper box: what the current tool / surroundings are telling you.
+	var info := PanelContainer.new()
+	info.add_theme_stylebox_override("panel", _panel_style())
+	info.custom_minimum_size = Vector2(0, _px(62))
+	col.add_child(info)
+	var iv := VBoxContainer.new()
+	iv.add_theme_constant_override("separation", 0)
+	iv.alignment = BoxContainer.ALIGNMENT_CENTER
+	info.add_child(iv)
+	info_main = _outlined("", _px(24), BONE, Art.font_numeric, 4)
+	info_main.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	info_main.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	iv.add_child(info_main)
+	info_sub = _outlined("", _px(15), Color(1.0, 0.87, 0.55), Art.font_heading, 3)
+	info_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	info_sub.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	iv.add_child(info_sub)
 	hold_bar = ProgressBar.new()
-	hold_bar.custom_minimum_size = Vector2(220, 6)
-	hold_bar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	hold_bar.custom_minimum_size = Vector2(0, _px(4))
 	hold_bar.show_percentage = false
 	hold_bar.max_value = 1.0
 	var fill := StyleBoxFlat.new()
@@ -225,70 +332,132 @@ func _build_hotbar(root: Control) -> void:
 	hold_bar.add_theme_stylebox_override("fill", fill)
 	hold_bar.add_theme_stylebox_override("background", bg)
 	hold_bar.modulate.a = 0.0
-	holder.add_child(hold_bar)
-	hint_label = Art.label("", 14, Color(0.85, 0.8, 0.7, 0.8), Art.font_italic)
-	hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	hint_label.add_theme_constant_override("outline_size", 4)
-	holder.add_child(hint_label)
-	var bar_panel := PanelContainer.new()
-	bar_panel.add_theme_stylebox_override("panel", Art.dark_panel())
-	bar_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	holder.add_child(bar_panel)
-	var inner := VBoxContainer.new()
-	inner.add_theme_constant_override("separation", 3)
-	bar_panel.add_child(inner)
-	hotbar = HBoxContainer.new()
-	hotbar.add_theme_constant_override("separation", 3)
-	inner.add_child(hotbar)
-	var sbar := ColorRect.new()
-	sbar.color = Color(0.1, 0.1, 0.1, 0.8)
-	sbar.custom_minimum_size = Vector2(0, 4)
-	inner.add_child(sbar)
-	stamina_fill = ColorRect.new()
-	stamina_fill.color = Color(0.62, 0.72, 0.78)
-	stamina_fill.size = Vector2(0, 4)
-	sbar.add_child(stamina_fill)
+	iv.add_child(hold_bar)
+	# Lower box: run status.
+	var status := PanelContainer.new()
+	status.add_theme_stylebox_override("panel", _panel_style())
+	status.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	status.custom_minimum_size = Vector2(_px(330), 0)
+	col.add_child(status)
+	var sv := VBoxContainer.new()
+	sv.add_theme_constant_override("separation", _px(2))
+	status.add_child(sv)
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", _px(6))
+	sv.add_child(top)
+	top.add_child(Art.icon_rect("icons/ui_clock.png", _px(22)))
+	timer_label = _outlined("00:00.00", _px(22), BONE, Art.font_numeric, 3)
+	timer_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(timer_label)
+	for i in 2:
+		var h := Art.icon_rect("icons/ui_heart.png", _px(22))
+		top.add_child(h)
+		hearts.append(h)
+	dread_fill = _bar(sv, Color(0.62, 0.1, 0.07))
+	stamina_fill = _bar(sv, Color(0.62, 0.72, 0.78))
+	status_line = _outlined("", _px(12), Color(0.85, 0.8, 0.7), Art.font_italic, 3)
+	status_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status_line.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	sv.add_child(status_line)
+	# The hunt warning sits just beneath, away from the investigator.
+	hunt_label = Art.label("HUNTING!", _px(64), Color(0.75, 0.04, 0.03), Art.font_heading)
+	hunt_label.add_theme_color_override("font_outline_color", Color(0.05, 0.0, 0.0, 0.6))
+	hunt_label.add_theme_constant_override("outline_size", _px(8))
+	hunt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hunt_label.modulate.a = 0.0
+	col.add_child(hunt_label)
 
-func _rebuild_hotbar() -> void:
-	for c in hotbar.get_children():
+func _bar(parent: Control, color: Color) -> ColorRect:
+	var bar := ColorRect.new()
+	bar.color = Color(0.0, 0.0, 0.0, 0.55)
+	bar.custom_minimum_size = Vector2(0, _px(4))
+	parent.add_child(bar)
+	var f := ColorRect.new()
+	f.color = color
+	f.size = Vector2(0, _px(4))
+	bar.add_child(f)
+	return f
+
+func _build_suspect(root: Control) -> void:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", _panel_style())
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.anchor_left = 0.5
+	p.anchor_right = 0.5
+	p.anchor_top = 1.0
+	p.anchor_bottom = 1.0
+	p.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	p.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	root.add_child(p)
+	p.offset_top = -_px(8)
+	p.offset_bottom = -_px(8)
+	suspect_box = VBoxContainer.new()
+	suspect_box.add_theme_constant_override("separation", _px(2))
+	p.add_child(suspect_box)
+
+func _rebuild_suspect() -> void:
+	for c in suspect_box.get_children():
 		c.queue_free()
-	var eq = _equipment
-	for i in eq.slots.size():
-		var id: String = eq.slots[i]
-		var slot := Control.new()
-		slot.custom_minimum_size = Vector2(46, 46)
-		var frame := TextureRect.new()
-		frame.texture = Art.tex("ui/slot_selected.png" if i == eq.selected else "ui/slot.png")
-		frame.set_anchors_preset(Control.PRESET_FULL_RECT)
-		frame.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		slot.add_child(frame)
-		var icon := Art.icon_rect(Defs.EQUIPMENT[id]["icon"], 34)
-		icon.position = Vector2(6, 6)
-		icon.size = Vector2(34, 34)
-		slot.add_child(icon)
-		var key := Art.label(str(i + 1) if i < 9 else "Q", 12, Color(0.95, 0.85, 0.6), Art.font_heading)
-		key.position = Vector2(3, 0)
-		key.add_theme_color_override("font_outline_color", Color.BLACK)
-		key.add_theme_constant_override("outline_size", 4)
-		slot.add_child(key)
-		var ch: String = eq.charge_text(id)
-		if ch != "":
-			var cl := Art.label(ch, 12, BONE)
-			cl.position = Vector2(26, 29)
-			cl.add_theme_color_override("font_outline_color", Color.BLACK)
-			cl.add_theme_constant_override("outline_size", 4)
-			slot.add_child(cl)
-		hotbar.add_child(slot)
+	var p = run.player
+	var sus: String = p.suspect
+	if run.is_harbinger():
+		sus = "harbinger"
+	var title := _corner_heading("SUSPECTED")
+	suspect_box.add_child(title)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", _px(8))
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	suspect_box.add_child(row)
+	if sus == "":
+		row.add_child(_outlined("None", _px(22), BONE, Art.font_heading))
+		row.add_child(_outlined("Tab / Shift+Tab to choose", _px(13), Color(0.8, 0.75, 0.66), Art.font_italic, 3))
+		return
+	var d: Dictionary = Defs.CREATURES[sus]
+	var name_box := VBoxContainer.new()
+	name_box.add_theme_constant_override("separation", -_px(2))
+	name_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_child(name_box)
+	name_box.add_child(_outlined(d["name"], _px(22), Art.GOLD if sus != "harbinger" else Color(0.85, 0.15, 0.1), Art.font_heading))
+	if nightmare():
+		# Nightmare: no icons — only what the creature is said to be.
+		var blurb := _outlined(d["blurb"], _px(14), BONE, Art.font_italic, 3)
+		blurb.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		blurb.custom_minimum_size = Vector2(_px(360), 0)
+		row.add_child(blurb)
+		return
+	if sus == "harbinger":
+		var t := _outlined("Sigil candles lit %d / 3  ·  then the Final Rite beside it (hold V)" % run.sigils_lit(), _px(14), BONE, Art.font_italic, 3)
+		row.add_child(t)
+		return
+	var show: bool = _settings().get("suspect_labels", true)
+	var j: Journal = p.journal
+	for ev in d["evidence"]:
+		var cell := _cell(Defs.EVIDENCE[ev]["icon"], Defs.EVIDENCE[ev]["short"], show, 34.0)
+		cell[1].set_state(j.has(ev))
+		row.add_child(cell[0])
+	var sep := ColorRect.new()
+	sep.color = Color(Art.GOLD.r, Art.GOLD.g, Art.GOLD.b, 0.4)
+	sep.custom_minimum_size = Vector2(1, _px(40))
+	row.add_child(sep)
+	var req: Dictionary = REQUIREMENTS.get(sus, {"items": [], "method": ""})
+	var slots: Array = _equipment.slots
+	for item in req["items"]:
+		var cell := _cell(Defs.EQUIPMENT[item]["icon"], EQ_SHORT.get(item, item), show, 34.0)
+		cell[1].set_state(item in slots)
+		row.add_child(cell[0])
+	var m := _outlined(req["method"], _px(12), Color(0.85, 0.8, 0.7), Art.font_italic, 3)
+	m.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	suspect_box.add_child(m)
 
 func _build_toasts(root: Control) -> void:
 	toast_box = VBoxContainer.new()
-	toast_box.anchor_left = 0.0
-	toast_box.anchor_right = 1.0
-	toast_box.offset_right = -JOURNAL_WIDTH - 20
-	toast_box.offset_top = 14
-	toast_box.offset_bottom = 200
-	toast_box.alignment = BoxContainer.ALIGNMENT_BEGIN
+	toast_box.anchor_top = 1.0
+	toast_box.anchor_bottom = 1.0
+	toast_box.offset_left = _px(12)
+	toast_box.offset_right = _px(12) + 420
+	toast_box.offset_top = -260
+	toast_box.offset_bottom = -_px(12)
+	toast_box.alignment = BoxContainer.ALIGNMENT_END
 	toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	toast_box.add_theme_constant_override("separation", 4)
 	root.add_child(toast_box)
@@ -297,9 +466,10 @@ func _build_big_message(root: Control) -> void:
 	big_box = VBoxContainer.new()
 	big_box.anchor_left = 0.0
 	big_box.anchor_right = 1.0
-	big_box.anchor_top = 0.24
-	big_box.anchor_bottom = 0.24
-	big_box.offset_right = -JOURNAL_WIDTH - 20
+	big_box.anchor_top = 0.3
+	big_box.anchor_bottom = 0.3
+	big_box.offset_left = 220
+	big_box.offset_right = -220
 	big_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	big_box.modulate.a = 0.0
 	root.add_child(big_box)
@@ -315,14 +485,15 @@ func _build_big_message(root: Control) -> void:
 	big_sub.add_theme_constant_override("outline_size", 8)
 	big_box.add_child(big_sub)
 
-## Compact strip of every entity, shown briefly while choosing a suspect.
+## Compact strip of every entity, shown briefly above the SUSPECTED panel while choosing.
 func _build_suspect_picker(root: Control) -> void:
 	var holder := CenterContainer.new()
 	holder.anchor_left = 0.0
 	holder.anchor_right = 1.0
-	holder.offset_right = -JOURNAL_WIDTH - 20
-	holder.offset_top = 118
-	holder.offset_bottom = 230
+	holder.anchor_top = 1.0
+	holder.anchor_bottom = 1.0
+	holder.offset_top = -_px(250)
+	holder.offset_bottom = -_px(140)
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(holder)
 	suspect_picker = HBoxContainer.new()
@@ -332,16 +503,18 @@ func _build_suspect_picker(root: Control) -> void:
 	for id in [""] + Defs.ORDINARY_CREATURES:
 		var cell := PanelContainer.new()
 		cell.add_theme_stylebox_override("panel", Art.parchment_panel())
-		cell.custom_minimum_size = Vector2(92, 0)
+		cell.custom_minimum_size = Vector2(_px(88), 0)
 		cell.set_meta("id", id)
 		var v := VBoxContainer.new()
 		v.add_theme_constant_override("separation", 0)
 		cell.add_child(v)
 		if id == "":
-			v.add_child(Art.label("?", 34, INK, Art.font_heading))
+			var q := Art.label("?", _px(32), INK, Art.font_heading)
+			q.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			v.add_child(q)
 		else:
-			v.add_child(Art.icon_rect(Defs.CREATURES[id]["token"], 40))
-		var n := Art.label("None" if id == "" else Defs.creature_name(id).replace("The ", ""), 13, INK, Art.font_heading)
+			v.add_child(Art.icon_rect(Defs.CREATURES[id]["token"], _px(38)))
+		var n := Art.label("None" if id == "" else Defs.creature_name(id).replace("The ", ""), _px(13), INK, Art.font_heading)
 		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.add_child(n)
 		suspect_picker.add_child(cell)
@@ -354,17 +527,14 @@ func show_suspect_picker() -> void:
 		cell.scale = Vector2(1.08, 1.08) if on else Vector2.ONE
 
 func _build_spectate(root: Control) -> void:
-	spectate_label = Art.label("", 24, Color(0.85, 0.85, 0.95), Art.font_heading)
+	spectate_label = _outlined("", 24, Color(0.85, 0.85, 0.95), Art.font_heading, 8)
 	spectate_label.anchor_left = 0.0
 	spectate_label.anchor_right = 1.0
-	spectate_label.offset_right = -JOURNAL_WIDTH - 20
 	spectate_label.anchor_top = 1.0
 	spectate_label.anchor_bottom = 1.0
-	spectate_label.offset_top = -210
-	spectate_label.offset_bottom = -180
+	spectate_label.offset_top = -_px(180)
+	spectate_label.offset_bottom = -_px(150)
 	spectate_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	spectate_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	spectate_label.add_theme_constant_override("outline_size", 8)
 	spectate_label.visible = false
 	root.add_child(spectate_label)
 
@@ -394,7 +564,10 @@ func _build_pause(root: Control) -> void:
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(t)
 	if run.multiplayer_match:
-		v.add_child(_small("The hunt goes on without you.", 15, INK_SOFT, Art.font_italic))
+		var note := "Opening the menu pauses the match for everyone — for up to %d seconds." % int(Net.PAUSE_LIMIT) if Net.options.get("pause_limit", true) else "Opening the menu pauses the match for everyone until you resume."
+		var nl := _small(note, 15, INK_SOFT, Art.font_italic)
+		nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(nl)
 	v.add_child(Art.button("Resume", func(): toggle_pause()))
 	if not run.multiplayer_match:
 		v.add_child(Art.button("Restart run", func():
@@ -407,6 +580,59 @@ func _build_pause(root: Control) -> void:
 		if run.multiplayer_match:
 			Net.leave()
 		Game.goto_menu()))
+
+## Multiplayer: the banner every hunter sees while the match is paused.
+func _build_shared_pause(root: Control) -> void:
+	shared_pause_panel = Control.new()
+	shared_pause_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	shared_pause_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	shared_pause_panel.visible = false
+	root.add_child(shared_pause_panel)
+	var dim := ColorRect.new()
+	dim.color = Color(0.02, 0.01, 0.03, 0.45)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	shared_pause_panel.add_child(dim)
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", _panel_style())
+	p.anchor_left = 0.5
+	p.anchor_right = 0.5
+	p.anchor_top = 0.2
+	p.anchor_bottom = 0.2
+	p.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	p.offset_left = -260
+	p.offset_right = 260
+	shared_pause_panel.add_child(p)
+	var v := VBoxContainer.new()
+	p.add_child(v)
+	shared_pause_title = _outlined("MATCH PAUSED", 40, Art.GOLD, Art.font_heading, 6)
+	shared_pause_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(shared_pause_title)
+	shared_pause_sub = _outlined("", 18, BONE, Art.font_italic, 4)
+	shared_pause_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	shared_pause_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(shared_pause_sub)
+
+var _shared_by := ""
+var _shared_left := -1.0
+
+## by: who opened their menu; remaining < 0 means no time limit.
+func show_shared_pause(on: bool, by: String = "", remaining: float = -1.0) -> void:
+	shared_pause_panel.visible = on
+	_shared_by = by
+	_shared_left = remaining
+	_update_shared_pause(0.0)
+	if not on and pause_panel.visible:
+		toast("The match has resumed.", "icons/ui_clock.png", true)
+
+func _update_shared_pause(delta: float) -> void:
+	if not shared_pause_panel.visible:
+		return
+	if _shared_left >= 0.0:
+		_shared_left = maxf(0.0, _shared_left - delta)
+		shared_pause_sub.text = "%s opened the menu  ·  resumes in %d s" % [_shared_by, int(ceil(_shared_left))]
+	else:
+		shared_pause_sub.text = "%s opened the menu  ·  no time limit" % _shared_by
 
 func _build_help(root: Control) -> void:
 	var v := _centered_panel(root, 560)
@@ -426,64 +652,19 @@ func _build_help(root: Control) -> void:
 	v.add_child(tip)
 	v.add_child(Art.button("Close", func(): help_panel.visible = false))
 
-func _build_follow_layers() -> void:
-	reading_label = Label.new()
-	reading_label.add_theme_font_override("font", Art.font_numeric)
-	reading_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
-	reading_label.add_theme_constant_override("outline_size", 6)
-	reading_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
-	reading_label.add_theme_constant_override("shadow_offset_y", 2)
-	reading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	reading_label.size = Vector2(320, 30)
-	reading_label.z_index = 30
-	run.world_text.add_child(reading_label)
-	notify_root = Node2D.new()
-	notify_root.z_index = 40
-	run.world_text.add_child(notify_root)
-
 # --- Journal updates ---------------------------------------------------------------------
 
 func on_discovered(entry: Dictionary) -> void:
-	var empty := entries_box.get_node_or_null("Empty")
-	if empty:
-		empty.queue_free()
-	var row := PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.55, 0.42, 0.22, 0.16)
-	sb.border_color = Art.GOLD
-	sb.border_width_left = 3
-	sb.set_corner_radius_all(2)
-	sb.content_margin_left = 6
-	sb.content_margin_right = 4
-	sb.content_margin_top = 3
-	sb.content_margin_bottom = 3
-	row.add_theme_stylebox_override("panel", sb)
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 8)
-	row.add_child(h)
-	h.add_child(Art.icon_rect(entry["icon"], 30))
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", -3)
-	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	h.add_child(v)
-	v.add_child(Art.label(entry["name"], 17, INK, Art.font_heading))
-	v.add_child(Art.label("%s · %s" % [Journal.format_time(entry["time"]), entry["room_name"]], 14, INK_SOFT, Art.font_heading))
-	entries_box.add_child(row)
-	_entry_rows[entry["id"]] = row
-	# Highlight: a gold pulse on the new entry.
-	row.modulate = Color(1.8, 1.45, 0.7)
-	var tw := row.create_tween()
-	for i in 2:
-		tw.tween_property(row, "modulate", Color(1.15, 1.05, 0.85), 0.35)
-		tw.tween_property(row, "modulate", Color(1.7, 1.4, 0.7), 0.35)
-	tw.tween_property(row, "modulate", Color.WHITE, 0.8)
-	_notify_evidence(entry)
 	refresh()
-	# Keep the newest discovery visible.
-	await get_tree().process_frame
-	await get_tree().process_frame
-	if is_instance_valid(entries_scroll):
-		entries_scroll.scroll_vertical = int(entries_scroll.get_v_scroll_bar().max_value)
+	var disc: Disc = _ev_discs.get(entry["id"])
+	if disc:
+		disc.pivot_offset = disc.size * 0.5
+		disc.modulate = Color(1.9, 1.5, 0.7)
+		disc.scale = Vector2(1.35, 1.35)
+		var tw := disc.create_tween().set_parallel(true)
+		tw.tween_property(disc, "scale", Vector2.ONE, 0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.tween_property(disc, "modulate", Color.WHITE, 1.6)
+	_notify_evidence(entry)
 
 ## The big, unmistakable "EVIDENCE RECORDED" card that pops beside the investigator.
 func _notify_evidence(entry: Dictionary) -> void:
@@ -545,113 +726,90 @@ func _notify_evidence(entry: Dictionary) -> void:
 
 func refresh() -> void:
 	var j: Journal = run.player.journal
-	var harb: bool = run.is_harbinger()
-	var voids := j.void_entries()
-	void_label.visible = not voids.is_empty()
-	if not voids.is_empty():
-		void_label.text = "Prior presence — %d record%s disregarded." % [voids.size(), "" if voids.size() == 1 else "s"]
-		for row in entries_box.get_children():
-			if row is PanelContainer and row.get_meta("void", false) == false:
-				row.set_meta("void", true)
-				row.modulate = Color(1, 1, 1, 0.35)
-	if harb:
-		unconfirmed_title.text = "The Harbinger"
-		unconfirmed_label.text = "No earthly evidence remains. Sigil candles lit: %d / 3" % run.sigils_lit()
-		suspect_label.text = "Light the sigils, then perform the Final Rite beside it (hold V)."
-	else:
-		unconfirmed_title.text = "Unconfirmed"
-		var names: Array = j.undiscovered_conventional().map(func(id): return Defs.EVIDENCE[id]["short"])
-		unconfirmed_label.text = " · ".join(names) if not names.is_empty() else "—"
-		var sus: String = run.player.suspect
-		if sus == "":
-			suspect_label.text = "Suspect: none  ·  Tab to choose"
-		else:
-			suspect_label.text = "Suspect: %s  ·  %s" % [Defs.creature_name(sus), _suspect_hint(sus)]
-
-func _suspect_hint(id: String) -> String:
-	match id:
-		"shade": return "salt + rite in its room (V)"
-		"poltergeist": return "book + rite in its room (V)"
-		"vampire": return "garlic + wooden stake"
-		"werewolf": return "silver stake"
-		"shapeshifter": return "mirror, then iron nails"
-	return ""
+	var voided := {}
+	for e in j.void_entries():
+		voided[e["id"]] = true
+	for id in _ev_discs:
+		var disc: Disc = _ev_discs[id]
+		disc.set_state(j.has(id))
+		if not j.has(id) and voided.has(id):
+			disc.ring = Color(0.5, 0.2, 0.15, 0.6)    # found before the Harbinger: no longer counts
+			disc.queue_redraw()
+	_rebuild_suspect()
 
 # --- Per-frame -----------------------------------------------------------------------------
+
+var _sigils_seen := -1
 
 func _process(delta: float) -> void:
 	_t += delta
 	if run == null or run.player == null:
 		return
+	_update_shared_pause(delta)
 	timer_label.text = Journal.format_time_precise(run.elapsed)
 	var p = run.player
 	hearts[0].texture = Art.tex("icons/ui_heart_wounded.png" if p.wounds >= 2 else "icons/ui_heart.png")
 	hearts[1].texture = Art.tex("icons/ui_heart_wounded.png" if p.wounds >= 1 else "icons/ui_heart.png")
 	hearts[1].modulate.a = 0.45 if p.wounds >= 1 else 1.0
 	var dw: float = dread_fill.get_parent().size.x
-	dread_fill.size = Vector2(dw * clampf(run.threat / 100.0, 0.0, 1.0), 7)
+	dread_fill.size = Vector2(dw * clampf(run.threat / 100.0, 0.0, 1.0), _px(4))
 	var sw: float = stamina_fill.get_parent().size.x
-	stamina_fill.size = Vector2(sw * p.stamina, 4)
+	stamina_fill.size = Vector2(sw * p.stamina, _px(4))
 	stamina_fill.color = Color(0.62, 0.72, 0.78) if p.stamina > 0.25 else Color(0.8, 0.4, 0.3)
-	location_label.text = "◆ " + run.map.room_name(p.room_id)
+	var line: String = "◆ " + run.map.room_name(p.room_id)
 	if run.multiplayer_match:
 		var parts: Array = []
 		for h in run.hunters:
 			if h != p:
 				parts.append("%s %s" % [h.display_name, "†" if h.dead else ("♥" if h.wounds >= 1 else "♥♥")])
-		rivals_label.text = "Rivals: " + "  ·  ".join(parts)
+		line += "   ·   " + "  ".join(parts)
+	status_line.text = line
 	var eq = _equipment
-	hint_label.text = eq.hint
-	prompt_label.text = eq.prompt if not p.dead else ""
-	var hp: float = eq.hold_progress()
-	hold_bar.value = hp
-	hold_bar.modulate.a = 1.0 if hp > 0.0 else 0.0
-	if run.is_harbinger():
+	_update_info(eq, p)
+	if run.is_harbinger() and run.sigils_lit() != _sigils_seen:
+		_sigils_seen = run.sigils_lit()
 		refresh()
-	_update_reading(eq, p, delta)
 	_update_notifications(delta, p)
 	_picker_t -= delta
 	suspect_picker.modulate.a = clampf(_picker_t * 2.0, 0.0, 1.0)
 	var target_hunt := 0.0
 	if _hunting:
-		target_hunt = 0.45 + 0.2 * sin(_t * 6.0)
+		target_hunt = 0.3 + 0.12 * sin(_t * 6.0)
 	hunt_overlay.modulate.a = move_toward(hunt_overlay.modulate.a, target_hunt, delta * 2.0)
+	hunt_label.modulate.a = (0.55 + 0.2 * sin(_t * 7.0)) if _hunting else move_toward(hunt_label.modulate.a, 0.0, delta * 3.0)
 	wound_overlay.color.a = move_toward(wound_overlay.color.a, 0.18 if p.wounds >= 1 and p.invuln <= 0.0 and not p.dead else 0.0, delta * 0.8)
-	var base_off := Vector2(145.0 / run.CAMERA_ZOOM, 0)
 	if _shake > 0.0:
 		_shake -= delta
-		run.camera.offset = base_off + Vector2(randf_range(-6, 6), randf_range(-6, 6)) * _shake
+		run.camera.offset = Vector2(randf_range(-6, 6), randf_range(-6, 6)) * _shake
 	else:
-		run.camera.offset = base_off
+		run.camera.offset = Vector2.ZERO
 	if spectating:
 		_update_spectating()
-	for k in _toast_recent.keys():
-		_toast_recent[k] -= delta
-		if _toast_recent[k] <= 0.0:
-			_toast_recent.erase(k)
+	for key in _toast_recent.keys():
+		_toast_recent[key] -= delta
+		if _toast_recent[key] <= 0.0:
+			_toast_recent.erase(key)
 
-## Equipment reading just below the investigator (or above, near the bottom edge).
-func _update_reading(eq, p, _delta: float) -> void:
-	var s := _settings()
-	var show: bool = s.get("equip_hud", true) and eq.reading != "" and not p.dead and not spectating
-	reading_label.visible = show
-	if not show:
+## Top-centre information: the live reading first, then the contextual prompt.
+func _update_info(eq, p) -> void:
+	if p.dead:
+		info_main.text = "—"
+		info_sub.text = ""
+		hold_bar.modulate.a = 0.0
 		return
-	var px: float = clampf(float(s.get("equip_hud_size", 20)), 10.0, 36.0)
-	reading_label.add_theme_font_size_override("font_size", int(round(px / run.CAMERA_ZOOM * 1.6)))
-	reading_label.scale = Vector2.ONE / 1.6
-	reading_label.text = eq.reading
-	var col: Color = eq.reading_color
-	var opacity: float = clampf(float(s.get("equip_hud_opacity", 0.9)), 0.15, 1.0)
-	col.a *= opacity * (1.0 if eq.reading_active else 0.65)
-	reading_label.add_theme_color_override("font_color", col)
-	var w := reading_label.size.x / 1.6
-	var below: Vector2 = p.global_position + Vector2(-w * 0.5, 25.0)
-	# Flip above the investigator when the hotbar would cover it.
-	var screen: Vector2 = get_viewport().get_canvas_transform() * p.global_position
-	if screen.y > get_viewport().get_visible_rect().size.y - 230.0:
-		below.y = p.global_position.y - 46.0
-	reading_label.position = below
+	if eq.reading != "":
+		info_main.text = eq.reading
+		var col: Color = eq.reading_color
+		col.a = 1.0 if eq.reading_active else 0.7
+		info_main.add_theme_color_override("font_color", col)
+		info_sub.text = eq.prompt if eq.prompt != "" else eq.hint
+	else:
+		info_main.text = eq.hint
+		info_main.add_theme_color_override("font_color", BONE)
+		info_sub.text = eq.prompt
+	var hp: float = eq.hold_progress()
+	hold_bar.value = hp
+	hold_bar.modulate.a = 1.0 if hp > 0.0 else 0.0
 
 func _update_notifications(delta: float, p) -> void:
 	var y := -58.0
@@ -661,9 +819,9 @@ func _update_notifications(delta: float, p) -> void:
 			continue
 		var age: float = card.get_meta("age") + delta
 		card.set_meta("age", age)
-		var k: float = card.get_meta("target_scale")
+		var sk: float = card.get_meta("target_scale")
 		var panel: Control = card.get_child(0)
-		var size: Vector2 = panel.size * k
+		var size: Vector2 = panel.size * sk
 		card.position = card.position.lerp(p.global_position + Vector2(-size.x * 0.5, y - size.y), clampf(delta * 14.0, 0.0, 1.0)) if age > 0.05 else p.global_position + Vector2(-size.x * 0.5, y - size.y)
 		y -= size.y + 4.0
 		if age > 3.4:
@@ -721,21 +879,21 @@ func wound() -> void:
 func shake(amount: float) -> void:
 	_shake = maxf(_shake, amount)
 
-## Small unobtrusive notification. Identical messages within 4 s are dropped.
+## Small unobtrusive notification (bottom-left). Identical messages within 4 s are dropped.
 func toast(text: String, icon: String = "", quiet: bool = false) -> void:
 	if _toast_recent.has(text):
 		return
 	_toast_recent[text] = 4.0
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", Art.parchment_panel())
-	p.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	p.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 8)
 	p.add_child(h)
 	if icon != "":
-		h.add_child(Art.icon_rect(icon, 24))
-	h.add_child(Art.label(text, 17, INK))
+		h.add_child(Art.icon_rect(icon, 22))
+	h.add_child(Art.label(text, 16, INK))
 	toast_box.add_child(p)
 	while toast_box.get_child_count() > 3:
 		var old := toast_box.get_child(0)

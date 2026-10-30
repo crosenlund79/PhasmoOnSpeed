@@ -13,7 +13,11 @@ signal connection_lost(reason: String)
 
 const DEFAULT_PORT := 24680
 const MAX_PLAYERS := 4
-const PROTOCOL := "spectral-run-mp-1"
+const PROTOCOL := "spectral-run-mp-2"
+## Shared menu pause: at most this long (real seconds) when the host limits it,
+## then no new pause for PAUSE_COOLDOWN so the match can never stall for long.
+const PAUSE_LIMIT := 10.0
+const PAUSE_COOLDOWN := 20.0
 const REPLAY_CHUNK := 48000
 ## World events every hunter may see/hear. Everything else (evidence, attempts,
 ## suspects, the entity's true type) stays on the host and in the replay.
@@ -24,6 +28,11 @@ const PUBLIC_EVENTS := ["decal", "decal_remove", "decal_swap", "flicker", "darkn
 var peer: ENetMultiplayerPeer
 var lobby := {}               # peer_id -> {name, ready}
 var house := "ashgrove"
+## Host-chosen match options, mirrored to every client with the lobby.
+var options := {"difficulty": "normal", "pause_limit": true}
+var pause_by := 0               # peer whose menu holds the shared pause (0 = running)
+var _pause_ends_ms := 0         # real-time deadline; 0 = no limit
+var _pause_cooldown_ms := 0
 var in_match := false
 var host_run: Node = null
 var client_run: Node = null
@@ -32,6 +41,7 @@ var _replay_parts := {}
 var _pending_results := {}
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS   # pause deadlines run in real time, even while paused
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.connected_to_server.connect(_on_connected)
@@ -90,6 +100,9 @@ func leave() -> void:
 	host_run = null
 	client_run = null
 	_replay_parts.clear()
+	pause_by = 0
+	_pause_ends_ms = 0
+	_pause_cooldown_ms = 0
 
 func _clean(n: String) -> String:
 	n = n.strip_edges().substr(0, 20)
@@ -120,6 +133,8 @@ func _on_peer_disconnected(id: int) -> void:
 		return
 	var who: String = lobby.get(id, {}).get("name", "A rival")
 	lobby.erase(id)
+	if in_match and pause_by == id:
+		_end_pause()
 	if in_match and host_run:
 		host_run.on_peer_left(id)
 	_set_status("%s left." % who)
@@ -157,18 +172,19 @@ func s_rejected(reason: String) -> void:
 	_fail(reason)
 
 @rpc("authority", "reliable")
-func s_lobby(data: Dictionary, house_id: String) -> void:
+func s_lobby(data: Dictionary, house_id: String, opts: Dictionary) -> void:
 	lobby = {}
 	for k in data:
 		lobby[int(k)] = data[k]
 	house = house_id
+	options = opts
 	if status.begins_with("Connect"):
 		_set_status("In the lobby. Ready up when you are.")
 	lobby_changed.emit()
 
 func _broadcast_lobby() -> void:
 	if multiplayer.is_server():
-		s_lobby.rpc(lobby, house)
+		s_lobby.rpc(lobby, house, options)
 		lobby_changed.emit()
 
 func set_ready(r: bool) -> void:
@@ -192,6 +208,12 @@ func set_house(house_id: String) -> void:
 		house = house_id
 		_broadcast_lobby()
 
+## Host: difficulty ("normal"/"nightmare") or pause_limit (bool) for the whole match.
+func set_option(key: String, value) -> void:
+	if multiplayer.is_server() and not in_match:
+		options[key] = value
+		_broadcast_lobby()
+
 func can_start() -> bool:
 	if not is_host() or lobby.size() < 2:
 		return false
@@ -212,13 +234,76 @@ func start_match(creature_override: String = "", run_seed: int = -1) -> void:
 	in_match = true
 	var seed_value := run_seed if run_seed >= 0 else int(Time.get_unix_time_from_system() * 1000.0) % 2147483647
 	var r := roster()
-	s_start.rpc(house, seed_value, r)
-	host_run = Game.start_match_host(house, seed_value, creature_override, r)
+	pause_by = 0
+	_pause_cooldown_ms = 0
+	s_start.rpc(house, seed_value, r, options)
+	host_run = Game.start_match_host(house, seed_value, creature_override, r, str(options["difficulty"]))
 
 @rpc("authority", "reliable")
-func s_start(house_id: String, seed_value: int, r: Array) -> void:
+func s_start(house_id: String, seed_value: int, r: Array, opts: Dictionary) -> void:
 	in_match = true
-	client_run = Game.start_match_client(house_id, seed_value, r, my_peer_id())
+	options = opts
+	client_run = Game.start_match_client(house_id, seed_value, r, my_peer_id(), str(opts.get("difficulty", "normal")))
+
+# --- Match: shared menu pause --------------------------------------------------------------
+# Any hunter opening their menu asks the host; the host alone decides, freezes
+# its simulation and tells everyone. Clients only freeze when the host says so.
+
+func request_pause(on: bool) -> void:
+	if not in_match:
+		return
+	if multiplayer.is_server():
+		_host_pause_request(1, on)
+	else:
+		c_pause.rpc_id(1, on)
+
+@rpc("any_peer", "reliable")
+func c_pause(on: bool) -> void:
+	if multiplayer.is_server():
+		_host_pause_request(multiplayer.get_remote_sender_id(), on)
+
+func _host_pause_request(id: int, on: bool) -> void:
+	if host_run == null or host_run.state != "playing":
+		return
+	var now := Time.get_ticks_msec()
+	if not on:
+		if id == pause_by:
+			_end_pause()
+		return
+	if pause_by != 0:
+		return   # already paused by someone else; their menu decides
+	if options["pause_limit"] and now < _pause_cooldown_ms:
+		var h = host_run.hunter_by_peer(id)
+		host_run.tell(h, "The match can't pause again for %d s." % int(ceil((_pause_cooldown_ms - now) / 1000.0)), "icons/ui_clock.png")
+		return
+	pause_by = id
+	_pause_ends_ms = now + int(PAUSE_LIMIT * 1000.0) if options["pause_limit"] else 0
+	_send_pause(true)
+
+func _end_pause() -> void:
+	if pause_by == 0:
+		return
+	pause_by = 0
+	_pause_ends_ms = 0
+	if options["pause_limit"]:
+		_pause_cooldown_ms = Time.get_ticks_msec() + int(PAUSE_COOLDOWN * 1000.0)
+	_send_pause(false)
+
+func _send_pause(on: bool) -> void:
+	var who: String = lobby.get(pause_by, {}).get("name", "A hunter")
+	var remaining := -1.0 if _pause_ends_ms == 0 else (_pause_ends_ms - Time.get_ticks_msec()) / 1000.0
+	s_pause.rpc(on, who, remaining)
+	if host_run:
+		host_run.apply_shared_pause(on, who, remaining)
+
+@rpc("authority", "reliable")
+func s_pause(on: bool, who: String, remaining: float) -> void:
+	if client_run:
+		client_run.apply_shared_pause(on, who, remaining)
+
+func _process(_delta: float) -> void:
+	if pause_by != 0 and _pause_ends_ms > 0 and Time.get_ticks_msec() >= _pause_ends_ms and multiplayer.is_server():
+		_end_pause()   # the limit is up: everyone resumes, menus may stay open
 
 # --- Match: client → host ----------------------------------------------------------------
 
@@ -285,6 +370,7 @@ func host_send_results(results: Dictionary, replay: Dictionary) -> void:
 	var raw := JSON.stringify(replay).to_utf8_buffer()
 	var packed := raw.compress(FileAccess.COMPRESSION_ZSTD)
 	var total := int(ceil(float(packed.size()) / REPLAY_CHUNK))
+	pause_by = 0
 	s_results.rpc(results, raw.size(), total)
 	for i in total:
 		s_replay_chunk.rpc(i, packed.slice(i * REPLAY_CHUNK, mini((i + 1) * REPLAY_CHUNK, packed.size())))
