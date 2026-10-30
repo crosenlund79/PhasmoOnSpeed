@@ -144,8 +144,21 @@ func _host() -> void:
 	var by_name := func(n: String) -> Player: return run.hunters.filter(func(h): return h.display_name == n)[0]
 	var c1: Player = by_name.call("Client1")
 	var c1_before := c1.global_position
-	run.player.global_position = c1.global_position + Vector2(-30, 0)
-	run.player.aim_angle = 0.0
+	# Push toward open floor (a wall right behind the client would absorb the shove).
+	var push := Vector2.RIGHT
+	# (Doors stay shut unless opened with E, so the client may have walked up to one.)
+	for d in [Vector2.LEFT, Vector2.RIGHT, Vector2.DOWN, Vector2.UP]:
+		var clear := true
+		for k in range(1, 4):
+			var cell := HouseMap.to_cell(c1_before + d * 30.0 * k)
+			if not run.map.walkable(cell) or run.map.closed_doors.has(cell):
+				clear = false
+		if clear:
+			push = d
+			break
+	run.player.global_position = c1.global_position - push * 30.0
+	run.player.aim_angle = push.angle()
+	_say("shoving Client1 at %s toward %s" % [c1_before, push])
 	run.shove(run.player)
 	check(run.player.shove_cd > 4.0, "shove landed and started the cooldown")
 	await _wait(0.8)

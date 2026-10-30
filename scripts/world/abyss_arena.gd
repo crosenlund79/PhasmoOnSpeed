@@ -38,7 +38,7 @@ static func contains(pos: Vector2) -> bool:
 ## clear of the hunters' spawn, visible to them, harmless.
 static func far_point(k: int, at: float) -> Vector2:
 	var y := (2.0 + (k % 4) * 2.6) * C + sin(at * 0.7 + k * 1.9) * C * 0.6
-	return ORIGIN + Vector2((COLS - 1.6) * C + sin(at * 0.5 + k) * C * 0.4, y)
+	return ORIGIN + Vector2((COLS - 5.0) * C + sin(at * 0.5 + k) * C * 0.6, y)
 
 ## Spawn points for k arrivals, spread along the left wall.
 static func spawn_point(k: int) -> Vector2:

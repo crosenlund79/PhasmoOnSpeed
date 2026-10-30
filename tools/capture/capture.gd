@@ -300,6 +300,11 @@ func _shot(s: String) -> void:
 		run.view.portal_warning(run.player.room_id, 2.5)
 		await get_tree().create_timer(1.8).timeout
 		await _save("portal_warning")
+		# Take an occupant and the entity along, to show them adrift in the realm.
+		run.creature.position = run.player.global_position + Vector2(30, 0)
+		run.creature.room_id = run.player.room_id
+		run.occupants[0].position = run.player.global_position + Vector2(-30, 0)
+		run.occupants[0].room_id = run.player.room_id
 		run.open_abyss(run.player.room_id)
 		run.player.invuln = 999.0
 		await _wait(220)

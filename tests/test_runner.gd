@@ -26,7 +26,7 @@ func _ready() -> void:
 		"test_counterattacks", "test_escalations", "test_prompt_and_needle", "test_audio_overrides",
 		"test_audio_export", "test_game_setup",
 		"test_blightness_rushes", "test_safe_names", "test_temperatures", "test_ghost_marker_and_ruled_out",
-		"test_hellbound", "test_abyssal", "test_sailor_and_doctor",
+		"test_hellbound", "test_abyssal", "test_sailor_and_doctor", "test_consolidation",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -1231,3 +1231,36 @@ func test_sailor_and_doctor() -> void:
 	pdr.player.wounds = 0
 	pdr.hazards.clear()
 	await _rite_in_lair(pdr, "plague_doctor", ["crucifix", "ghost_book"])
+
+# --- Consolidation -------------------------------------------------------------------------
+
+func test_consolidation() -> void:
+	# One difficulty table, same values as before.
+	check(Defs.tune("beginner", "dread") == 0.6 and Defs.tune("hellbound", "dread") == 1.6 and Defs.tune("nightmare", "dread") == 1.0, "dread rates")
+	check(Defs.tune("hellbound", "hunt_cooldown") == 0.55 and Defs.tune("beginner", "hunt_cooldown") == 1.5, "hunt cooldowns")
+	check(Defs.tune("normal", "panic") == 1.0 and Defs.tune("nightmare", "panic") == 2.0 and Defs.tune("hellbound", "panic") == 2.6, "occupant panic")
+	check(Defs.hostile("hellbound") == "hellbound" and Defs.hostile("abyssal") == "abyssal" and Defs.hostile("nightmare") == "", "hostile difficulties")
+	for id in Defs.ORDINARY_CREATURES:
+		check(Defs.short_name(id).length() <= 12, "%s: short name fits the suspect strip" % id)
+	var run := await _start("ashgrove", "shade", 51)
+	var p := run.player
+	# Requirements light up when prepared, not merely carried.
+	check(not p.has_prepared("salt") and not p.has_prepared("ghost_book"), "nothing prepared at the start")
+	check(p.has_prepared("holy_water"), "holy water counts while a flask remains")
+	run.place_item(p, "salt", p.global_position)
+	p.charges["salt"] -= 1
+	check(p.has_prepared("salt"), "poured salt counts")
+	check(run.hud.requirement_items("plague_doctor") == Defs.CREATURES["plague_doctor"]["rite_needs"], "ghost requirements come from the rite")
+	# The clock tolls before a hunt.
+	run.creature.cooldown_t = 0.0
+	run.trigger_hunt(false)
+	check(run.creature.is_hunting(), "hunt started")
+	var clock_near := run.map.furniture.any(func(f): return f["type"] == "grandfather_clock" and (f["rect"] as Rect2).get_center().distance_to(run.creature.position) < 900.0)
+	check(not clock_near or run.recorder.data["events"].any(func(e): return e[1] == "shake"), "the nearest clock tolls and stops")
+	# A loop restarted while it fades out keeps playing.
+	Sfx.start_loop("probe", "ambience_house", -20.0, 0.01)
+	Sfx.stop_loop("probe", 0.5)
+	Sfx.start_loop("probe", "ambience_house", -20.0, 0.01)
+	await get_tree().create_timer(0.8).timeout
+	check(Sfx._loops["probe"].playing, "restarted loop survives the old fade")
+	Sfx.stop_loop("probe", 0.01)

@@ -373,6 +373,7 @@ func _process(delta: float) -> void:
 	_hazard_tick(delta)
 	if Defs.rules(difficulty) == "nightmare":
 		_nightmare_noises(delta)
+	_phantom_steps(delta)
 	_record(delta)
 	if multiplayer_match:
 		_net_tick(delta)
@@ -397,6 +398,48 @@ func _nightmare_noises(delta: float) -> void:
 	sound_at(n[0], pos, n[1], n[2] * rng.randf_range(0.9, 1.1), 1100.0)
 	for o in occupants:
 		o.react(pos)
+
+## The anticipation cue: the grandfather clock nearest the entity ticks, tolls
+## once and stops, just before a hunt breaks loose (heard by everyone nearby).
+func _clock_toll(near: Vector2) -> void:
+	var best: Dictionary = {}
+	var bd := 900.0
+	for f in map.furniture:
+		if f["type"] != "grandfather_clock":
+			continue
+		var d: float = (f["rect"] as Rect2).get_center().distance_to(near)
+		if d < bd:
+			bd = d
+			best = f
+	if best.is_empty():
+		return
+	sound_at("clock_toll", (best["rect"] as Rect2).get_center(), -2.0, 1.0, 1300.0)
+	if best.has("index"):
+		view.shake_furniture(best["index"])
+		record_event("shake", {"index": best["index"]})
+
+var _phantom_t := 40.0
+
+## Footsteps that belong to nobody: a few paces somewhere behind a hunter once
+## dread has built a little. Atmosphere only — never evidence, never a threat.
+func _phantom_steps(delta: float) -> void:
+	_phantom_t -= delta
+	if _phantom_t > 0.0:
+		return
+	_phantom_t = rng.randf_range(35.0, 60.0)
+	if Defs.rules(difficulty) == "beginner" or threat < 30.0 or (creature and creature.is_hunting()):
+		return
+	var here := hunters_in_house().filter(func(h): return not h.dead)
+	if here.is_empty():
+		return
+	var h: Player = here[rng.randi_range(0, here.size() - 1)]
+	var back := Vector2.from_angle(h.aim_angle + PI + rng.randf_range(-0.5, 0.5))
+	var side := back.orthogonal()
+	var tw := create_tween()
+	for k in 4:
+		var pos := h.global_position + back * (300.0 - k * 30.0) + side * (8.0 if k % 2 == 0 else -8.0)
+		tw.tween_callback(func(): sound_at("footstep", pos, -9.0, rng.randf_range(0.8, 0.9), 700.0))
+		tw.tween_interval(0.48)
 
 func _record(delta: float) -> void:
 	recorder.tick(elapsed, delta, _actor_states())
@@ -850,6 +893,8 @@ func haunt_near(pos: Vector2) -> void:
 			lit.append(i)
 	if not lit.is_empty():
 		set_light(lit[rng.randi_range(0, lit.size() - 1)], false)
+	else:
+		shake_furniture_near(pos)   # nothing to slam or snuff: a chair shifts, a book shelf rattles
 
 var _shimmer_t := {}
 
@@ -954,6 +999,7 @@ func trigger_hunt(reckless: bool) -> void:
 				creature.cooldown_t = 20.0
 				add_threat(-15.0, "crucifix")
 				return
+	_clock_toll(creature.position)
 	creature.begin_hunt(_fair_hunt_start(), reckless)
 
 ## Chooses where a hunt begins so that it is never unavoidable for any hunter.

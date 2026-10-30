@@ -8,10 +8,10 @@ missing. The code-side list lives in `scripts/core/audio_catalog.gd`
 
 | | |
 |---|---|
-| Sound cues in the catalog | **62** |
-| …triggered by the game | **57** |
+| Sound cues in the catalog | **63** |
+| …triggered by the game | **58** |
 | …generated but currently never triggered | **5** (`camera_shutter`, `cat_meow`, `emf_beep`, `emf_spike`, `thermometer_tick`) |
-| Cues using generated placeholder audio | **62 of 62** — all made by `tools/audio/generate_audio.py` |
+| Cues using generated placeholder audio | **63 of 63** — all made by `tools/audio/generate_audio.py` |
 | Cues with creator (original) audio | **0** so far |
 | Suggested missing sounds | **24** (see the end) |
 
@@ -127,6 +127,7 @@ Status in every row below: **Existing placeholder** (generated) unless marked.
 | `furnace_roar` | Furnace roar | `environment/furnace_roar.wav` | The Lost One's furnace sequence | one-shot, positional | Essential | |
 | `water_drip` | Dripping sea water | `environment/water_drip.wav` | Every few seconds near the Drowned Sailor | one-shot, positional | Desirable | |
 | `wood_creak` | Ship's timbers | `environment/timber_creak.wav` | The boards groan as the Drowned Sailor walks | one-shot, positional | Desirable | |
+| `clock_toll` | Grandfather clock stops | `environment/clock_toll.wav` | The clock nearest the entity ticks, tolls once and stops as a hunt is about to begin | one-shot, positional | Desirable | The anticipation cue. |
 | `nm_knock` | Knocking in the walls | `environment/nightmare_knock.wav` | Nightmare Mode ambient noise (every 7–16 s) | one-shot, positional | Desirable | |
 | `nm_drag` | Something dragged | `environment/nightmare_drag.wav` | Nightmare noise; the vampire's blood mist rising | one-shot, positional | Desirable | |
 | `critter_squish` | Critter squashed | `environment/critter_squish.wav` | Stepping on a spider, roach or rat (Nightmare) | one-shot, positional, local | Optional | |

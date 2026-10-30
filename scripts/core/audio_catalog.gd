@@ -69,6 +69,7 @@ const CUES := {
 	"furnace_roar": ["environment/furnace_roar", "wav"],
 	"water_drip": ["environment/water_drip", "wav"],
 	"wood_creak": ["environment/timber_creak", "wav"],
+	"clock_toll": ["environment/clock_toll", "wav"],
 	"nm_knock": ["environment/nightmare_knock", "wav"],
 	"nm_drag": ["environment/nightmare_drag", "wav"],
 	"critter_squish": ["environment/critter_squish", "wav"],

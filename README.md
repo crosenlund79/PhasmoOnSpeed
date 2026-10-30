@@ -21,6 +21,22 @@ score wins (see `docs/MULTIPLAYER.md`).
 2. Open `project.godot` in the editor (this imports the art and audio) and press
    Play, or run `godot --path .` from the repository root.
 
+## Windows build and installer
+
+```bash
+GODOT=/path/to/godot-4.3 tools/installer/build_installer.sh
+```
+
+Needs the Godot 4.3 export templates and NSIS (`makensis`). It exports
+`export/windows/SpectralRun.exe` + `.pck` and builds
+`export/installer/SpectralRun-Setup-<version>.exe` (the version comes from
+`project.godot`; `export/` is not committed). The installer is per-user (no
+admin rights), installs to `%LOCALAPPDATA%\Programs\SpectralRun`, and a newer
+installer updates that folder in place, asking you to close the game first if it
+is running. Saves, settings, statistics and leaderboards live in
+`%APPDATA%\Godot\app_userdata\SPECTRAL RUN` and are never touched by updates or
+the uninstaller.
+
 ## Controls
 
 | Input | Action |

@@ -1711,6 +1711,20 @@ def s_bottle_clink():
     return fades(remove_dc(fit(y, dur)), 0.001, 0.2)
 
 
+def s_clock_toll():
+    """A grandfather clock: a few ticks, one deep toll, then the ticking stops."""
+    rng = rng_for(415)
+    dur = 3.2
+    y = np.zeros(N(dur))
+    for k in range(4):
+        m = N(0.05)
+        tick = bp(rng.standard_normal(m), 1800 if k % 2 == 0 else 1500, 5000) * env_ad(m, 0.0005, 0.006)
+        place(y, tick * 0.35, 0.05 + k * 0.42)
+    place(y, bell(110, 2.6, rng, 0.4) * 0.8, 1.75)
+    y = reverb(y, 1.8, 0.4, rng, 3000)
+    return fades(remove_dc(fit(y, dur)), 0.002, 0.5)
+
+
 # name -> (generator, kind, expected duration (approx))
 SOUNDS = {
     "pencil_scribble": (s_pencil_scribble, "oneshot"),
@@ -1775,6 +1789,7 @@ SOUNDS = {
     "sea_whisper": (s_sea_whisper, "oneshot"),
     "plague_breath": (s_plague_breath, "oneshot"),
     "bottle_clink": (s_bottle_clink, "oneshot"),
+    "clock_toll": (s_clock_toll, "oneshot"),
 }
 
 
