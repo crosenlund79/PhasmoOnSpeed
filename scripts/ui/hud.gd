@@ -22,19 +22,26 @@ const EQ_SHORT := {"emf": "Needle", "thermometer": "Thermo", "uv": "Wraithlight"
 	"ghost_book": "Book", "orb_camera": "Scrying", "salt": "Salt", "crucifix": "Crucifix",
 	"holy_water": "Holy Water", "garlic": "Garlic", "wooden_stake": "Stake", "silverware": "Silverware",
 	"silver_stake": "Silver Stake", "hand_mirror": "Mirror", "iron_nails": "Iron Nails", "voodoo_doll": "Doll"}
-## What each entity needs to be vanquished (items shown as icons, method as text).
+## How each entity is vanquished: the method line under the SUSPECTED panel, and
+## for creatures of flesh the items it takes. A ghost's items are its rite_needs
+## (see requirement_items), so the panel can never disagree with the rite itself.
 const REQUIREMENTS := {
-	"shade": {"items": ["salt"], "method": "Salt its room · Rite of Stillness there (hold V)"},
-	"poltergeist": {"items": ["ghost_book"], "method": "Book in its room · Rite of Binding there (hold V)"},
+	"shade": {"method": "Salt its room · Rite of Stillness there (hold V)"},
+	"poltergeist": {"method": "Book in its room · Rite of Binding there (hold V)"},
+	"blightness": {"method": "Crucifix in its room · Rite of Severance there (hold V)"},
+	"crawler": {"method": "Carry holy water · Rite of Drowning in its room (hold V)"},
+	"lost_one": {"method": "Book and salt in its room · Rite of Rest (hold V) · never touch its keepsake"},
+	"drowned_sailor": {"method": "Salt its room, carry holy water · Rite of the Tides there (hold V)"},
+	"plague_doctor": {"method": "Crucifix and book in its room · Rite of Cleansing there (hold V)"},
 	"vampire": {"items": ["garlic", "wooden_stake"], "method": "Carry garlic · strike with the wooden stake"},
 	"werewolf": {"items": ["silverware", "silver_stake"], "method": "Melt silverware · strike with the silver stake"},
 	"shapeshifter": {"items": ["hand_mirror", "iron_nails"], "method": "Unmask it in the mirror · strike with iron nails"},
-	"blightness": {"items": ["crucifix"], "method": "Crucifix in its room · Rite of Severance there (hold V)"},
-	"crawler": {"items": ["holy_water"], "method": "Holy water in hand · Rite of Drowning in its room (hold V)"},
-	"lost_one": {"items": ["ghost_book", "salt"], "method": "Book and salt in its room · Rite of Rest (hold V) · never touch its keepsake"},
-	"drowned_sailor": {"items": ["salt", "holy_water"], "method": "Salt its room, holy water in hand · Rite of the Tides there (hold V)"},
-	"plague_doctor": {"items": ["crucifix", "ghost_book"], "method": "Crucifix and book in its room · Rite of Cleansing there (hold V)"},
 }
+
+static func requirement_items(id: String) -> Array:
+	if Defs.is_ghost(id):
+		return Defs.CREATURES[id].get("rite_needs", [])
+	return REQUIREMENTS.get(id, {}).get("items", [])
 
 ## A circular icon slot. Styled by state; drawn, so it scales cleanly.
 class Disc extends Control:
@@ -610,11 +617,10 @@ func _rebuild_suspect() -> void:
 	sep.color = Color(Art.GOLD.r, Art.GOLD.g, Art.GOLD.b, 0.4)
 	sep.custom_minimum_size = Vector2(1, _px(40))
 	row.add_child(sep)
-	var req: Dictionary = REQUIREMENTS.get(sus, {"items": [], "method": ""})
-	var slots: Array = _equipment.slots
-	for item in req["items"]:
+	var req: Dictionary = REQUIREMENTS.get(sus, {"method": ""})
+	for item in requirement_items(sus):
 		var cell := _cell(Defs.EQUIPMENT[item]["icon"], EQ_SHORT.get(item, item), show, 34.0)
-		cell[1].set_state(item in slots)
+		cell[1].set_state(p.has_prepared(item))
 		row.add_child(cell[0])
 	var m := _outlined(req["method"], _px(12), Color(0.85, 0.8, 0.7), Art.font_italic, 3)
 	m.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -627,8 +633,7 @@ func _suspect_choices(sus: String) -> HBoxContainer:
 	choices.alignment = BoxContainer.ALIGNMENT_CENTER
 	var show: bool = _settings().get("suspect_labels", true)
 	for id in Defs.ORDINARY_CREATURES:
-		var cell := _cell(Defs.CREATURES[id]["token"], Defs.creature_name(id).replace("The ", ""), show, 34.0 if id == sus else 28.0)
-		cell[0].custom_minimum_size.x = _px(70)
+		var cell := _cell(Defs.CREATURES[id]["token"], Defs.short_name(id), show, 34.0 if id == sus else 28.0)
 		var on: bool = id == sus
 		cell[1].set_state(on, on)
 		if on:
@@ -751,7 +756,7 @@ func _build_suspect_picker(root: Control) -> void:
 			v.add_child(q)
 		else:
 			v.add_child(Art.icon_rect(Defs.CREATURES[id]["token"], _px(38)))
-		var n := Art.label("None" if id == "" else Defs.creature_name(id).replace("The ", ""), _px(13), INK, Art.font_heading)
+		var n := Art.label("None" if id == "" else Defs.short_name(id), _px(13), INK, Art.font_heading)
 		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.add_child(n)
 		suspect_picker.add_child(cell)
@@ -777,6 +782,11 @@ func _build_spectate(root: Control) -> void:
 	spectate_label.visible = false
 	root.add_child(spectate_label)
 
+## Panels built at their design size follow the Gameplay UI scale about their centre.
+func _scale_with_hud(c: Control) -> void:
+	c.scale = Vector2(k, k)
+	c.resized.connect(func(): c.pivot_offset = c.size * 0.5)
+
 func _centered_panel(root: Control, width: float) -> VBoxContainer:
 	var cc := CenterContainer.new()
 	cc.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -789,6 +799,7 @@ func _centered_panel(root: Control, width: float) -> VBoxContainer:
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var p := PanelContainer.new()
 	p.custom_minimum_size = Vector2(width, 0)
+	_scale_with_hud(p)
 	cc.add_child(p)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 10)
@@ -841,6 +852,7 @@ func _build_shared_pause(root: Control) -> void:
 	p.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	p.offset_left = -260
 	p.offset_right = 260
+	_scale_with_hud(p)
 	shared_pause_panel.add_child(p)
 	var v := VBoxContainer.new()
 	p.add_child(v)

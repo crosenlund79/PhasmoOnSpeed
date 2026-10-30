@@ -43,6 +43,18 @@ func add_backdrop(_path: String = "", dim: float = 0.35) -> void:
 	vig.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(vig)
 
+## Visible canvas size: at a larger Menu UI scale the canvas is smaller than the
+## 1600x900 design size, so wide layouts must shrink to fit.
+func canvas_size() -> Vector2:
+	var vp := get_viewport()
+	return vp.get_visible_rect().size if vp else Vector2(1600, 900)
+
+func fit_width(width: float, margin: float = 80.0) -> float:
+	return minf(width, canvas_size().x - margin)
+
+func fit_height(height: float, margin: float = 200.0) -> float:
+	return minf(height, canvas_size().y - margin)
+
 func centered_column(width: float, top: float = 40.0) -> VBoxContainer:
 	var m := MarginContainer.new()
 	m.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -53,7 +65,7 @@ func centered_column(width: float, top: float = 40.0) -> VBoxContainer:
 	cc.use_top_left = false
 	m.add_child(cc)
 	var v := VBoxContainer.new()
-	v.custom_minimum_size = Vector2(width, 0)
+	v.custom_minimum_size = Vector2(fit_width(width), 0)
 	v.add_theme_constant_override("separation", 12)
 	cc.add_child(v)
 	return v

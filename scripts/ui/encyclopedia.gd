@@ -27,15 +27,18 @@ func _ready() -> void:
 	t.add_theme_constant_override("outline_size", 8)
 	left.add_child(t)
 	left.add_child(Art.label("Everything a hunter needs to know.", 16, Color(0.82, 0.78, 0.7), Art.font_italic))
+	# The roster scrolls, so Back stays on screen at any menu scale.
+	var list_scroll := ScrollContainer.new()
+	list_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	left.add_child(list_scroll)
 	list_box = VBoxContainer.new()
 	list_box.add_theme_constant_override("separation", 6)
-	left.add_child(list_box)
+	list_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list_scroll.add_child(list_box)
 	for id in Defs.ENCYCLOPEDIA_ORDER:
 		_add_entry_button(id, Defs.creature_name(id), Defs.CREATURES[id]["token"])
 	_add_entry_button("_equipment", "Equipment", "icons/eq_emf.png")
-	var spacer := Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	left.add_child(spacer)
 	left.add_child(Art.button("Back", func(): Game.goto_menu(), 330))
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -140,14 +143,19 @@ func _show_equipment() -> void:
 	page.add_child(Art.heading("Equipment", 40))
 	page.add_child(_para("Every hunter carries the full kit from the start. House resources must be found.", 18, true))
 	_section("Your kit")
+	_equip_row("", LANTERN)
 	for id in Defs.BASE_LOADOUT:
 		_equip_row(id)
 	_section("Found in the house")
 	for id in Defs.RESOURCE_ORDER:
 		_equip_row(id)
 
-func _equip_row(id: String) -> void:
-	var e: Dictionary = Defs.EQUIPMENT[id]
+## The lantern is not a slot item (F toggles it), so it has no Defs.EQUIPMENT entry.
+const LANTERN := {"name": "Lantern", "icon": "icons/eq_flashlight.png",
+	"desc": "Always at hand: press F to open or shutter it. Its beam carries far, but a lit lantern lets things see you from further away. Caught in its light, a creature of flesh and blood shows as a dark silhouette."}
+
+func _equip_row(id: String, entry: Dictionary = {}) -> void:
+	var e: Dictionary = entry if id == "" else Defs.EQUIPMENT[id]
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	row.add_child(Art.icon_rect(e["icon"], 40))

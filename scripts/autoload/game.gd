@@ -51,6 +51,12 @@ func _unhandled_input(event: InputEvent) -> void:
 func _switch(node: Node) -> void:
 	get_tree().paused = false
 	if _current and is_instance_valid(_current):
+		if _current is Run or _current is ClientRun:
+			# Leaving an investigation by any route (results, lobby, a dropped
+			# connection, restart): its loops end with it. A restarted run starts
+			# them again straight away, which cancels these fades.
+			Sfx.stop_loop("hunt", 0.3)
+			Sfx.stop_loop("ambience", 0.6)
 		_current.queue_free()
 	_current = node
 	_apply_ui_scale()

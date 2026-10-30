@@ -110,9 +110,6 @@ func stylebox(path: String, margin: int, fallback_bg: Color, fallback_border: Co
 func parchment_panel() -> StyleBox:
 	return stylebox("ui/panel_frame.png", 24, PARCHMENT, INK)
 
-func dark_panel() -> StyleBox:
-	return stylebox("ui/panel_dark.png", 24, Color(0.1, 0.09, 0.1, 0.95), GOLD)
-
 func _build_theme() -> Theme:
 	var t := Theme.new()
 	t.default_font = font_body

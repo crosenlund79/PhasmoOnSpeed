@@ -148,7 +148,7 @@ func is_visible_now() -> bool:
 	return alpha > 0.25
 
 func speed_for_hunt() -> float:
-	var k := 0.85 if Defs.rules(run.difficulty) == "beginner" else 1.0   # Beginner: slower hunts
+	var k := Defs.tune(run.difficulty, "hunt_speed")   # Beginner: slower hunts
 	if wrath:
 		return 360.0 * k   # the Lost One's fury: faster than anyone can run
 	if angered_t > 0.0:
@@ -182,7 +182,7 @@ func end_hunt() -> void:
 	state = "roam"
 	state_t = 0.0
 	target_alpha = 0.0
-	cooldown_t = def["hunt_cooldown"] * {"beginner": 1.5, "hellbound": 0.55}.get(run.difficulty, 1.0) * (0.5 if angered_t > 0.0 else 1.0)
+	cooldown_t = def["hunt_cooldown"] * Defs.tune(run.difficulty, "hunt_cooldown") * (0.5 if angered_t > 0.0 else 1.0)
 	if wrath:
 		wrath = false
 		wrath_target = null
@@ -381,7 +381,7 @@ func _update_disguise(delta: float) -> void:
 	_talk_t -= delta
 	if _talk_t <= 0.0 and state == "roam":
 		# Talks exactly like an occupant would — terrified, too, in Nightmare.
-		var fear := 2.0 if Defs.rules(run.difficulty) == "nightmare" else 1.0
+		var fear := Defs.tune(run.difficulty, "panic")
 		_talk_t = Occupants.talk_delay(run.disguise["personality"], rng, fear)
 		var line := Occupants.pick_line(run.disguise["personality"], "lines", rng, fear)
 		tag.say(line)
@@ -574,7 +574,7 @@ func _player_visible(player: Node2D) -> bool:
 
 func _hunt(delta: float) -> void:
 	_sway(delta)
-	if state_t >= float(def["hunt_duration"]) * (0.7 if Defs.rules(run.difficulty) == "beginner" else 1.0) or run.hunters_in_house().is_empty():
+	if state_t >= float(def["hunt_duration"]) * Defs.tune(run.difficulty, "hunt_length") or run.hunters_in_house().is_empty():
 		end_hunt()
 		return
 	# Chase the hunter it can see (sticking with its current quarry while visible).
@@ -598,7 +598,7 @@ func _hunt(delta: float) -> void:
 	if sees:
 		last_seen = player.global_position
 		if type_id == "werewolf" and wolf:
-			chase_speed = minf(chase_speed + 28.0 * delta, 288.0 * (0.85 if Defs.rules(run.difficulty) == "beginner" else 1.0))
+			chase_speed = minf(chase_speed + 28.0 * delta, 288.0 * Defs.tune(run.difficulty, "hunt_speed"))
 		else:
 			chase_speed = move_toward(chase_speed, base, 60.0 * delta)
 	else:

@@ -20,7 +20,7 @@ func _ready() -> void:
 	replay_player = ReplayPlayer.new()
 	replay_player.setup(result["replay"])
 	# Keep the replayed investigator centred in the area left of the results panel.
-	replay_player.camera_offset = Vector2(300.0 / replay_player.zoom, 0.0)
+	replay_player.camera_offset = Vector2(get_viewport_rect().size.x * (0.5 - 0.5 * 0.62) / replay_player.zoom, 0.0)
 	var world_holder := Node2D.new()
 	add_child(world_holder)
 	world_holder.add_child(replay_player)
@@ -222,9 +222,9 @@ func _taunt() -> String:
 			lines = ["You summoned the end of all things and then asked it, politely, to leave. It worked.",
 				"Most people learn from their mistakes. You banished yours."]
 		elif summary["time"] < 90.0:
-			lines = ["Was that a haunting or a drive-by?", "The ghost hadn't even finished unpacking."]
+			lines = ["Was that a haunting or a social call?", "The ghost hadn't even finished unpacking."]
 		elif summary["wounds"] > 0:
-			lines = ["Bleeding, but victorious. The dry cleaner will not be.", "Half alive counts as alive. Technically."]
+			lines = ["Bleeding, but victorious. The laundress will not be.", "Half alive counts as alive. Technically."]
 		else:
 			lines = ["The occupants may now resume their perfectly ordinary lives.", "Another house, another soul sent packing.",
 				"Neat, methodical, and only slightly screaming."]
@@ -236,7 +236,7 @@ func _taunt() -> String:
 				"You brought ghost-hunting gear to something with teeth."]
 		else:
 			lines = ["Your journal will make a fine ghost story. Narrated by you, from the other side.",
-				"The occupants send their regards. From the car.", "On the bright side, you can haunt this place now."]
+				"The occupants send their regards. From the carriage.", "On the bright side, you can haunt this place now."]
 	return lines[r.randi_range(0, lines.size() - 1)]
 
 func _process(delta: float) -> void:

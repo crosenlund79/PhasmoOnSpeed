@@ -31,12 +31,6 @@ func set_token(path: String) -> void:
 	sprite.scale = Vector2(s, s)
 	shadow.scale = Vector2(s, s) * 1.04
 
-func set_diameter(d: float) -> void:
-	diameter = d
-	var p := token_path
-	token_path = ""
-	set_token(p)
-
 func face(angle: float, delta: float, rate: float = 14.0) -> void:
 	facing = lerp_angle(facing, angle, clampf(rate * delta, 0.0, 1.0))
 	sprite.rotation = facing

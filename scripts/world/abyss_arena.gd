@@ -26,12 +26,19 @@ const HAND_RADIUS := 18.0
 var seed_value := 1
 var t := 0.0
 var running := false
+var clock: Callable   # optional: replays drive the timeline from replay time instead
 
 static func rect() -> Rect2:
 	return Rect2(ORIGIN, Vector2(COLS, ROWS) * C)
 
 static func contains(pos: Vector2) -> bool:
 	return rect().grow(40.0).has_point(pos)
+
+## Where the k-th occupant or the entity drifts, slowly, by the far (right) wall —
+## clear of the hunters' spawn, visible to them, harmless.
+static func far_point(k: int, at: float) -> Vector2:
+	var y := (2.0 + (k % 4) * 2.6) * C + sin(at * 0.7 + k * 1.9) * C * 0.6
+	return ORIGIN + Vector2((COLS - 1.6) * C + sin(at * 0.5 + k) * C * 0.4, y)
 
 ## Spawn points for k arrivals, spread along the left wall.
 static func spawn_point(k: int) -> Vector2:
@@ -78,7 +85,7 @@ func close() -> void:
 
 func _process(delta: float) -> void:
 	if running:
-		t += delta
+		t = float(clock.call()) if clock.is_valid() else t + delta
 		queue_redraw()
 
 # --- The trap timeline -------------------------------------------------------------------

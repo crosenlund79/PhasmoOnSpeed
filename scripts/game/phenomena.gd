@@ -94,6 +94,7 @@ func clear() -> void:
 	voices.clear()
 	for idx in mirror_ttl:
 		run.view.show_mirror_overlay(idx, null, 0.0)
+		run.record_event("mirror", {"index": idx, "on": false})
 	mirror_ttl.clear()
 	temps.clear()
 	book_write_t = -1.0

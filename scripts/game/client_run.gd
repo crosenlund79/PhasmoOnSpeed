@@ -57,9 +57,9 @@ func _ready() -> void:
 		view.build_nightmare()
 	if blood_moon:
 		view.set_blood_moon(true)
-	if difficulty in ["hellbound", "abyssal"]:
-		view.set_hostile(difficulty)
-		if difficulty == "abyssal":
+	if Defs.hostile(difficulty) != "":
+		view.set_hostile(Defs.hostile(difficulty))
+		if Defs.hostile(difficulty) == "abyssal":
 			view.ensure_abyss()
 	world.add_child(view)
 	world_text = CanvasLayer.new()

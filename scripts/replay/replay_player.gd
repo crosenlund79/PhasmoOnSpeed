@@ -14,6 +14,7 @@ var camera: Camera2D
 var fx: WorldFx
 var text_layer: CanvasLayer
 var t := 0.0
+var _doors_at_start: Array = []
 var duration := 0.0
 var _hold := 0.0
 var _tokens := {}        # actor id -> TokenSprite
@@ -43,8 +44,8 @@ func _ready() -> void:
 		view.build_nightmare()
 	if replay.get("blood_moon", false):
 		view.set_blood_moon(true)
-	if replay.get("difficulty", "") in ["hellbound", "abyssal"]:
-		view.set_hostile(replay["difficulty"])
+	if Defs.hostile(str(replay.get("difficulty", ""))) != "":
+		view.set_hostile(Defs.hostile(str(replay["difficulty"])))
 	add_child(view)
 	text_layer = CanvasLayer.new()
 	text_layer.layer = 1
@@ -89,6 +90,7 @@ func _ready() -> void:
 	add_child(camera)
 	camera.make_current()
 	_build_moments()
+	_doors_at_start = view.doors.map(func(d): return d["open"])
 	_restart()
 
 func _restart() -> void:
@@ -107,6 +109,12 @@ func _restart() -> void:
 	fx.clear()
 	if view.abyss:
 		view.abyss.close()
+	# Doors, flames and the moon/mist go back to how the run began.
+	for i in view.doors.size():
+		view.set_door(i, _doors_at_start[i], false)
+	for i in view.lights.size():
+		view.set_light(i, true)
+	view.clear_mood()
 	for i in view.mirrors.size():
 		view.show_mirror_overlay(i, null, 0.0)
 	view.set_darkness(HouseView.DARKNESS, 0.01)
@@ -185,6 +193,10 @@ func _event(ev: Array) -> void:
 	var m := _moment_for(type, d)
 	if not m.is_empty():
 		_show_moment(m[0], m[1])
+	if type == "abyss" and d.get("phase", "") == "open":
+		# The trap timeline follows replay time (it plays faster than real time).
+		var opened := float(ev[0])
+		view.ensure_abyss().clock = func(): return t - opened
 	if fx.apply(type, d):
 		return
 	match type:
@@ -236,8 +248,10 @@ func _moment_for(type: String, d: Dictionary) -> Array:
 			var how: String = {"hellfire": " by hellfire", "abyss": " in the Abyss", "miasma": " in the miasma"}.get(str(d.get("source", "")), "")
 			return ["icons/ui_heart_wounded.png", "%s wounded%s" % [_who(d), how]]
 		"portal":
-			return ["tokens/blightness.png", "A portal tore open"]
+			return ["icons/ui_skull.png", "A portal tore open"]
 		"abyss_pull":
+			if d.get("entity", false):
+				return ["icons/ui_skull.png", "The entity was torn into the Abyss"]
 			return ["icons/ui_skull.png", "%s dragged into the Abyss" % _who(d)]
 		"abyss_return":
 			return ["icons/ui_skull.png", "%s returned from the Abyss" % _who(d)] if d.get("alive", true) else []

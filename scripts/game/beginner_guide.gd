@@ -59,7 +59,7 @@ func _process(delta: float) -> void:
 	if eq.prompt != "" and _t > 3.0:
 		_once("interact", "Interacting", "Doors, stairs and anything you can pick up show a small prompt beside them — press E or Space. Hold V to perform a rite when you are ready.", "icons/ui_quill.png")
 	if _t > 40.0 and p.journal.active_entries().is_empty():
-		_once("hunting_tips", "Where to look", "Ghosts send the Witch's Needle into a frenzy, freeze rooms, answer the Whisper Box, leave handprints under the Wraithlight Lantern, ghost writing and orbs. Flesh-and-blood creatures leave marks instead: bite marks, blood, fur, claws, footprints… Sweep the house with your lantern lit.", "icons/eq_emf.png")
+		_once("hunting_tips", "Where to look", "Ghosts send the Witch's Needle into a frenzy, freeze rooms, answer the Whisper Box, leave handprints under the Wraithlight Lantern, write in the Ghost Writing Book and show orbs in the Scrying Mirror. Flesh-and-blood creatures leave marks instead: bite marks, blood, fur, claws, footprints… Sweep the house with your lantern lit.", "icons/eq_emf.png")
 	if run.is_harbinger():
 		_once("harbinger", "The Harbinger", "Recklessness has called something worse. Earlier evidence no longer counts. Light the three sigil candles (E), then hold V beside it for the Final Rite. Don't let it catch you.", "tokens/harbinger.png", true)
 		return
@@ -89,13 +89,14 @@ func _process(delta: float) -> void:
 			var steps: Array = Defs.CREATURES[sus]["vanquish"]
 			_once("how_" + sus, "Vanquishing %s" % Defs.creature_name(sus), " ".join(steps), Defs.CREATURES[sus]["token"], true)
 	if sus != "":
-		var need: Array = hud.REQUIREMENTS.get(sus, {}).get("items", [])
-		var missing: Array = need.filter(func(it): return not it in eq.slots)
+		var need: Array = hud.requirement_items(sus)
+		var missing: Array = need.filter(func(it): return not p.has_prepared(it))
 		if not missing.is_empty() and _t > 20.0:
 			var it: String = missing[0]
-			_once("need_%s_%s" % [sus, it], "You still need: %s" % Defs.EQUIPMENT[it]["name"], Defs.EQUIPMENT[it].get("desc", ""), Defs.EQUIPMENT[it]["icon"])
+			var title := ("Still to lay in its room: %s" if it in ["ghost_book", "crucifix", "salt"] else "You still need: %s") % Defs.EQUIPMENT[it]["name"]
+			_once("need_%s_%s" % [sus, it], title, Defs.EQUIPMENT[it].get("desc", ""), Defs.EQUIPMENT[it]["icon"])
 		elif missing.is_empty() and not need.is_empty():
-			_once("ready_" + sus, "Ready to vanquish", "You carry everything %s needs. Follow the steps: %s" % [Defs.creature_name(sus), Defs.CREATURES[sus]["vanquish"][-1]], "icons/ui_trophy.png", true)
+			_once("ready_" + sus, "Ready to vanquish", "Everything %s needs is prepared — the rite only works in its room. Follow the steps: %s" % [Defs.creature_name(sus), Defs.CREATURES[sus]["vanquish"][-1]], "icons/ui_trophy.png", true)
 	# Danger.
 	var hunting: bool = hud._hunting
 	if hunting and not _was_hunting:

@@ -167,5 +167,3 @@ func _squash(c: Dictionary) -> void:
 	_blood_layer.add_child(splat)
 	Sfx.play_at("critter_squish", node.position, self, -8.0 if c["kind"] != "rat" else -3.0, rng.randf_range(0.9, 1.15), 700.0)
 
-func alive_count() -> int:
-	return list.filter(func(c): return c["alive"]).size()

@@ -51,6 +51,3 @@ func set_visible(v: bool) -> void:
 	name_label.visible = v and SaveData.settings().get("npc_names", true)
 	bubble.visible = v
 
-func free_labels() -> void:
-	name_label.queue_free()
-	bubble.queue_free()

@@ -106,9 +106,9 @@ func _ready() -> void:
 		view.build_nightmare()
 	if blood_moon:
 		view.set_blood_moon(true)
-	if difficulty in ["hellbound", "abyssal"]:
-		view.set_hostile(difficulty)
-		if difficulty == "abyssal":
+	if Defs.hostile(difficulty) != "":
+		view.set_hostile(Defs.hostile(difficulty))
+		if Defs.hostile(difficulty) == "abyssal":
 			view.ensure_abyss()
 	world.add_child(view)
 	world_text = CanvasLayer.new()
@@ -267,6 +267,14 @@ func _place_resources() -> void:
 			var node := _item_sprite(spec["sprite"], pos, 26.0)
 			pickups.append({"kind": "resource", "res": res, "node": node, "pos": pos, "icon": Defs.EQUIPMENT[res]["icon"],
 				"label": "Pick Up " + Defs.EQUIPMENT[res]["name"], "hold": 0.0})
+	# A location without a stove, hearth or furnace cannot melt silver: leave a
+	# ready-made silver stake instead, so a werewolf is always beatable.
+	if map.furniture_with("melt").is_empty():
+		var rooms := map.indoor_rooms()
+		var cell := map.random_free_cell(rooms[rng.randi_range(0, rooms.size() - 1)]["id"], rng, used)
+		var pos := HouseMap.cell_center(cell)
+		pickups.append({"kind": "resource", "res": "silver_stake", "node": _item_sprite("items/silver_stake.png", pos, 26.0), "pos": pos,
+			"icon": Defs.EQUIPMENT["silver_stake"]["icon"], "label": "Pick Up " + Defs.EQUIPMENT["silver_stake"]["name"], "hold": 0.0})
 
 func _item_sprite(path: String, pos: Vector2, size: float, rot: float = 0.0) -> Sprite2D:
 	var s := Sprite2D.new()
@@ -291,7 +299,7 @@ func _spawn_occupants() -> void:
 		var o := Occupant.new()
 		var r: Dictionary = rooms[rng.randi_range(0, rooms.size() - 1)]
 		o.setup(self, "npc_%d" % (i + 1), cast[i], HouseMap.cell_center(map.random_free_cell(r["id"], rng)))
-		o.fear = (2.6 if difficulty == "hellbound" else 2.0) if Defs.rules(difficulty) == "nightmare" else 1.0
+		o.fear = Defs.tune(difficulty, "panic")
 		view.actor_layer.add_child(o)
 		occupants.append(o)
 		recorder.register_actor(o.actor_id, "npc", o.token_path, 36.0)
@@ -408,19 +416,19 @@ func _actor_states() -> Dictionary:
 
 func _update_threat(delta: float) -> void:
 	# Beginner: dread builds more slowly and the first hunt comes much later.
-	threat = minf(100.0, threat + THREAT_PER_SECOND * delta * {"beginner": 0.6, "hellbound": 1.6}.get(difficulty, 1.0))
+	threat = minf(100.0, threat + THREAT_PER_SECOND * delta * Defs.tune(difficulty, "dread"))
 	if not escalated and threat >= ESCALATE_AT and creature and creature.type_id in ["werewolf", "vampire"] and creature.state != "banished":
 		_escalate()
 	if creature == null or creature.state != "roam" or creature.cooldown_t > 0.0:
 		return
+	if in_abyss(creature):
+		return   # away in the Abyss: even a forced hunt waits for its return
 	if forced_hunt_t > 0.0:
 		forced_hunt_t -= delta
 		if forced_hunt_t <= 0.0:
 			trigger_hunt(forced_hunt_reckless)
 		return
-	if creature.has_meta("abyss"):
-		return   # away in the Abyss
-	if not is_harbinger() and elapsed < GRACE_PERIOD * {"beginner": 2.0, "hellbound": 0.6}.get(difficulty, 1.0):
+	if not is_harbinger() and elapsed < GRACE_PERIOD * Defs.tune(difficulty, "grace"):
 		return
 	hunt_roll_t -= delta
 	if hunt_roll_t > 0.0:
@@ -557,7 +565,7 @@ func on_book_written(book: Sprite2D) -> void:
 	record_event("decal_swap", {"id": book.name, "sprite": "items/ghost_book_written.png"})
 
 func vampire_bite() -> void:
-	var candidates: Array = occupants.filter(func(o): return o.state != "flee" and o.state != "gone" and not o.bitten)
+	var candidates: Array = occupants.filter(func(o): return o.state != "flee" and o.state != "gone" and not o.bitten and not o in _abyss_npcs)
 	if candidates.is_empty():
 		return
 	var o: Occupant = candidates[rng.randi_range(0, candidates.size() - 1)]
@@ -617,12 +625,12 @@ func _environment_tick(delta: float) -> void:
 		if i >= 0 and not view.doors[i]["open"]:
 			set_door(i, true)
 	# Supernatural meddling with doors and flames, more often while it hunts.
-	if creature and creature.state != "banished":
+	if creature and creature.state != "banished" and not in_abyss(creature):
 		_haunt_t -= 0.12 * (2.5 if creature.is_hunting() else 1.0)
 		if _haunt_t <= 0.0:
-			_haunt_t = rng.randf_range(4.0, 9.0) if difficulty == "hellbound" else rng.randf_range(12.0, 24.0)
+			_haunt_t = rng.randf_range(12.0, 24.0) * Defs.tune(difficulty, "haunt_every")
 			haunt_near(creature.position)
-			if difficulty == "hellbound":
+			if Defs.hostile(difficulty) == "hellbound":
 				shake_furniture_near(creature.position)   # the house itself lashes out
 
 # --- Hellbound & Abyssal ------------------------------------------------------------------
@@ -642,7 +650,7 @@ var abyss_until := -1.0
 var _abyss_npcs: Array = []
 
 func _hostile_tick(delta: float) -> void:
-	if difficulty == "hellbound":
+	if Defs.hostile(difficulty) == "hellbound":
 		_hellfire_t -= delta
 		if _hellfire_t <= 0.0:
 			_hellfire_t = rng.randf_range(8.0, 14.0)
@@ -650,7 +658,7 @@ func _hostile_tick(delta: float) -> void:
 			if not targets.is_empty():
 				var h: Player = targets[rng.randi_range(0, targets.size() - 1)]
 				spawn_hellfire(h.global_position + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(0.0, 90.0))
-	elif difficulty == "abyssal":
+	elif Defs.hostile(difficulty) == "abyssal":
 		if abyss_until > 0.0:
 			_abyss_tick()
 		else:
@@ -678,7 +686,7 @@ func spawn_hellfire(at: Vector2) -> void:
 
 ## Hellbound: starting a rite is noticed — fire near you and a surge of dread.
 func on_rite_begun(p: Player) -> void:
-	if difficulty != "hellbound":
+	if Defs.hostile(difficulty) != "hellbound":
 		return
 	add_threat(6.0, "hellbound_rite")
 	spawn_hellfire(p.global_position + Vector2.from_angle(rng.randf() * TAU) * 80.0)
@@ -727,21 +735,37 @@ func open_abyss(room: String) -> void:
 		announce_to(h, "DRAGGED INTO THE ABYSS", "Survive one minute.", Color(0.8, 0.45, 1.0), 2.4)
 		for o: Player in hunters_in_house():
 			tell(o, "%s vanished into a portal." % h.display_name, "icons/ui_skull.png", true)
+	# Occupants and the entity go too: frozen and drifting at the far end of the
+	# realm, seen by everyone there but unable to act on the house or the hunters.
 	_abyss_npcs.clear()
 	for o in occupants:
 		if o.state != "gone" and o.room_id == room:
-			o.visible = false
-			o.modulate.a = 0.0
 			o.set_process(false)
 			o.tag.set_visible(false)
+			o.modulate.a = 1.0
 			_abyss_npcs.append(o)
-	if creature and creature.state != "banished" and creature.room_id == room:
+	if creature and creature.state != "banished" and creature.state != "bound" and creature.room_id == room:
 		if creature.is_hunting():
 			creature.end_hunt()
 		creature.set_meta("abyss", true)
-		creature.visible = false
-		creature.modulate.a = 0.0
 		creature.set_process(false)
+		creature.alpha = 0.85
+		creature.modulate.a = 0.85
+		record_event("abyss_pull", {"actor": _creature_actor_id(), "entity": true})
+	_abyss_drift()
+
+## Where the occupants and the entity hang in the realm (out of the hunters' way).
+func _abyss_drift() -> void:
+	var t := view.abyss.t if view.abyss else 0.0
+	var k := 0
+	for o in _abyss_npcs:
+		o.position = AbyssArena.far_point(k, t)
+		k += 1
+	if in_abyss(creature):
+		creature.position = AbyssArena.far_point(k, t)
+
+func in_abyss(n: Node) -> bool:
+	return n != null and is_instance_valid(n) and n.has_meta("abyss")
 
 func _move_hunter(h: Player, to: Vector2) -> void:
 	h.global_position = to
@@ -763,6 +787,7 @@ func _abyss_tick() -> void:
 			sound_at("player_hurt", h.global_position, -6.0)
 			tell(h, "The %s tear at you!" % what, "icons/ui_skull.png")
 			_wound(h, null, "abyss")
+	_abyss_drift()
 	if elapsed >= abyss_until:
 		close_abyss()
 
@@ -787,16 +812,18 @@ func close_abyss() -> void:
 			announce_to(h, "SPAT BACK OUT", "The portal returns you to %s." % map.room_name(room), Color(0.8, 0.45, 1.0), 1.8)
 		record_event("abyss_return", {"actor": h.actor_id, "alive": not h.dead})
 	for o in _abyss_npcs:
-		if is_instance_valid(o):
+		if is_instance_valid(o) and o.state != "gone":
 			o.position = HouseMap.cell_center(map.random_free_cell(room, rng, used))
 			o.visible = true
 			o.modulate.a = 1.0
 			o.set_process(true)
+			o.tag.set_visible(true)
 			o.say("Where— where was I?")
 	_abyss_npcs.clear()
 	if creature and creature.has_meta("abyss"):
 		creature.remove_meta("abyss")
 		creature.position = HouseMap.cell_center(map.random_free_cell(room, rng, used))
+		creature.room_id = room
 		creature.visible = true
 		creature.set_process(true)
 		creature.cooldown_t = maxf(creature.cooldown_t, 8.0)
@@ -909,7 +936,7 @@ func _take_stairs(h: Player, cell: Vector2i) -> void:
 # --- Hunts ---------------------------------------------------------------------------
 
 func trigger_hunt(reckless: bool) -> void:
-	if creature == null or creature.state != "roam" or state != "playing":
+	if creature == null or creature.state != "roam" or state != "playing" or in_abyss(creature) or hunters_in_house().is_empty():
 		return
 	forced_hunt_t = -1.0
 	# Crucifixes stop eligible ghost hunts before they begin.
@@ -1011,6 +1038,8 @@ func _on_hunt_ended(c: Creature, hit: bool) -> void:
 		if h.get_meta("hit_this_hunt", false):
 			h.set_meta("hit_this_hunt", false)
 			continue
+		if in_abyss(h):
+			continue   # it hunted a house they were not in
 		if not c.hunt_reckless and c.type_id != "harbinger":
 			h.clean_hunts += 1
 		tell(h, "The hunt is over… for now.", "icons/ui_clock.png", true)
@@ -1052,7 +1081,9 @@ func on_creature_contact(c: Creature, p: Player) -> void:
 		"crawler":
 			# It rises out of the floor and drags its victim under: a wound, never an instant death.
 			c.set_meta("rising", true)
-			get_tree().create_timer(1.2).timeout.connect(func():
+			var tw := create_tween()   # bound to the run: never fires after it is gone
+			tw.tween_interval(1.2)
+			tw.tween_callback(func():
 				if is_instance_valid(c):
 					c.remove_meta("rising"))
 			_push(p, (c.position - p.global_position).normalized() * 420.0)
@@ -1077,12 +1108,13 @@ func _wound(p: Player, c: Creature, source: String) -> void:
 	if p.dead or state != "playing":
 		return
 	p.wounds += 1
-	p.set_meta("hit_this_hunt", true)
+	if creature and creature.is_hunting():
+		p.set_meta("hit_this_hunt", true)
 	record_event("attack", {"actor": p.actor_id, "wounds": p.wounds, "source": source})
 	if p.wounds >= 2:
 		_hunter_dies(p, c)
 		return
-	p.invuln = Player.INVULN_AFTER_HIT * (1.6 if Defs.rules(difficulty) == "beginner" else 1.0)
+	p.invuln = Player.INVULN_AFTER_HIT * Defs.tune(difficulty, "wound_grace")
 	sound_to(p, "player_hurt", 0.0)
 	if p.is_local:
 		hud.wound()
@@ -1147,7 +1179,7 @@ func _keepsake_tick(delta: float) -> void:
 
 func _examine_keepsake(p: Player, k: Dictionary) -> void:
 	record_event("keepsake", {"actor": p.actor_id, "item": k["item"], "forbidden": k["forbidden"] and creature.type_id == "lost_one"})
-	if not (k["forbidden"] and creature.type_id == "lost_one" and creature.state in ["roam", "stunned"]):
+	if not (k["forbidden"] and creature.type_id == "lost_one" and creature.state in ["roam", "stunned"]) or in_abyss(creature):
 		WorldFx.twitch(k["node"])
 		tell(p, KEEPSAKES[k["item"]][1], "items/%s.png" % k["item"], true)
 		return
@@ -1215,6 +1247,9 @@ var npcs_burned := 0
 func use_voodoo(p: Player) -> void:
 	if not p.has_resource("voodoo_doll") or state != "playing" or creature == null or creature.state == "banished":
 		return
+	if in_abyss(creature):
+		tell(p, "The pins stay cold. Whatever haunts this house is not here right now.", "icons/eq_voodoo_doll.png", true)
+		return
 	p.take_resource("voodoo_doll", 1)
 	p.set_meta("voodoo_uses", int(p.get_meta("voodoo_uses", 0)) + 1)
 	p.equipment.rebuild_slots()
@@ -1234,7 +1269,7 @@ func use_voodoo(p: Player) -> void:
 			forced_hunt_t = 4.0
 			forced_hunt_reckless = true
 		return
-	var victims: Array = occupants.filter(func(o): return o.state != "gone")
+	var victims: Array = occupants.filter(func(o): return o.state != "gone" and not o in _abyss_npcs)
 	if victims.is_empty():
 		tell(p, "The doll's pins grow hot. Something turns its attention to you.", "icons/eq_voodoo_doll.png")
 		record_event("voodoo", {"actor": p.actor_id, "effect": "turned"})
@@ -1471,6 +1506,9 @@ func _maybe_quip_shove_victim(p: Player) -> void:
 # --- Defences & placement ---------------------------------------------------------------
 
 func place_item(p: Player, type: String, at: Vector2) -> bool:
+	if in_abyss(p):
+		tell(p, "Nothing you set down here would stay. Wait for the way back.", "icons/ui_skull.png", true)
+		return false
 	var pos := at if map.walkable(HouseMap.to_cell(at)) else p.global_position
 	var written: bool = type == "ghost_book" and p.get_meta("book_written", false)
 	var sprite_path: String = {"ghost_book": "items/ghost_book_written.png" if written else "items/ghost_book.png",
@@ -1491,7 +1529,7 @@ func splash_holy_water(p: Player) -> void:
 	p.blessed = 3.0
 	record_event("holy_water", {"actor": p.actor_id, "x": p.global_position.x, "y": p.global_position.y})
 	var c := creature
-	if c == null or c.state == "banished":
+	if c == null or c.state == "banished" or in_abyss(c):
 		return
 	var to := c.position - p.global_position
 	if to.length() < 125.0 and absf(angle_difference(p.aim_angle, to.angle())) < 0.9:
@@ -1513,6 +1551,9 @@ func strike(p: Player, item: String) -> void:
 		return
 	var c := creature
 	if c == null or c.state == "banished":
+		return
+	if in_abyss(c) or in_abyss(p):
+		tell(p, "Your blow passes through it like smoke. Nothing can be ended in the Abyss.", Defs.EQUIPMENT[item]["icon"], true)
 		return
 	var to := c.position - p.global_position
 	var reach := to.length() < STRIKE_REACH and (absf(angle_difference(p.aim_angle, to.angle())) < 1.2 or to.length() < 30.0)
@@ -1569,6 +1610,12 @@ func rite_hold_time() -> float:
 	return 2.5 if is_harbinger() else 1.5
 
 func can_begin_rite(p: Player) -> bool:
+	if in_abyss(p):
+		tell(p, "No rite can be finished in the Abyss.", "icons/ui_skull.png", true)
+		return false
+	if in_abyss(creature):
+		tell(p, "The rite finds nothing to bind — it has been torn away into the Abyss.", "icons/ui_skull.png", true)
+		return false
 	if is_harbinger():
 		if creature.state != "bound":
 			tell(p, "The Harbinger cannot be banished until all three sigil candles burn.", "items/sigil_candle_lit.png", true)
@@ -1586,7 +1633,7 @@ func can_begin_rite(p: Player) -> bool:
 	if not _rite_requirement_met(p):
 		var d: Dictionary = Defs.CREATURES[p.suspect]
 		var needs: Array = d["rite_needs"]
-		var words: Array = needs.map(func(n): return "holy water in hand" if n == "holy_water" else Defs.EQUIPMENT[n]["name"].to_lower() + " in this room")
+		var words: Array = needs.map(func(n): return "a flask of holy water" if n == "holy_water" else ("salt" if n == "salt" else "the " + Defs.EQUIPMENT[n]["name"]) + " in this room")
 		tell(p, "The %s needs %s." % [d["rite_name"], " and ".join(words)], Defs.EQUIPMENT[needs[0]]["icon"], true)
 		return false
 	return true
@@ -1874,9 +1921,10 @@ func _victory(p: Player) -> void:
 	state = "ending"
 	_outcome = "vanquished"
 	_end_t = 2.6
-	creature.banish()
+	close_abyss()
 	if creature.is_hunting():
-		creature.end_hunt()
+		creature.end_hunt()   # before banishing: the hunt is ended (and recorded) like any other
+	creature.banish()
 	Sfx.stop_loop("hunt", 0.4)
 	sound_all("vanquish_success", 2.0)
 	fx_darkness(Color(0.42, 0.42, 0.5), 2.0)
@@ -1902,6 +1950,7 @@ func _hunter_dies(p: Player, c: Creature = null) -> void:
 		state = "ending"
 		_outcome = "perished"
 		_end_t = 2.8
+		close_abyss()
 		Sfx.stop_loop("hunt", 0.4)
 		fx_darkness(Color(0.05, 0.02, 0.02), 1.5)
 		announce("PERISHED", "", Art.BLOOD, 2.6)
@@ -1916,6 +1965,7 @@ func _hunter_dies(p: Player, c: Creature = null) -> void:
 		state = "ending"
 		_outcome = "failed"
 		_end_t = 3.0
+		close_abyss()
 		fx_darkness(Color(0.05, 0.02, 0.02), 1.5)
 		announce("ALL HUNTERS PERISHED", "The house keeps them all.", Art.BLOOD, 3.0)
 
@@ -2101,3 +2151,4 @@ func on_peer_left(peer: int) -> void:
 		state = "ending"
 		_outcome = "failed"
 		_end_t = 1.0
+		close_abyss()

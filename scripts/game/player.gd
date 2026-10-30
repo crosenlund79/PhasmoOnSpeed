@@ -46,7 +46,8 @@ var sprinting := false
 var _step_t := 0.0
 
 # Inventory: base equipment charges and found resources.
-var charges := {"salt": 3, "crucifix": 1, "holy_water": 3}
+const START_CHARGES := {"salt": 3, "crucifix": 1, "holy_water": 3}
+var charges := START_CHARGES.duplicate()
 var resources := {}   # id -> count
 var book_placed := false
 var crucifix_burns := 2
@@ -164,6 +165,18 @@ func _cone_light(color: Color, energy: float, scale: float) -> PointLight2D:
 	var l := Lighting.make_cone(color, energy, scale)
 	light_pivot.add_child(l)
 	return l
+
+## Whether this hunter has done their part for one vanquishing requirement:
+## laid the book / crucifix or poured salt, still carries holy water, or holds the
+## item (silverware counts once it has been melted into the stake).
+func has_prepared(item: String) -> bool:
+	match item:
+		"ghost_book": return book_placed
+		"crucifix": return int(charges["crucifix"]) < int(START_CHARGES["crucifix"])
+		"salt": return int(charges["salt"]) < int(START_CHARGES["salt"])
+		"holy_water": return int(charges["holy_water"]) > 0
+		"silverware": return has_resource("silverware") or has_resource("silver_stake")
+	return has_resource(item)
 
 func has_resource(id: String) -> bool:
 	return int(resources.get(id, 0)) > 0

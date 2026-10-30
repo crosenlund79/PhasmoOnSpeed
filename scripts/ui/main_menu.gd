@@ -285,6 +285,17 @@ func _modal(root: Control, width: float) -> VBoxContainer:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
 	p.add_child(v)
+	# Taller than the canvas (a big Menu UI scale)? Scroll instead of clipping.
+	p.resized.connect(func():
+		var max_h := get_viewport_rect().size.y - 40.0
+		if p.size.y > max_h and v.get_parent() == p:
+			var sc := ScrollContainer.new()
+			sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+			sc.custom_minimum_size = Vector2(width - 40.0, max_h - 40.0)
+			p.remove_child(v)
+			v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			sc.add_child(v)
+			p.add_child(sc))
 	return v
 
 func _slider(v: VBoxContainer, title: String, key: String, lo: float, hi: float, step: float, apply_now: bool) -> void:
@@ -343,7 +354,7 @@ func _build_settings(root: Control) -> void:
 	v.add_child(Art.label("Investigation HUD", 18, Color(0.35, 0.22, 0.12), Art.font_heading))
 	_check(v, "Show equipment labels", "equip_labels")
 	_check(v, "Show evidence labels", "ev_labels")
-	_check(v, "Show suspect requirement labels", "suspect_labels")
+	_check(v, "Show SUSPECTED panel labels", "suspect_labels")
 	_slider(v, "Equipment HUD opacity", "equip_hud_opacity", 0.2, 1.0, 0.05, false)
 	v.add_child(Art.label("Evidence notifications", 18, Color(0.35, 0.22, 0.12), Art.font_heading))
 	_check(v, "Show 'Evidence recorded' cards", "ev_notify")

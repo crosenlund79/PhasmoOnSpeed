@@ -84,6 +84,9 @@ func test_houses_valid() -> void:
 					walk += 1
 					check(reach.has(Vector2i(x, y)), "%s: unreachable cell %d,%d" % [id, x, y])
 		check(walk > 300, "%s: too small" % id)
+		# Special scenery the entities rely on (each has a fallback, but a house should not need it).
+		check(not m.furniture_with("melt").is_empty(), "%s: no stove, hearth or furnace to melt silver" % id)
+		check(m.furniture.any(func(f): return f["type"] == "boiler"), "%s: no basement furnace for the Lost One" % id)
 		var ids := {}
 		var dead_ends := 0
 		for r in m.rooms:
@@ -1106,7 +1109,14 @@ func test_abyssal() -> void:
 		run.close_abyss()
 		run.open_abyss(room)   # the warning picked another room: open one here to test the pull
 	check(run.player.has_meta("abyss") and AbyssArena.contains(run.player.global_position), "the hunter in the room is in the Abyss")
-	check(not o.visible and run.creature.has_meta("abyss"), "occupant and entity in the room were taken too")
+	check(AbyssArena.contains(o.position) and run.creature.has_meta("abyss") and AbyssArena.contains(run.creature.position), "occupant and entity in the room were taken too (and are seen there)")
+	# While it is away it cannot reach the house: no forced hunt, no rite, no doll.
+	run.forced_hunt_t = 0.1
+	run.creature.cooldown_t = 0.0
+	await _frames(10)
+	check(not run.creature.is_hunting(), "a forced hunt waits while the entity is in the Abyss")
+	run.player.suspect = "shade"
+	check(not run.can_begin_rite(run.player), "no rite from inside the Abyss")
 	check(is_equal_approx(run.abyss_until - run.elapsed, AbyssArena.DURATION) or run.abyss_until - run.elapsed > 55.0, "about a minute")
 	# Traps hurt (with warnings and grace); being in the Abyss pauses ordinary hunts.
 	var arena := run.view.abyss
@@ -1128,6 +1138,20 @@ func test_abyssal() -> void:
 	check(o.visible and not run.creature.has_meta("abyss") and run.creature.visible, "occupant and entity returned")
 	check(run.recorder.data["events"].any(func(e): return e[1] == "abyss_return"), "return recorded for the replay")
 	check(run.build_summary()["abyss_escapes"] == 1, "escape counted in the results")
+	check(o.tag != null and run.occupants.has(o), "occupant restored with its speech tag")
+	# Ending while the Abyss is open closes it: nobody is left behind in the realm.
+	_cleanup_scene()
+	await get_tree().process_frame
+	var r2: Run = Game.start_run("blackwood", 43, "shade", "abyssal")
+	await get_tree().process_frame
+	r2.creature.set_process(false)
+	r2.creature.position = r2.player.global_position
+	r2.creature.room_id = r2.player.room_id
+	r2.open_abyss(r2.player.room_id)
+	check(r2.in_abyss(r2.player) and r2.in_abyss(r2.creature), "both pulled in")
+	r2._victory(r2.player)
+	check(not r2.in_abyss(r2.player) and not r2.in_abyss(r2.creature) and r2.abyss_until < 0.0, "an ending closes the Abyss")
+	check(r2.recorder.data["events"].any(func(e): return e[1] == "abyss" and e[2]["phase"] == "close"), "the close is in the replay")
 
 # --- The Drowned Sailor and the Plague Doctor -------------------------------------------
 

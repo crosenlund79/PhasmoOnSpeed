@@ -137,18 +137,33 @@ func start_loop(key: String, sound: String, volume_db: float = 0.0, fade: float 
 	if s == null:
 		return
 	var p: AudioStreamPlayer = _loops.get(key)
-	if p and p.stream == s and p.playing:
-		return
 	if p == null:
 		p = AudioStreamPlayer.new()
 		add_child(p)
 		_loops[key] = p
-	p.stream = s
 	p.set_meta("base_db", volume_db + GAIN.get(sound, 0.0))
 	var target := _loop_db(key, p.get_meta("base_db"))
+	if p.stream == s and p.playing:
+		# Already playing — but possibly fading out (a restart, a hunt resuming
+		# straight after another): cancel the fade and bring it back up.
+		_fade_loop(p, target, fade)
+		return
+	p.stream = s
 	p.volume_db = -40.0
 	p.play()
-	create_tween().tween_property(p, "volume_db", target, fade)
+	_fade_loop(p, target, fade)
+
+## One volume fade per loop at a time, so a late "fade out, then stop" can never
+## silence a loop that has just been started again.
+func _fade_loop(p: AudioStreamPlayer, db: float, time: float, then_stop: bool = false) -> void:
+	var old: Tween = p.get_meta("fade") if p.has_meta("fade") else null
+	if old and old.is_valid():
+		old.kill()
+	var tw := create_tween()
+	tw.tween_property(p, "volume_db", db, maxf(0.01, time))
+	if then_stop:
+		tw.tween_callback(p.stop)
+	p.set_meta("fade", tw)
 
 func set_loop_pitch(key: String, pitch: float) -> void:
 	var p: AudioStreamPlayer = _loops.get(key)
@@ -159,9 +174,7 @@ func stop_loop(key: String, fade: float = 0.6) -> void:
 	var p: AudioStreamPlayer = _loops.get(key)
 	if p == null or not p.playing:
 		return
-	var tw := create_tween()
-	tw.tween_property(p, "volume_db", -50.0, fade)
-	tw.tween_callback(p.stop)
+	_fade_loop(p, -50.0, fade, true)
 
 func stop_all_loops() -> void:
 	for key in _loops:

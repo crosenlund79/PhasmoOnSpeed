@@ -41,11 +41,11 @@ const PERSONALITIES := {
 		"lines": ["Honestly, these old pipes make the strangest noises.", "It's just the wind.", "Are you sure you're qualified?",
 			"My cousin said it's subsidence.", "Ghosts. In this economy."],
 		"react": ["Draughty house, that's all.", "That'll be the rats.", "Probably the boiler."],
-		"flee": ["Fine — I'm leaving, but not because of ghosts!", "I'll wait in the car. For unrelated reasons."],
+		"flee": ["Fine — I'm leaving, but not because of ghosts!", "I'll wait in the carriage. For unrelated reasons."],
 	},
 	"curious": {
 		"label": "Curious", "speed": 70.0, "idle": [2.0, 5.0], "talk": [13.0, 22.0], "jitter": 0.3, "approach": true,
-		"lines": ["Remarkable. That chair moved without anyone touching it.", "May I see the little box that beeps?",
+		"lines": ["Remarkable. That chair moved without anyone touching it.", "May I see the needle in that little glass tube?",
 			"I've been keeping notes, you know.", "The clock stopped at three again. Fascinating."],
 		"react": ["Did you see that? Do it again!", "Ooh. Where did that come from?", "I must take a closer look."],
 		"flee": ["On reflection, I'll observe from the garden!", "Fascinating — goodbye!"],

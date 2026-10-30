@@ -18,7 +18,8 @@ func _ready() -> void:
 		replay_player = ReplayPlayer.new()
 		replay_player.setup(result["replay"])
 		replay_player.follow = result.get("me", "player_1") if result.get("me", "") != "" else "player_1"
-		replay_player.camera_offset = Vector2(300.0 / replay_player.zoom, 0.0)
+		# Centre the replayed hunter in the area left of the panel (which starts at 50%).
+		replay_player.camera_offset = Vector2(get_viewport_rect().size.x * (0.5 - 0.5 * 0.5) / replay_player.zoom, 0.0)
 		var holder := Node2D.new()
 		add_child(holder)
 		holder.add_child(replay_player)
@@ -160,7 +161,7 @@ func _commentary() -> String:
 	if not vanq.is_empty() and int(vanq[0]["rank"]) > 1:
 		return "%s banished it — and still lost to %s's paperwork." % [vanq[0]["name"], rows[0]["name"]]
 	if mres["outcome"] != "vanquished":
-		return ["Nobody left. Technically a draw. Spiritually, a massacre.", "The occupants send their regards. From the car."][r.randi_range(0, 1)]
+		return ["Nobody left. Technically a draw. Spiritually, a massacre.", "The occupants send their regards. From the carriage."][r.randi_range(0, 1)]
 	if mres["harbinger"]:
 		return "Someone summoned the Harbinger. Everyone knows who. Nobody is saying."
 	return ["An admirable display of teamwork. For someone else.", "Competitive ghost hunting: like regular ghost hunting, but with elbows."][r.randi_range(0, 1)]

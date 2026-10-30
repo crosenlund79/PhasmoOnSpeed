@@ -204,9 +204,6 @@ func _apply_ready(id: int, r: bool) -> void:
 		lobby[id]["ready"] = r
 		_broadcast_lobby()
 
-func set_house(house_id: String) -> void:
-	set_option("house", house_id)
-
 ## Host: the match setup (Game.DEFAULT_SETUP keys: mode, house, entity,
 ## difficulty, blood_moon — singly or as "setup") or pause_limit (bool).
 func set_option(key: String, value) -> void:

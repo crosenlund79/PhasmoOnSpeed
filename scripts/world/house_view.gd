@@ -601,9 +601,23 @@ func emerge_splash(pos: Vector2) -> void:
 	WorldFx.ring(overlay_layer, pos, Color(0.45, 0.65, 0.75), 60.0, 1.0)
 	WorldFx.ring(overlay_layer, pos, Color(0.7, 0.85, 0.95), 110.0, 1.4)
 
+var _dark_tw: Tween
+
+## Every darkness layer (hunt, mood, Blood Moon, basement, hostile tint) is folded
+## into one colour; only one fade toward it runs at a time, so an older, longer
+## fade can never finish last and leave a stale tint behind.
+func _fade_darkness(time: float) -> void:
+	if _dark_tw and _dark_tw.is_valid():
+		_dark_tw.kill()
+	if time <= 0.05 or not is_inside_tree():
+		modulate_node.color = _effective_darkness()
+		return
+	_dark_tw = create_tween()
+	_dark_tw.tween_property(modulate_node, "color", _effective_darkness(), time)
+
 func set_darkness(c: Color, time: float = 1.0) -> void:
 	_darkness = c
-	create_tween().tween_property(modulate_node, "color", _effective_darkness(), time)
+	_fade_darkness(time)
 
 ## The viewer's floor: basements are always a shade darker (and colder).
 var basement_view := false
@@ -612,7 +626,7 @@ func set_basement_view(on: bool) -> void:
 	if on == basement_view:
 		return
 	basement_view = on
-	create_tween().tween_property(modulate_node, "color", _effective_darkness(), 0.6)
+	_fade_darkness(0.6)
 
 func _effective_darkness() -> Color:
 	var c := _darkness * Color(0.74, 0.76, 0.84) if basement_view else _darkness
@@ -633,7 +647,7 @@ var _abyss_flicker_t := 8.0
 
 func set_hostile(kind: String) -> void:
 	hostile = kind
-	modulate_node.color = _effective_darkness()
+	_fade_darkness(0.01)
 
 func ensure_abyss() -> AbyssArena:
 	if abyss == null:
@@ -746,7 +760,7 @@ func set_blood_moon(on: bool) -> void:
 		if l["kind"] == "moon":
 			l["light"].color = BLOOD_MOONLIGHT if on else Color(0.55, 0.65, 0.9)
 			l["base"] = float(l["base"]) * (1.25 if on else 1.0 / 1.25)
-	modulate_node.color = _effective_darkness()
+	_fade_darkness(0.01)
 
 ## Dread escalation: "moon" (werewolf) or "mist" (vampire). Permanent once set.
 var mood := ""
@@ -756,10 +770,11 @@ func set_mood(m: String) -> void:
 	if mood == m:
 		return
 	mood = m
-	create_tween().tween_property(modulate_node, "color", _effective_darkness(), 2.5)
+	_fade_darkness(2.5)
 	if m == "moon":
 		for l in lights:
 			if l["kind"] == "moon":
+				l["before_mood"] = [l["base"], l["light"].color]
 				l["base"] = float(l["base"]) * 2.4
 				l["light"].color = BLOOD_MOONLIGHT if blood_moon else Color(0.78, 0.86, 1.0)
 	elif m == "mist":
@@ -782,6 +797,19 @@ func set_mood(m: String) -> void:
 			overlay_layer.add_child(s)
 			create_tween().tween_property(s, "modulate:a", 1.0, 4.0)
 			_mist.append(s)
+
+## Back to no escalation (a replay starting over).
+func clear_mood() -> void:
+	mood = ""
+	for l in lights:
+		if l.has("before_mood"):
+			l["base"] = l["before_mood"][0]
+			l["light"].color = l["before_mood"][1]
+			l.erase("before_mood")
+	for m in _mist:
+		m.queue_free()
+	_mist.clear()
+	_fade_darkness(0.01)
 
 func _process(delta: float) -> void:
 	_t += delta
@@ -808,7 +836,9 @@ func _process(delta: float) -> void:
 		var e: float = l["base"]
 		if not l["on"]:
 			light.energy = move_toward(light.energy, 0.0, delta * 3.0)
+			light.enabled = light.energy > 0.0   # a snuffed flame casts no (costly) shadows
 			continue
+		light.enabled = true
 		if blood_moon and l["kind"] == "moon":
 			e *= 1.0 + 0.14 * sin(_t * 0.7 + l["phase"])   # a slow, ominous breathing
 		if l["flicker"] > 0.0:

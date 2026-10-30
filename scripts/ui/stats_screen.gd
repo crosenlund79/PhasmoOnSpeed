@@ -13,7 +13,7 @@ func _ready() -> void:
 	warn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(warn)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(1480, 680)
+	panel.custom_minimum_size = Vector2(fit_width(1480), fit_height(680, 220))
 	v.add_child(panel)
 	var scroll := ScrollContainer.new()
 	panel.add_child(scroll)

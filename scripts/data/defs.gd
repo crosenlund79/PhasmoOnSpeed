@@ -188,15 +188,15 @@ const FORM_SPEED := {"human": 205.0, "ghost": 200.0, "vampire": 215.0, "werewolf
 # Slot equipment (numbers 1-9). The lantern is a separate always-available toggle (F).
 # Internal ids keep their original names; what the player sees is period kit.
 const EQUIPMENT := {
-	"emf": {"name": "Witch's Needle", "icon": "icons/eq_emf.png", "detector": true, "desc": "A dark needle sealed in a corked glass tube. It lies still in quiet rooms, twitches near a ghost's touch and taps the glass harder the stronger the presence. Some ghosts send it into a rattling frenzy (Level 5)."},
-	"thermometer": {"name": "Mercury Thermometer", "icon": "icons/eq_thermometer.png", "detector": true, "desc": "Shows the temperature of the room you stand in. Any entity's room runs cold; only some fall below freezing."},
+	"emf": {"name": "Witch's Needle", "icon": "icons/eq_emf.png", "detector": true, "desc": "A dark needle sealed in a corked glass tube. It lies still in quiet rooms, twitches near a ghost's touch and taps the glass harder the stronger the presence. Some ghosts send it into a rattling frenzy (Needle 5)."},
+	"thermometer": {"name": "Thermometer", "icon": "icons/eq_thermometer.png", "detector": true, "desc": "Shows the temperature of the room you stand in. Any entity's room runs cold; only some fall below freezing."},
 	"uv": {"name": "Wraithlight Lantern", "icon": "icons/eq_uv.png", "detector": true, "desc": "A lantern of violet glass. Its light reveals handprints invisible in ordinary light. Sweep walls near disturbances."},
 	"spirit_box": {"name": "Whisper Box", "icon": "icons/eq_spirit_box.png", "detector": true, "desc": "A wooden box with brass hinges and a lock. Open it to ask a question: near the right ghost, a voice may whisper back."},
-	"ghost_book": {"name": "Ghost Writing Book", "icon": "icons/eq_ghost_book.png", "placeable": true, "desc": "Lay it down in the haunted room. Some ghosts write in it. Also needed for the Rite of Binding."},
+	"ghost_book": {"name": "Ghost Writing Book", "icon": "icons/eq_ghost_book.png", "placeable": true, "desc": "Lay it down in the haunted room. Some ghosts write in it. Needed for the Rites of Binding, Rest and Cleansing."},
 	"orb_camera": {"name": "Scrying Mirror", "icon": "icons/eq_orb_camera.png", "detector": true, "desc": "A black-glass mirror. Gaze through it to see ghost orbs drifting in a haunted room — invisible to the naked eye."},
-	"salt": {"name": "Salt", "icon": "icons/eq_salt.png", "placeable": true, "charges": 3, "desc": "Pour a line (3 uses). Hunting ghosts that cross it are slowed. Needed for the Rite of Stillness."},
-	"crucifix": {"name": "Crucifix", "icon": "icons/eq_crucifix.png", "placeable": true, "charges": 2, "desc": "Place it near a ghost: it burns to stop a ghost hunt from starting (2 burns). Powerless against flesh and blood."},
-	"holy_water": {"name": "Holy Water", "icon": "icons/eq_holy_water.png", "charges": 3, "desc": "Splash a ghost to stun it and end its hunt; you are briefly blessed against a ghost's touch (3 splashes). Useless against vampires and werewolves."},
+	"salt": {"name": "Salt", "icon": "icons/eq_salt.png", "placeable": true, "charges": 3, "desc": "Pour a line (3 uses). Hunting ghosts that cross it are slowed. Needed for the Rites of Stillness, Rest and the Tides."},
+	"crucifix": {"name": "Crucifix", "icon": "icons/eq_crucifix.png", "placeable": true, "charges": 2, "desc": "Place it near a ghost: it burns to stop a ghost hunt from starting (2 burns). Powerless against flesh and blood. Needed for the Rites of Severance and Cleansing."},
+	"holy_water": {"name": "Holy Water", "icon": "icons/eq_holy_water.png", "charges": 3, "desc": "Splash a ghost to stun it and end its hunt; you are briefly blessed against a ghost's touch (3 splashes). Useless against creatures of flesh and blood. The Rites of Drowning and the Tides each spend a flask."},
 	# Resources found in the house (appear in the hotbar only once collected).
 	"garlic": {"name": "Garlic", "icon": "icons/eq_garlic.png", "resource": true, "desc": "Found in kitchens and pantries. Carried, it repels and weakens a vampire at close range."},
 	"wooden_stake": {"name": "Wooden Stake", "icon": "icons/eq_wooden_stake.png", "resource": true, "desc": "Found in sheds, cellars and studies. Strike at close range (garlic required)."},
@@ -291,11 +291,16 @@ static func evidence_name(id: String) -> String:
 ## hellfire and hostility; portals and Abyssal Hell).
 const DIFFICULTIES := ["beginner", "normal", "nightmare", "hellbound", "abyssal"]
 const DIFFICULTY_INFO := {
-	"beginner": {"name": "Beginner", "rules": "beginner", "desc": "A guided first investigation: tips as you go, and gentler hunts."},
-	"normal": {"name": "Normal", "rules": "normal", "desc": "The suspect panel shows each entity's evidence and what it takes to vanquish it."},
-	"nightmare": {"name": "Nightmare", "rules": "nightmare", "desc": "Only a name and description on the suspect panel. Terrified occupants, vermin, blood and noises in the walls."},
-	"hellbound": {"name": "Hellbound", "rules": "nightmare", "desc": "Nightmare, and the house itself turns hostile: dread surges, doors slam, flames die, hunts come back fast — and the floor erupts in hellfire."},
-	"abyssal": {"name": "Abyssal", "rules": "nightmare", "desc": "Nightmare, and reality tears: purple portals swallow whole rooms and drag everyone inside to a minute of traps in Abyssal Hell."},
+	"beginner": {"name": "Beginner", "rules": "beginner", "desc": "A guided first investigation: tips as you go, and gentler hunts.",
+		"tune": {"dread": 0.6, "grace": 2.0, "hunt_cooldown": 1.5, "hunt_speed": 0.85, "hunt_length": 0.7, "wound_grace": 1.6}},
+	"normal": {"name": "Normal", "rules": "normal", "desc": "The suspect panel shows each entity's evidence and what it takes to vanquish it.",
+		"tune": {}},
+	"nightmare": {"name": "Nightmare", "rules": "nightmare", "desc": "Only a name and description on the suspect panel. Terrified occupants, vermin, blood and noises in the walls.",
+		"tune": {"panic": 2.0}},
+	"hellbound": {"name": "Hellbound", "rules": "nightmare", "hostile": "hellbound", "desc": "Nightmare, and the house itself turns hostile: dread surges, doors slam, flames die, hunts come back fast — and the floor erupts in hellfire.",
+		"tune": {"panic": 2.6, "dread": 1.6, "grace": 0.6, "hunt_cooldown": 0.55, "haunt_every": 0.35}},
+	"abyssal": {"name": "Abyssal", "rules": "nightmare", "hostile": "abyssal", "desc": "Nightmare, and reality tears: purple portals swallow whole rooms and drag everyone inside to a minute of traps in Abyssal Hell.",
+		"tune": {"panic": 2.0}},
 }
 ## "Random" difficulty never picks Beginner.
 const RANDOM_DIFFICULTIES := ["normal", "nightmare", "hellbound", "abyssal"]
@@ -305,11 +310,33 @@ const BLOOD_MOON_CHANCE := 0.15
 static func rules(difficulty: String) -> String:
 	return DIFFICULTY_INFO.get(difficulty, DIFFICULTY_INFO["normal"])["rules"]
 
+## A difficulty's multiplier for one aspect of play (1.0 unless it changes it).
+##   dread          how fast dread (threat) builds
+##   grace          length of the calm opening before the first hunt can roll
+##   hunt_cooldown  time before the entity may hunt again
+##   hunt_speed     entity speed while hunting
+##   hunt_length    how long a hunt lasts
+##   wound_grace    invulnerability after a wound
+##   panic          how strongly occupants (and a disguised shapeshifter) fear
+##   haunt_every    time between the entity slamming doors / snuffing flames
+static func tune(difficulty: String, key: String) -> float:
+	return float(DIFFICULTY_INFO.get(difficulty, DIFFICULTY_INFO["normal"])["tune"].get(key, 1.0))
+
+## "hellbound" or "abyssal" for the openly hostile difficulties, else "".
+static func hostile(difficulty: String) -> String:
+	return str(DIFFICULTY_INFO.get(difficulty, {}).get("hostile", ""))
+
 static func difficulty_name(difficulty: String) -> String:
 	return DIFFICULTY_INFO.get(difficulty, {}).get("name", difficulty.capitalize())
 
 static func creature_name(id: String) -> String:
 	return CREATURES.get(id, {}).get("name", id)
+
+## A compact name for tight spots (the suspect strip): "Sailor", not "The Drowned Sailor".
+const SHORT_NAMES := {"drowned_sailor": "Sailor", "plague_doctor": "Doctor", "shapeshifter": "Shifter"}
+
+static func short_name(id: String) -> String:
+	return SHORT_NAMES.get(id, creature_name(id).trim_prefix("The "))
 
 static func is_ghost(id: String) -> bool:
 	return CREATURES.get(id, {}).get("kind", "") == "ghost"
