@@ -92,6 +92,11 @@ var shared_pause_panel: Control
 var shared_pause_title: Label
 var shared_pause_sub: Label
 var spectate_label: Label
+var guide_panel: PanelContainer
+var guide_title: Label
+var guide_text: Label
+var guide_icon: TextureRect
+var _guide_t := 0.0
 var suspect_picker: HBoxContainer
 var notify_root: Node2D
 var _notifications: Array = []
@@ -109,7 +114,7 @@ func setup(p_run) -> void:
 	run = p_run
 	layer = 10
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	k = clampf(float(_settings().get("hud_scale", 1.0)), 0.7, 1.5)
+	k = clampf(float(_settings().get("hud_scale", 1.0)), Game.GAME_SCALE_MIN, Game.GAME_SCALE_MAX)
 	var root := Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -120,6 +125,7 @@ func setup(p_run) -> void:
 	_build_centre(root)
 	_build_suspect(root)
 	_build_toasts(root)
+	_build_guide(root)
 	_build_big_message(root)
 	_build_suspect_picker(root)
 	_build_spectate(root)
@@ -404,6 +410,8 @@ func _rebuild_suspect() -> void:
 		sus = "harbinger"
 	var title := _corner_heading("SUSPECTED")
 	suspect_box.add_child(title)
+	if not nightmare() and sus != "harbinger":
+		suspect_box.add_child(_suspect_choices(sus))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", _px(8))
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -449,6 +457,24 @@ func _rebuild_suspect() -> void:
 	m.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	suspect_box.add_child(m)
 
+## Every entity you can suspect: the chosen one in gold, the others greyed (Tab cycles).
+func _suspect_choices(sus: String) -> HBoxContainer:
+	var choices := HBoxContainer.new()
+	choices.add_theme_constant_override("separation", _px(2))
+	choices.alignment = BoxContainer.ALIGNMENT_CENTER
+	var show: bool = _settings().get("suspect_labels", true)
+	for id in Defs.ORDINARY_CREATURES:
+		var cell := _cell(Defs.CREATURES[id]["token"], Defs.creature_name(id).replace("The ", ""), show, 34.0 if id == sus else 28.0)
+		cell[0].custom_minimum_size.x = _px(70)
+		var on: bool = id == sus
+		cell[1].set_state(on, on)
+		if on:
+			cell[2].add_theme_color_override("font_color", Art.GOLD)
+		else:
+			cell[2].modulate = Color(1, 1, 1, 0.5)
+		choices.add_child(cell[0])
+	return choices
+
 func _build_toasts(root: Control) -> void:
 	toast_box = VBoxContainer.new()
 	toast_box.anchor_top = 1.0
@@ -461,6 +487,47 @@ func _build_toasts(root: Control) -> void:
 	toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	toast_box.add_theme_constant_override("separation", 4)
 	root.add_child(toast_box)
+
+## Beginner Mode: a parchment note of advice on the left edge, above the toasts.
+func _build_guide(root: Control) -> void:
+	guide_panel = PanelContainer.new()
+	guide_panel.add_theme_stylebox_override("panel", Art.parchment_panel())
+	guide_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	guide_panel.anchor_top = 1.0
+	guide_panel.anchor_bottom = 1.0
+	guide_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	guide_panel.offset_left = _px(12)
+	guide_panel.offset_right = _px(12) + _px(400)
+	guide_panel.offset_top = -200
+	guide_panel.offset_bottom = -200
+	guide_panel.modulate.a = 0.0
+	root.add_child(guide_panel)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", _px(10))
+	guide_panel.add_child(h)
+	guide_icon = Art.icon_rect("icons/ui_quill.png", _px(40))
+	guide_icon.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	h.add_child(guide_icon)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 0)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(v)
+	guide_title = Art.label("", _px(17), Art.BLOOD, Art.font_heading)
+	v.add_child(guide_title)
+	guide_text = _small("", _px(15), INK)
+	guide_text.custom_minimum_size = Vector2(_px(330), 0)
+	v.add_child(guide_text)
+
+func show_guide(title: String, text: String, icon: String = "icons/ui_quill.png") -> void:
+	guide_title.text = title
+	guide_text.text = text
+	guide_icon.texture = Art.tex(icon)
+	guide_panel.offset_top = -200   # collapse, then regrow upwards to fit the new text
+	guide_panel.offset_bottom = -200
+	_guide_t = clampf(5.0 + text.length() * 0.06, 7.0, 15.0)
+	Sfx.play("pencil_scribble", -14.0, 1.1)
+	var tw := guide_panel.create_tween()
+	tw.tween_property(guide_panel, "modulate:a", 1.0, 0.3)
 
 func _build_big_message(root: Control) -> void:
 	big_box = VBoxContainer.new()
@@ -520,6 +587,8 @@ func _build_suspect_picker(root: Control) -> void:
 		suspect_picker.add_child(cell)
 
 func show_suspect_picker() -> void:
+	if not nightmare():
+		return   # the SUSPECTED panel already lists every entity
 	_picker_t = 1.6
 	for cell in suspect_picker.get_children():
 		var on: bool = cell.get_meta("id") == run.player.suspect
@@ -746,6 +815,10 @@ func _process(delta: float) -> void:
 	if run == null or run.player == null:
 		return
 	_update_shared_pause(delta)
+	if _guide_t > 0.0:
+		_guide_t -= delta
+		if _guide_t <= 0.0:
+			guide_panel.create_tween().tween_property(guide_panel, "modulate:a", 0.0, 0.6)
 	timer_label.text = Journal.format_time_precise(run.elapsed)
 	var p = run.player
 	hearts[0].texture = Art.tex("icons/ui_heart_wounded.png" if p.wounds >= 2 else "icons/ui_heart.png")

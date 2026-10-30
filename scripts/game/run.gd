@@ -23,7 +23,7 @@ var run_seed := 0
 var creature_override := ""
 var roster: Array = []             # [{peer_id, name}] — empty means solo
 var multiplayer_match := false
-var difficulty := "normal"         # "normal" or "nightmare"
+var difficulty := "normal"         # "beginner", "normal" or "nightmare"
 var rng := RandomNumberGenerator.new()
 var map: HouseMap
 var world: Node2D
@@ -114,11 +114,15 @@ func _ready() -> void:
 	add_child(hud)
 	hud.setup(self)
 	player.journal.discovered.connect(hud.on_discovered)
+	if difficulty == "beginner":
+		var guide := BeginnerGuide.new()
+		guide.setup(self)
+		add_child(guide)
 	Sfx.stop_loop("music", 0.8)
 	Sfx.start_loop("ambience", "ambience_house", -6.0, 1.5)
 	record_event("start", {"house": house_id})
 	tell_all(map.name + " — something is here.", "icons/ui_house.png")
-	if not multiplayer_match and int(SaveData.data.get("runs_started", 0)) <= 3:
+	if not multiplayer_match and difficulty != "beginner" and int(SaveData.data.get("runs_started", 0)) <= 3:
 		# Brief onboarding for the first few runs; never blocks play.
 		var tw := create_tween()
 		tw.tween_interval(3.0)
@@ -365,7 +369,8 @@ func _actor_states() -> Dictionary:
 	return actors
 
 func _update_threat(delta: float) -> void:
-	threat = minf(100.0, threat + THREAT_PER_SECOND * delta)
+	# Beginner: dread builds more slowly and the first hunt comes much later.
+	threat = minf(100.0, threat + THREAT_PER_SECOND * delta * (0.6 if difficulty == "beginner" else 1.0))
 	if creature == null or creature.state != "roam" or creature.cooldown_t > 0.0:
 		return
 	if forced_hunt_t > 0.0:
@@ -373,7 +378,7 @@ func _update_threat(delta: float) -> void:
 		if forced_hunt_t <= 0.0:
 			trigger_hunt(forced_hunt_reckless)
 		return
-	if not is_harbinger() and elapsed < GRACE_PERIOD:
+	if not is_harbinger() and elapsed < GRACE_PERIOD * (2.0 if difficulty == "beginner" else 1.0):
 		return
 	hunt_roll_t -= delta
 	if hunt_roll_t > 0.0:
@@ -687,7 +692,7 @@ func on_creature_contact(c: Creature, p: Player) -> void:
 	if p.wounds >= 2:
 		_hunter_dies(p, c)
 		return
-	p.invuln = Player.INVULN_AFTER_HIT
+	p.invuln = Player.INVULN_AFTER_HIT * (1.6 if difficulty == "beginner" else 1.0)
 	sound_to(p, "player_hurt", 0.0)
 	if p.is_local:
 		hud.wound()

@@ -101,9 +101,9 @@ func _build_room() -> void:
 	opts.add_theme_constant_override("separation", 8)
 	room_box.add_child(opts)
 	opts.add_child(Art.heading("Difficulty", 22))
-	for d in [["normal", "Normal"], ["nightmare", "Nightmare"]]:
+	for d in [["beginner", "Beginner"], ["normal", "Normal"], ["nightmare", "Nightmare"]]:
 		var did: String = d[0]
-		var b := Art.button(d[1], func(): Net.set_option("difficulty", did), 170)
+		var b := Art.button(d[1], func(): Net.set_option("difficulty", did), 150)
 		b.add_theme_font_size_override("font_size", 16)
 		b.toggle_mode = true
 		opts.add_child(b)

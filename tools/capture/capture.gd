@@ -235,6 +235,36 @@ func _shot(s: String) -> void:
 		enc.show_entry("werewolf")
 		await _wait(10)
 		await _save("encyclopedia")
+	elif s.begins_with("beginner_"):
+		# Beginner Mode: the guide note after the first evidence, with the full suspect row.
+		var run: Run = Game.start_run(s.substr(9), 5, "vampire", "beginner")
+		await _wait(20)
+		run.creature.set_process(false)
+		run.discover(run.player, "bite_marks", run.player.room_id)
+		run.elapsed = 84.2
+		await _wait(400)
+		run.player.suspect = "vampire"
+		run.hud.refresh()
+		await _wait(20)
+		await _save(s)
+	elif s == "replay_moment":
+		# Results replay with a moment popup taken from the recorded events.
+		var run: Run = Game.start_run("ashgrove", 5, "poltergeist")
+		await _wait(30)
+		run.discover(run.player, "uv", run.player.room_id)
+		await _wait(60)
+		run.attempt_vanquish(run.player, "shade", "rite")
+		await _wait(60)
+		run.player.global_position = run.creature.position + Vector2(20, 0)
+		run.player.room_id = run.creature.lair_room
+		run.attempt_vanquish(run.player, "poltergeist", "rite")
+		await _wait(260)
+		var res = get_tree().current_scene
+		for i in 600:
+			if res.replay_player and not res.replay_player._moments.is_empty() and res.replay_player._moments[-1]["t"] > 0.3 and res.replay_player._moments[-1]["t"] < 1.2:
+				break
+			await get_tree().process_frame
+		await _save("replay_moment")
 	elif s == "results":
 		var run: Run = Game.start_run("ashgrove", 5, "poltergeist")
 		await _wait(200)

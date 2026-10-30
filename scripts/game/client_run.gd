@@ -96,6 +96,10 @@ func _ready() -> void:
 	add_child(hud)
 	hud.setup(self)
 	player.journal.discovered.connect(hud.on_discovered)
+	if difficulty == "beginner":
+		var guide := BeginnerGuide.new()
+		guide.setup(self)
+		add_child(guide)
 	Sfx.stop_loop("music", 0.8)
 	Sfx.start_loop("ambience", "ambience_house", -6.0, 1.5)
 

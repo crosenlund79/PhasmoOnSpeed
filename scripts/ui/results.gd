@@ -115,7 +115,7 @@ func _build_panel(root: Control, won: bool) -> void:
 	if won and recs.get("new_best_time", false):
 		time_row.add_child(Art.label("NEW RECORD", 20, Art.BLOOD, Art.font_heading))
 	var prev_t: float = recs.get("prev_best_time", 0.0)
-	var pb_line := "%s%s  ·  previous best %s" % [summary["house_name"], "  ·  NIGHTMARE" if summary.get("difficulty", "normal") == "nightmare" else "", Journal.format_time_precise(prev_t) if prev_t > 0.0 else "—"]
+	var pb_line := "%s%s  ·  previous best %s" % [summary["house_name"], "" if summary.get("difficulty", "normal") == "normal" else "  ·  " + str(summary["difficulty"]).to_upper(), Journal.format_time_precise(prev_t) if prev_t > 0.0 else "—"]
 	v.add_child(Art.label(pb_line, 15, Color(0.3, 0.22, 0.15), Art.font_italic))
 	v.add_child(_rule())
 	var score_row := HBoxContainer.new()

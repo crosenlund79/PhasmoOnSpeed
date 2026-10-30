@@ -82,6 +82,25 @@ old entity's evidence types are no longer accepted.
   edges too — EQUIPMENT top-left, readings / time / health top-centre, the
   SUSPECTED panel bottom-centre — keeping the centre of the screen clear.
 
+## Beginner Mode
+
+A guided first investigation (`scripts/game/beginner_guide.gd`): one-off tips
+appear in a parchment note on the left as things become relevant — each tool
+the first time it is held, the first evidence, which entities still fit what
+has been found, how to vanquish the chosen suspect and which items are still
+missing, the first hunt and the first wound. Danger is gentler: dread builds at
+60 %, no hunts for the first 80 s, hunts are 15 % slower, 30 % shorter and come
+50 % less often, with longer invulnerability after a hit. Controls and rules
+are otherwise unchanged; records are kept separately and are not submitted
+online.
+
+## Replay moments
+
+The looping results replay shows short popups (icon + one line, at most two at
+once) for evidence found, wounds, deaths, hunts, crucifix saves, wrong or
+incomplete attempts, fleeing occupants, shapeshifter changes, the Harbinger and
+the vanquishing — read only from the recorded events, never from live logic.
+
 ## Nightmare Mode
 
 Chosen on the house screen (solo) or by the host in the lobby. Scoring rules

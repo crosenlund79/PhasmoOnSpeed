@@ -70,7 +70,7 @@ func set_setting(key: String, value) -> void:
 
 ## Normal and Nightmare personal bests are kept apart.
 func house_record(house_id: String, difficulty: String = "normal") -> Dictionary:
-	var key := "houses" if difficulty != "nightmare" else "nightmare_houses"
+	var key := "houses" if difficulty == "normal" else difficulty + "_houses"
 	if not data["records"].has(key):
 		data["records"][key] = {}
 	var houses: Dictionary = data["records"][key]
@@ -84,7 +84,7 @@ func note_run_started() -> void:
 ## Records a finished run exactly once. Returns {new_best_time, new_best_score, prev_best_time, prev_best_score}.
 func record_run(summary: Dictionary) -> Dictionary:
 	var house_id: String = summary["house"]
-	var nightmare: bool = summary.get("difficulty", "normal") == "nightmare"
+	var other_mode: bool = summary.get("difficulty", "normal") != "normal"
 	var rec := house_record(house_id, summary.get("difficulty", "normal"))
 	var out := {"new_best_time": false, "new_best_score": false,
 		"prev_best_time": rec["best_time"], "prev_best_score": rec["best_score"],
@@ -98,7 +98,7 @@ func record_run(summary: Dictionary) -> Dictionary:
 		if summary["score"] > int(rec["best_score"]):
 			rec["best_score"] = summary["score"]
 			out["new_best_score"] = true
-		if not nightmare and summary["score"] > int(data["records"]["best_score"]):
+		if not other_mode and summary["score"] > int(data["records"]["best_score"]):
 			data["records"]["best_score"] = summary["score"]
 			data["records"]["best_score_time"] = summary["time"]
 			data["records"]["best_score_house"] = summary.get("house_name", house_id)
@@ -174,7 +174,8 @@ func record_match(results: Dictionary, my_actor: String) -> Dictionary:
 		mp["deaths"] = int(mp["deaths"]) + 1
 	mp["shoves_given"] = int(mp["shoves_given"]) + int(me["shoves_given"])
 	mp["shoves_taken"] = int(mp["shoves_taken"]) + int(me["shoves_taken"])
-	var best_key := "nightmare_best_score" if results.get("difficulty", "normal") == "nightmare" else "best_score"
+	var diff: String = results.get("difficulty", "normal")
+	var best_key := "best_score" if diff == "normal" else diff + "_best_score"
 	out["prev_best"] = int(mp.get(best_key, 0))
 	if int(me["score"]) > int(mp.get(best_key, 0)):
 		mp[best_key] = int(me["score"])

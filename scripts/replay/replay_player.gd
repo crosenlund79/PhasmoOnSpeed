@@ -22,6 +22,13 @@ var _event_i := 0
 var _lights := {}        # player actor id -> {cone, ambient, on}
 var _labels := {}        # actor id -> Label (names in multiplayer)
 var follow := "player_1"
+## Moment popups: shown in the replay area, driven only by recorded events.
+const MOMENT_HOLD := 1.8         # real seconds on screen
+const MOMENT_MAX := 2
+var moments_enabled := true
+var _moment_layer: CanvasLayer
+var _moment_box: VBoxContainer
+var _moments: Array = []         # [{node, t, text}]
 var zoom := 1.25
 var camera_offset := Vector2.ZERO
 
@@ -77,11 +84,15 @@ func _ready() -> void:
 	camera.offset = camera_offset
 	add_child(camera)
 	camera.make_current()
+	_build_moments()
 	_restart()
 
 func _restart() -> void:
 	t = 0.0
 	_event_i = 0
+	for m in _moments:
+		m["node"].queue_free()
+	_moments.clear()
 	for aid in _tokens:
 		_idx[aid] = 0
 		_tokens[aid].set_token(replay["actors"][aid]["token"])
@@ -100,6 +111,7 @@ func _restart() -> void:
 
 func _process(delta: float) -> void:
 	fx.tick(delta * SPEED)
+	_tick_moments(delta)
 	if duration <= 0.0:
 		return
 	if _hold > 0.0:
@@ -164,6 +176,9 @@ func _apply(now: float) -> void:
 func _event(ev: Array) -> void:
 	var type: String = ev[1]
 	var d: Dictionary = ev[2]
+	var m := _moment_for(type, d)
+	if not m.is_empty():
+		_show_moment(m[0], m[1])
 	if fx.apply(type, d):
 		return
 	match type:
@@ -180,3 +195,109 @@ func _event(ev: Array) -> void:
 				_tokens[aid].sprite.modulate = Color(0.6, 0.1, 0.1)
 		"vanquish":
 			view.set_darkness(Color(0.42, 0.42, 0.5), 0.6)
+
+# --- Moment notifications ------------------------------------------------------------------
+
+func _build_moments() -> void:
+	_moment_layer = CanvasLayer.new()
+	_moment_layer.layer = 6      # above the world and the results screen's shading; kept within the replay area
+	add_child(_moment_layer)
+	_moment_box = VBoxContainer.new()
+	_moment_box.alignment = BoxContainer.ALIGNMENT_END
+	_moment_box.add_theme_constant_override("separation", 6)
+	_moment_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_moment_layer.add_child(_moment_box)
+
+func _who(d: Dictionary) -> String:
+	var aid: String = d.get("actor", "")
+	var a: Dictionary = replay.get("actors", {}).get(aid, {})
+	if replay.get("multiplayer", false) and a.has("name"):
+		return str(a["name"])
+	return "The investigator"
+
+## Icon and words for the recorded moments worth explaining; [] for the rest.
+func _moment_for(type: String, d: Dictionary) -> Array:
+	match type:
+		"evidence":
+			var e: Dictionary = Defs.EVIDENCE.get(d.get("id", ""), {})
+			if e.is_empty():
+				return []
+			var who := "" if not replay.get("multiplayer", false) else _who(d) + ": "
+			return [e["icon"], "%s%s discovered" % [who, e["name"]]]
+		"attack":
+			if int(d.get("wounds", 1)) >= 2:
+				return []    # the death moment follows
+			return ["icons/ui_heart_wounded.png", "%s wounded" % _who(d)]
+		"death":
+			return ["icons/ui_skull.png", "%s perished" % _who(d)]
+		"hunt_start":
+			return ["icons/ui_skull.png", "Reckless hunt started" if d.get("reckless", false) else "Hunt started"]
+		"crucifix_burn":
+			return ["icons/eq_crucifix.png", "Crucifix prevented a hunt"]
+		"attempt":
+			match str(d.get("outcome", "")):
+				"wrong":
+					return [Defs.CREATURES.get(d.get("identity", ""), {}).get("token", "icons/ui_skull.png"), "Incorrect vanquishing attempted (%s)" % Defs.creature_name(d.get("identity", ""))]
+				"incomplete_room", "incomplete_exposure":
+					return ["icons/ui_quill.png", "Vanquishing attempt incomplete"]
+			return []
+		"npc_flee":
+			return ["tokens/occupant_a.png", "The occupants fled the house"]
+		"transform":
+			return ["tokens/shapeshifter.png", "Shapeshifter transformed"]
+		"expose":
+			return ["icons/eq_hand_mirror.png", "Shapeshifter unmasked in the mirror"]
+		"harbinger":
+			return ["tokens/harbinger.png", "The Harbinger appeared"]
+		"vanquish":
+			return [Defs.CREATURES.get(d.get("creature", ""), {}).get("token", "icons/ui_trophy.png"), "%s vanquished" % Defs.creature_name(d.get("creature", "")).capitalize()]
+	return []
+
+func _show_moment(icon: String, text: String) -> void:
+	if not moments_enabled:
+		return
+	for m in _moments:
+		if m["text"] == text:
+			m["t"] = 0.0     # same moment again: keep the one already shown
+			return
+	var p := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.07, 0.06, 0.05, 0.86)
+	sb.border_color = Color(Art.GOLD.r, Art.GOLD.g, Art.GOLD.b, 0.8)
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(6)
+	sb.set_content_margin_all(6)
+	sb.content_margin_right = 12
+	p.add_theme_stylebox_override("panel", sb)
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 8)
+	p.add_child(h)
+	h.add_child(Art.icon_rect(icon, 30))
+	var l := Art.label(text, 17, Color(0.95, 0.9, 0.78), Art.font_heading)
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	h.add_child(l)
+	_moment_box.add_child(p)
+	p.modulate.a = 0.0
+	p.create_tween().tween_property(p, "modulate:a", 1.0, 0.15)
+	_moments.append({"node": p, "t": 0.0, "text": text})
+	while _moments.size() > MOMENT_MAX:
+		var old: Dictionary = _moments.pop_front()
+		old["node"].queue_free()
+
+func _tick_moments(delta: float) -> void:
+	if _moment_box == null:
+		return
+	# Centred at the bottom of the replay area (the screen minus the camera offset).
+	var vs := get_viewport().get_visible_rect().size
+	var cx := vs.x * 0.5 - camera_offset.x * zoom
+	_moment_box.position = Vector2(cx - 300.0, vs.y - 330.0)   # under the investigator, clear of the taunt line
+	_moment_box.size = Vector2(600.0, 150.0)
+	for m in _moments.duplicate():
+		m["t"] += delta
+		if m["t"] > MOMENT_HOLD:
+			m["node"].modulate.a -= delta * 3.0
+			if m["node"].modulate.a <= 0.0:
+				_moments.erase(m)
+				m["node"].queue_free()

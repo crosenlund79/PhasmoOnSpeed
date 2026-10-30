@@ -52,10 +52,11 @@ func _ready() -> void:
 			Journal.format_time_precise(hr["best_time"]) if hr["best_time"] > 0.0 else "—",
 			str(hr["best_score"]) if hr["best_score"] > 0 else "—", int(hr["wins"]), int(hr["runs"])]
 		pbs.add_child(Art.label(line, 16))
-		var nr: Dictionary = SaveData.house_record(id, "nightmare")
-		if int(nr["runs"]) > 0:
-			pbs.add_child(Art.label("      Nightmare — %s · %s pts · %d/%d won" % [Journal.format_time_precise(nr["best_time"]) if nr["best_time"] > 0.0 else "—",
-				str(nr["best_score"]) if nr["best_score"] > 0 else "—", int(nr["wins"]), int(nr["runs"])], 15, Art.BLOOD))
+		for diff in ["beginner", "nightmare"]:
+			var nr: Dictionary = SaveData.house_record(id, diff)
+			if int(nr["runs"]) > 0:
+				pbs.add_child(Art.label("      " + diff.capitalize() + " — %s · %s pts · %d/%d won" % [Journal.format_time_precise(nr["best_time"]) if nr["best_time"] > 0.0 else "—",
+				str(nr["best_score"]) if nr["best_score"] > 0 else "—", int(nr["wins"]), int(nr["runs"])], 15, Art.BLOOD if diff == "nightmare" else Color(0.25, 0.35, 0.2)))
 	# Competitive results are kept apart from solo rankings and legends.
 	var mp: Dictionary = SaveData.data.get("mp", {})
 	var comp := parchment_box(right, Vector2(560, 0))

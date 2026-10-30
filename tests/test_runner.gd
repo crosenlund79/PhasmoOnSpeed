@@ -21,6 +21,7 @@ func _ready() -> void:
 		"test_basements", "test_stairs_and_basement_evidence", "test_encyclopedia_matches_game",
 		"test_all_entities_selectable", "test_occupant_identities", "test_mp_scoring",
 		"test_hud_layout", "test_nightmare",
+		"test_suspect_display", "test_beginner", "test_replay_moments", "test_ui_scaling",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -563,3 +564,76 @@ func test_nightmare() -> void:
 	check(SaveData.house_record("blackwood", "nightmare")["runs"] == 1, "nightmare run recorded as nightmare")
 	check(SaveData.house_record("blackwood")["runs"] == 0, "normal records untouched")
 	SaveData.reset_all()
+
+# --- Revision 4 -----------------------------------------------------------------------
+
+func test_suspect_display() -> void:
+	var run := await _start("ashgrove", "vampire", 7)
+	run.cycle_suspect(run.player, 1)
+	await _frames(3)
+	var row: HBoxContainer = run.hud.suspect_box.get_child(1)
+	check(row.get_child_count() == Defs.ORDINARY_CREATURES.size(), "every entity is listed (%d)" % row.get_child_count())
+	var lit := 0
+	for cell in row.get_children():
+		if cell.get_child(0).ring == Art.GOLD:
+			lit += 1
+	check(lit == 1, "exactly the chosen suspect is highlighted (%d)" % lit)
+	check(run.hud.suspect_box.get_child_count() >= 4, "evidence and requirements still shown")
+
+func test_beginner() -> void:
+	SaveData.reset_all()
+	var run: Run = Game.start_run("ashgrove", 3, "vampire", "beginner")
+	await get_tree().process_frame
+	var guide: BeginnerGuide = run.find_children("*", "BeginnerGuide", true, false)[0] if not run.find_children("*", "BeginnerGuide", true, false).is_empty() else null
+	check(guide != null, "beginner run has the guide")
+	check(run.creature.speed_for_hunt() < float(Defs.CREATURES["vampire"]["hunt_speed"]), "hunts are slower")
+	run.creature.set_process(false)
+	await _frames(150)
+	check(run.hud.guide_panel.modulate.a > 0.5 and run.hud.guide_title.text != "", "a first tip is shown")
+	run.discover(run.player, "bite_marks", run.player.room_id)
+	await _frames(5)
+	check(guide._said.has("first_evidence") and guide._said.has("fits_1"), "evidence explained and suspects narrowed")
+	run.player.suspect = "vampire"
+	await _frames(5)
+	check(guide._said.has("how_vampire"), "vanquishing explained for the suspect")
+	SaveData.reset_all()
+
+func test_replay_moments() -> void:
+	var run := await _start("ashgrove", "werewolf", 11)
+	run.discover(run.player, "fur", run.player.room_id)
+	run.creature.begin_hunt(run.creature.position, false)
+	await _frames(20)
+	run.attempt_vanquish(run.player, "shade", "rite")
+	var replay: Dictionary = run.recorder.finish(run.elapsed, "test")
+	_cleanup_scene()
+	await get_tree().process_frame
+	var rp := ReplayPlayer.new()
+	rp.setup(replay)
+	get_tree().root.add_child(rp)
+	await get_tree().process_frame
+	var texts := []
+	for e in replay["events"]:
+		var m: Array = rp._moment_for(e[1], e[2])
+		if not m.is_empty():
+			texts.append(m[1])
+	check("Shed Fur discovered" in texts, "evidence moment from the recording (%s)" % str(texts))
+	check("Hunt started" in texts, "hunt moment")
+	check(texts.any(func(x): return x.begins_with("Incorrect vanquishing")), "incorrect attempt moment")
+	await _frames(240)
+	check(rp._moments.size() <= ReplayPlayer.MOMENT_MAX, "popups never stack beyond the limit")
+	rp.queue_free()
+
+func test_ui_scaling() -> void:
+	SaveData.set_setting("ui_scale", 1.2)
+	SaveData.set_setting("hud_scale", 0.8)
+	Game.goto_menu()
+	await get_tree().process_frame
+	check(is_equal_approx(get_tree().root.content_scale_factor, 1.2), "menu scale applied to menus")
+	var run := await _start("ashgrove", "shade", 2)
+	check(is_equal_approx(get_tree().root.content_scale_factor, 1.0), "menu scale does not resize gameplay")
+	check(is_equal_approx(run.hud.k, 0.8), "gameplay UI uses its own scale")
+	SaveData.set_setting("ui_scale", 1.0)
+	SaveData.set_setting("hud_scale", 1.0)
+	_cleanup_scene()
+	Game.goto_menu()
+	await get_tree().process_frame
