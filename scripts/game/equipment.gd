@@ -37,6 +37,7 @@ var _tool_room_t := 0.0
 var _last_tool_room := ""
 var _emf_smooth := 1.0
 var interact_pos := Vector2.INF   # what [E] would act on (highlighted)
+var interact_icon := ""
 var near_items: Array = []        # pickups close by (faintly highlighted)
 var needle := 0.0                 # Witch's Needle agitation 0–5 (0 = not held)
 
@@ -129,9 +130,10 @@ func _update_holds(delta: float) -> void:
 	var inp := player.input
 	var interact: Dictionary = run.find_interactable(player, player.global_position)
 	interact_pos = interact.get("pos", player.global_position) if not interact.is_empty() else Vector2.INF
+	interact_icon = interact.get("icon", "")
 	prompt = ""
 	if not interact.is_empty():
-		prompt = "[E] " + interact["label"]
+		prompt = "E / SPACE — " + interact["label"]
 	var rite: String = run.rite_prompt(player)
 	if rite != "" and prompt == "":
 		prompt = rite

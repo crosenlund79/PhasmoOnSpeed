@@ -172,6 +172,21 @@ func stair_destination(pos: Vector2, locked: Vector2i = Vector2i(-99, -99), move
 			return Vector2.INF
 	return cell_center(_stair_cells[c])
 
+## The stair cell within radius of pos (closest), or (-99, -99).
+func nearest_stair(pos: Vector2, radius: float) -> Vector2i:
+	var best := Vector2i(-99, -99)
+	var bd := radius
+	for c in _stair_cells:
+		var d := pos.distance_to(cell_center(c))
+		if d < bd:
+			bd = d
+			best = c
+	return best
+
+## World position of the landing on the other floor for a stair cell.
+func stair_target(c: Vector2i) -> Vector2:
+	return cell_center(_stair_cells[c])
+
 func at(c: Vector2i) -> int:
 	if c.x < 0 or c.y < 0 or c.x >= w or c.y >= h:
 		return VOID

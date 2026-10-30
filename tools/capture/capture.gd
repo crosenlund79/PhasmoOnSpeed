@@ -173,6 +173,59 @@ func _shot(s: String) -> void:
 		get_tree().current_scene.show_entry(s.substr(5))
 		await _wait(10)
 		await _save("encyclopedia_" + s.substr(5))
+	elif s == "prompt":
+		# Standing at a closed door: highlight ring and the E / SPACE prompt chip.
+		var run: Run = Game.start_run("ashgrove", 5, "shade")
+		await _wait(5)
+		run.creature.set_process(false)
+		var dc: Vector2i = run.view.doors[1]["cell"]
+		run.set_door(1, false)
+		var side := Vector2(0, 38) if run.map.is_wall(dc + Vector2i(1, 0)) else Vector2(38, 0)
+		if not run.map.walkable(HouseMap.to_cell(HouseMap.cell_center(dc) + side)):
+			side = -side
+		run.player.global_position = HouseMap.cell_center(dc) + side
+		run.player.aim_override = (-side).angle()
+		run._apply_camera_limits(run.player.global_position)
+		run.camera.reset_smoothing()
+		run.player.equipment.select(Defs.BASE_LOADOUT.find("emf"))
+		run.phenomena.hotspots.append({"pos": run.player.global_position + Vector2(30, 0), "level": 4, "ttl": 99.0, "room": run.player.room_id})
+		await _wait(40)
+		await _save("prompt_door")
+	elif s.begins_with("escalate_"):
+		var cr := s.substr(9)
+		var run: Run = Game.start_run("blackwood", 24, cr)
+		await _wait(5)
+		run.creature.set_process(false)
+		run.creature.position = run.player.global_position + Vector2(110, -10)
+		run.threat = 80.0
+		run.creature.set_process(true)
+		run.creature.state = "stunned"
+		run.creature.stunned_t = 99.0
+		await _wait(22 if cr == "werewolf" else 120)
+		await _save("escalate_%s" % cr)
+		if cr == "werewolf":
+			await _wait(80)
+			await _save("escalate_werewolf_done")
+	elif s.begins_with("defeat_"):
+		var cr := s.substr(7)
+		var run: Run = Game.start_run("ashgrove", 21, cr)
+		await _wait(5)
+		run.creature.set_process(false)
+		run.creature.position = run.player.global_position + Vector2(60, 0)
+		run.creature.alpha = 1.0
+		run.creature.modulate.a = 1.0
+		var item: String = {"vampire": "wooden_stake", "werewolf": "silver_stake", "shapeshifter": "iron_nails"}[cr]
+		run.player.add_resource(item)
+		run.player.equipment.rebuild_slots()
+		run.player.equipment.select(run.player.equipment.slots.find(item))
+		if cr == "shapeshifter":
+			run.creature.expose(10.0)
+			run.attempt_vanquish(run.player, cr, item)
+		else:
+			run.creature.begin_hunt(run.creature.position, false)
+			run.on_creature_contact(run.creature, run.player)
+		await _wait(28)
+		await _save("defeat_%s" % cr)
 	elif s.begins_with("overview_"):
 		var run: Run = Game.start_run(s.substr(9), 5, "shade")
 		await _wait(10)

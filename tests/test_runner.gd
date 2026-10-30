@@ -23,6 +23,7 @@ func _ready() -> void:
 		"test_hud_layout", "test_nightmare",
 		"test_suspect_display", "test_beginner", "test_replay_moments", "test_ui_scaling",
 		"test_environment", "test_witch_needle", "test_voodoo_doll", "test_new_ghosts",
+		"test_counterattacks", "test_escalations", "test_prompt_and_needle",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -412,16 +413,16 @@ func test_basements() -> void:
 func test_stairs_and_basement_evidence() -> void:
 	var run := await _start("blackwood", "werewolf", 13)
 	var st: Dictionary = run.map.stairs[0]
-	# Crossing the staircase sideways does nothing; heading down the steps does.
-	var down := Vector2(st["a"] - st["a_land"])
+	# Walking onto the stairs does nothing; [E] / [Space] takes them.
+	run.creature.set_process(false)
 	run.player.global_position = HouseMap.cell_center(st["a"])
-	run.player.velocity = down.orthogonal() * 200.0
-	run._check_stairs(run.player)
-	check(run.map.floor_at(run.player.global_position) == 0, "sideways across the stairs stays upstairs")
-	run.player.velocity = down * 200.0
-	run._check_stairs(run.player)
+	await _frames(10)
+	check(run.map.floor_at(run.player.global_position) == 0, "standing on the stairs stays upstairs")
+	var it := run.find_interactable(run.player, run.player.global_position)
+	check(it.get("kind", "") == "stairs" and it["label"].contains("Down"), "the stairs offer to be used (%s)" % it.get("label", ""))
+	run.do_interact(run.player, it)
 	await _frames(3)
-	check(run.map.floor_at(run.player.global_position) == -1, "stepping on the stairs took the hunter down")
+	check(run.map.floor_at(run.player.global_position) == -1, "using the stairs took the hunter down")
 	check(run.map.room(run.player.room_id).get("level", 0) == -1, "basement room recognised (%s)" % run.player.room_id)
 	check(run.recorder.data["events"].any(func(e): return e[1] == "floor"), "floor change recorded for the replay")
 	await _frames(30)
@@ -658,12 +659,15 @@ func test_environment() -> void:
 	check(not m.los(a, b), "a closed door blocks line of sight")
 	run.player.global_position = dpos + (a - dpos) * 0.45
 	await _frames(12)
-	check(run.view.doors[i]["open"], "walking into a closed door opens it")
-	check(m.los(a, b), "an open door does not block sight")
-	run.player.global_position = a
+	check(not run.view.doors[i]["open"], "walking into a closed door does not open it")
+	run.player.global_position = a + (a - dpos).normalized() * 10.0
+	run.player.aim_angle = (dpos - run.player.global_position).angle()
 	await _frames(2)
 	var it := run.find_interactable(run.player, run.player.global_position)
-	check(it.get("kind", "") == "door", "a door can be operated with E")
+	check(it.get("kind", "") == "door" and it["i"] == i, "the nearby door is selected for E / Space (%s)" % str(it.get("kind")))
+	run.do_interact(run.player, it)
+	check(run.view.doors[i]["open"] and m.los(a, b), "E / Space opened it; an open door does not block sight")
+	check(InputMap.action_get_events("interact").size() == 2, "E and Space both interact")
 	# Lights: the entity snuffs them, a hunter relights them.
 	var li := -1
 	for k in run.view.lights.size():
@@ -762,3 +766,77 @@ func test_new_ghosts() -> void:
 		e.sort()
 		uniq[str(e)] = true
 	check(uniq.size() == Defs.ORDINARY_CREATURES.filter(Defs.is_ghost).size(), "every ghost has a distinct evidence set")
+
+# --- Revision 6 -----------------------------------------------------------------------
+
+func test_counterattacks() -> void:
+	for pair in [["vampire", "wooden_stake"], ["werewolf", "silver_stake"]]:
+		var run := await _start("ashgrove", pair[0], 21)
+		run.player.add_resource(pair[1])
+		run.player.equipment.rebuild_slots()
+		run.player.equipment.select(run.player.equipment.slots.find(pair[1]))
+		run.creature.begin_hunt(run.creature.position, false)
+		run.on_creature_contact(run.creature, run.player)
+		check(run.player.wounds == 0 and run._outcome == "vanquished", "%s: counterattack with the %s vanquishes" % pair)
+		check(run.recorder.data["events"].any(func(e): return e[1] == "counter"), "%s: counterattack recorded" % pair[0])
+		if pair[0] == "werewolf":
+			check(run.creature.current_token() == "tokens/werewolf_human.png", "the werewolf falls back into human form")
+		else:
+			check(run.recorder.data["events"].any(func(e): return e[1] == "creature_fx" and e[2]["kind"] == "dust"), "the vampire turns to dust")
+		_cleanup_scene()
+		await get_tree().process_frame
+	# Without the right item it is an ordinary wound.
+	var run2 := await _start("ashgrove", "vampire", 22)
+	run2.creature.begin_hunt(run2.creature.position, false)
+	run2.on_creature_contact(run2.creature, run2.player)
+	check(run2.player.wounds == 1, "no stake in hand: wounded as usual")
+	_cleanup_scene()
+	await get_tree().process_frame
+	# Shapeshifter: still needs exposing; when banished it shows a colourless, glistening human.
+	var run3 := await _start("ashgrove", "shapeshifter", 23)
+	run3.player.add_resource("iron_nails")
+	run3.creature.expose(10.0)
+	run3.attempt_vanquish(run3.player, "shapeshifter", "iron_nails")
+	check(run3.creature.current_token() == "tokens/shapeshifter_human.png" and run3.creature.token.sprite.material != null, "true human form, glistening")
+
+func test_escalations() -> void:
+	var run := await _start("blackwood", "werewolf", 24)
+	check(run.creature.current_token() == "tokens/werewolf_human.png", "a werewolf first walks as a man")
+	run.threat = 80.0
+	await _frames(5)
+	check(run.view.mood == "moon", "high dread brings the full moon")
+	check(not run.creature.wolf, "the change is not an instant sprite swap")
+	await _frames(90)
+	check(run.creature.wolf and run.creature.current_token() == "tokens/werewolf.png", "it has become the wolf")
+	run.threat = 0.0
+	await _frames(10)
+	check(run.creature.wolf, "the transformation is permanent")
+	_cleanup_scene()
+	await get_tree().process_frame
+	var v := await _start("blackwood", "vampire", 24)
+	v.threat = 80.0
+	await _frames(5)
+	check(v.view.mood == "mist" and v.view._mist.size() == 2, "a vampire's dread fills the house with red mist")
+	check(v.recorder.data["events"].any(func(e): return e[1] == "escalate"), "escalation recorded for replay / clients")
+
+func test_prompt_and_needle() -> void:
+	var run := await _start("ashgrove", "shade", 25)
+	run.creature.set_process(false)
+	var pk: Dictionary = run.pickups[0]
+	run.player.global_position = pk["pos"] + Vector2(16, 0)
+	await _frames(4)
+	check(run.hud.prompt_chip.visible and run.hud.prompt_text.text.begins_with("E / SPACE — Pick Up"), "pickup prompt shown (%s)" % run.hud.prompt_text.text)
+	# The needle: strikes against the glass grow with the reading.
+	var g = run.hud.needle_gauge
+	var counts := []
+	for lv in [1.0, 2.0, 4.0, 5.0]:
+		g.level = lv
+		var hits := 0
+		for i in 600:
+			var before: int = g._strikes.size()
+			g._process(1.0 / 60.0)
+			if g._strikes.size() > before:
+				hits += 1
+		counts.append(hits)
+	check(counts[0] == 0, "still at level 1 (%s)" % str(counts))
+	check(counts[1] < counts[2] and counts[2] < counts[3], "more strikes as the presence grows (%s)" % str(counts))

@@ -67,6 +67,34 @@ class FxRing extends Node2D:
 		var k := clampf(_t / dur, 0.0, 1.0)
 		draw_arc(Vector2.ZERO, 6.0 + radius * k, 0.0, TAU, 48, Color(color.r, color.g, color.b, (1.0 - k) * 0.8), 2.5 * (1.0 - k) + 0.5, true)
 
+## A vampire's end: a puff of grey dust that drifts away and settles.
+static func dust(parent: Node, pos: Vector2) -> void:
+	var p := CPUParticles2D.new()
+	p.position = pos
+	p.z_index = 6
+	p.amount = 90
+	p.one_shot = true
+	p.explosiveness = 0.75
+	p.lifetime = 1.8
+	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	p.emission_sphere_radius = 14.0
+	p.direction = Vector2(0.4, -1.0)
+	p.spread = 70.0
+	p.initial_velocity_min = 20.0
+	p.initial_velocity_max = 75.0
+	p.gravity = Vector2(18, 12)
+	p.damping_min = 12.0
+	p.damping_max = 25.0
+	p.scale_amount_min = 1.5
+	p.scale_amount_max = 4.0
+	var g := Gradient.new()
+	g.set_color(0, Color(0.62, 0.58, 0.54, 0.95))
+	g.set_color(1, Color(0.4, 0.38, 0.36, 0.0))
+	p.color_ramp = g
+	parent.add_child(p)
+	p.emitting = true
+	p.get_tree().create_timer(2.5).timeout.connect(p.queue_free)
+
 static func ring(parent: Node, pos: Vector2, color: Color, radius: float = 60.0, dur: float = 0.9) -> void:
 	var r := FxRing.new()
 	r.position = pos
@@ -119,9 +147,15 @@ func apply(type: String, d: Dictionary) -> bool:
 			match str(d.get("kind", "")):
 				"ping": ring(view.overlay_layer, Vector2(d["x"], d["y"]), Color(0.75, 0.9, 0.45), 70.0, 0.9)
 				"rage": ring(view.overlay_layer, Vector2(d["x"], d["y"]), Color(1.0, 0.25, 0.15), 110.0, 1.2)
+				"dust": dust(view.overlay_layer, Vector2(d["x"], d["y"]))
+				"transform": ring(view.overlay_layer, Vector2(d["x"], d["y"]), Color(0.75, 0.85, 1.0), 120.0, 1.4)
+				"revert": ring(view.overlay_layer, Vector2(d["x"], d["y"]), Color(1.0, 0.95, 0.8), 90.0, 1.2)
+				"counter": ring(view.overlay_layer, Vector2(d["x"], d["y"]), Art.GOLD, 80.0, 0.7)
 				"twitch":
 					if decals.has(d["id"]) and is_instance_valid(decals[d["id"]]):
 						twitch(decals[d["id"]])
+		"escalate":
+			view.set_mood(str(d["kind"]))
 		"shimmer":
 			view.shimmer_room(str(d["room"]))
 		"npc_burn":

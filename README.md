@@ -32,10 +32,10 @@ score wins (see `docs/MULTIPLAYER.md`).
 | 1 – 9 | Select base equipment |
 | Q / mouse wheel | Cycle items (Q jumps to found resources) |
 | Left click | Use the equipped item (ask, place, pour, splash, strike; hold for the hand mirror) |
-| E | Interact: pick up, retrieve placed items; **hold** to melt silver or light sigil candles |
+| E / Space | Interact: doors, stairs, pick up, relight, retrieve; **hold** to melt silver or light sigil candles |
 | Tab / Shift+Tab | Choose the entity you suspect — any entity (a choice, never an attempt) |
 | V (hold) | Perform the banishing rite |
-| Space | Shove a rival (competitive matches) |
+| G | Shove a rival (competitive matches) |
 | R (hold) | Restart the run immediately (solo) |
 | H | Controls overlay |
 | Esc / P | Pause |

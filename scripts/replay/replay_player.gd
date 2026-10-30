@@ -249,6 +249,10 @@ func _moment_for(type: String, d: Dictionary) -> Array:
 			return ["icons/eq_hand_mirror.png", "Shapeshifter unmasked in the mirror"]
 		"harbinger":
 			return ["tokens/harbinger.png", "The Harbinger appeared"]
+		"counter":
+			return ["icons/%s.png" % ("eq_wooden_stake" if d.get("creature", "") == "vampire" else "eq_silver_stake"), "%s counterattacked!" % _who(d)]
+		"escalate":
+			return ["icons/ui_skull.png", "The full moon rose" if d.get("kind", "") == "moon" else "A blood-red mist filled the house"]
 		"voodoo":
 			return ["icons/eq_voodoo_doll.png", "%s stabbed the voodoo doll" % _who(d)]
 		"npc_burn":

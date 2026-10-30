@@ -156,7 +156,7 @@ func _approach_and_strike(item: String) -> bool:
 			await get_tree().process_frame
 			continue
 		_path = run.map.path(run.player.global_position, c.position)
-		_pi = 0
+		_pi = 1 if _path.size() > 1 else 0   # (re-planned every frame: don't snap back to this cell's centre)
 		_step_along(Player.WALK_SPEED)
 		await get_tree().process_frame
 	return false

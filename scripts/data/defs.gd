@@ -103,10 +103,10 @@ const CREATURES := {
 		"hunt_speed": 215.0, "roam_speed": 110.0, "interaction_interval": 9.0, "lair_bias": 0.35,
 		"difficulty": 1.15,
 		"blurb": "It stalks from the dark and strikes from behind.",
-		"behaviour": "Drifts after the investigators, leaving blood droplets on the floor. Its resting room is strewn with grave soil, and sooner or later an occupant is bitten.",
+		"behaviour": "Drifts after the investigators, leaving blood droplets on the floor. Its resting room is strewn with grave soil, and sooner or later an occupant is bitten. When dread runs high a thick red mist fills the house.",
 		"hunting": "Ambushes: its hunts begin behind you and out of your light.",
 		"strengths": ["Ghost equipment is useless against it.", "Crucifixes and holy water have no power over it."],
-		"weaknesses": ["Garlic carried in your kit repels and slows it at close range.", "Shows as a dark silhouette when caught in your lantern's beam."],
+		"weaknesses": ["Garlic carried in your kit repels and slows it at close range.", "With the wooden stake in hand you can counterattack the moment it reaches you.", "Shows as a dark silhouette when caught in your lantern's beam."],
 		"vanquish": ["Find garlic (kitchens, pantries, dining rooms) and keep it in your kit.", "Find a wooden stake (sheds, cellars, studies).", "Strike it with the stake at close range."],
 	},
 	"werewolf": {
@@ -116,11 +116,11 @@ const CREATURES := {
 		"hunt_speed": 240.0, "roam_speed": 120.0, "interaction_interval": 7.0, "lair_bias": 0.45,
 		"difficulty": 1.2,
 		"blurb": "Relentless. Once it sees you, it runs you down.",
-		"behaviour": "Prowls the house leaving heavy paw prints, sheds fur and gouges the walls of its den.",
-		"hunting": "Hunts most often of all, and accelerates while it can see you until it outruns a walking investigator. Only sprinting and breaking line of sight save you.",
+		"behaviour": "Walks the house as a rough, unshaven man until dread runs high: then the full moon breaks through and it tears into a wolf for good. Leaves heavy paw prints, sheds fur and gouges the walls of its den.",
+		"hunting": "Hunts most often of all. As a wolf it accelerates while it can see you until it outruns a walking investigator. Only sprinting and breaking line of sight save you.",
 		"strengths": ["Ghost equipment is useless against it.", "Crucifixes and holy water have no power over it.", "Gets faster the longer it sees you."],
-		"weaknesses": ["Silver.", "Shows as a dark silhouette when caught in your lantern's beam."],
-		"vanquish": ["Collect three pieces of silverware.", "Hold E at a stove or hearth to melt them into a silver stake.", "Strike it with the silver stake at close range."],
+		"weaknesses": ["Silver: with the silver stake in hand you can counterattack the moment it reaches you.", "Shows as a dark silhouette when caught in your lantern's beam."],
+		"vanquish": ["Collect three pieces of silverware.", "Hold E or Space at a stove or hearth to melt them into a silver stake.", "Strike it with the silver stake at close range."],
 	},
 	"shapeshifter": {
 		"name": "Shapeshifter", "kind": "physical", "token": "tokens/shapeshifter.png",
@@ -146,7 +146,7 @@ const CREATURES := {
 		"hunting": "Begins hunting within seconds of arriving and hunts again every few seconds.",
 		"strengths": ["Crucifixes cannot stop it.", "Leaves no evidence."],
 		"weaknesses": ["Holy water stuns it briefly.", "Three sigil candles bind it in its room."],
-		"vanquish": ["Find the three pale sigil candles and hold E to light each one.", "When all three burn it is bound in its room and stops hunting.", "Stand beside it and hold V to perform the Final Rite."],
+		"vanquish": ["Find the three pale sigil candles and hold E or Space to light each one.", "When all three burn it is bound in its room and stops hunting.", "Stand beside it and hold V to perform the Final Rite."],
 	},
 }
 const ORDINARY_CREATURES := ["shade", "poltergeist", "blightness", "crawler", "lost_one", "vampire", "werewolf", "shapeshifter"]

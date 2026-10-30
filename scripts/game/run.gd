@@ -14,6 +14,9 @@ const MEANINGFUL_INVESTIGATION := 4
 const HARBINGER_AFTER_RECKLESS := 2
 const HARBINGER_AFTER_WRONG := 3
 const STRIKE_REACH := 62.0
+const DOOR_REACH := 56.0
+const ESCALATE_AT := 65.0          # dread at which a werewolf's moon rises / a vampire's mist comes
+const STAIR_REACH := 40.0
 const CAMERA_ZOOM := 1.55
 const SNAPSHOT_HZ := 20.0
 const PRIVATE_HZ := 10.0
@@ -65,6 +68,7 @@ var _priv_acc := 0.0
 var _quip_t := 0.0
 var critters: Critters = null
 var _env_t := 0.0
+var escalated := false
 var _haunt_t := 14.0
 var _dread_noise_t := 12.0
 
@@ -238,8 +242,8 @@ func _place_resources() -> void:
 			used[cell] = true
 			var pos := HouseMap.cell_center(cell)
 			var node := _item_sprite(spec["sprite"], pos, 26.0)
-			pickups.append({"kind": "resource", "res": res, "node": node, "pos": pos,
-				"label": "Pick up " + Defs.EQUIPMENT[res]["name"], "hold": 0.0})
+			pickups.append({"kind": "resource", "res": res, "node": node, "pos": pos, "icon": Defs.EQUIPMENT[res]["icon"],
+				"label": "Pick Up " + Defs.EQUIPMENT[res]["name"], "hold": 0.0})
 
 func _item_sprite(path: String, pos: Vector2, size: float) -> Sprite2D:
 	var s := Sprite2D.new()
@@ -319,7 +323,6 @@ func _process(delta: float) -> void:
 	for h: Player in hunters:
 		var before := h.global_position
 		h.room_id = map.room_at(h.global_position, h.room_id)
-		_check_stairs(h)
 		if h.equipment:
 			h.equipment.process_input(delta)
 			h.equipment.update_tools(delta)
@@ -377,6 +380,8 @@ func _actor_states() -> Dictionary:
 func _update_threat(delta: float) -> void:
 	# Beginner: dread builds more slowly and the first hunt comes much later.
 	threat = minf(100.0, threat + THREAT_PER_SECOND * delta * (0.6 if difficulty == "beginner" else 1.0))
+	if not escalated and threat >= ESCALATE_AT and creature and creature.type_id in ["werewolf", "vampire"] and creature.state != "banished":
+		_escalate()
 	if creature == null or creature.state != "roam" or creature.cooldown_t > 0.0:
 		return
 	if forced_hunt_t > 0.0:
@@ -562,17 +567,15 @@ func _someone_in_doorway(i: int) -> bool:
 			return true
 	return false
 
-## Hunters push closed doors open by walking into them; occupants and creatures
-## of flesh open the doors they pass through. Ghosts simply drift through.
+## Occupants and creatures of flesh open the doors they pass through. Ghosts
+## simply drift through.
 func _environment_tick(delta: float) -> void:
 	_env_t -= delta
 	if _env_t > 0.0:
 		return
 	_env_t = 0.12
+	# Hunters open doors deliberately ([E] / [Space]); walking into one does nothing.
 	var movers: Array = []
-	for h: Player in hunters:
-		if not h.dead:
-			movers.append(h.global_position)
 	for o in occupants:
 		if o.state != "gone":
 			movers.append(o.position)
@@ -619,12 +622,29 @@ func shimmer(room_id: String) -> void:
 	view.shimmer_room(room_id)
 	record_event("shimmer", {"room": room_id})
 
+## Dread has peaked: the full moon (the werewolf turns, for good) or the blood mist.
+func _escalate() -> void:
+	escalated = true
+	var kind := "moon" if creature.type_id == "werewolf" else "mist"
+	view.set_mood(kind)
+	record_event("escalate", {"kind": kind})
+	if kind == "moon":
+		tell_all("The full moon breaks through the clouds.", "icons/ui_skull.png")
+		creature.transform_to_wolf()
+	else:
+		sound_all("nm_drag", -10.0, 0.6)
+		tell_all("A thick red mist rises through the house.", "icons/ui_skull.png")
+
 func creature_fx(kind: String, pos: Vector2, extra: Dictionary = {}) -> void:
 	var d := {"kind": kind, "x": snappedf(pos.x, 0.1), "y": snappedf(pos.y, 0.1)}
 	d.merge(extra)
 	match kind:
 		"ping": WorldFx.ring(view.overlay_layer, pos, Color(0.75, 0.9, 0.45), 70.0, 0.9)
 		"rage": WorldFx.ring(view.overlay_layer, pos, Color(1.0, 0.25, 0.15), 110.0, 1.2)
+		"dust": WorldFx.dust(view.overlay_layer, pos)
+		"transform": WorldFx.ring(view.overlay_layer, pos, Color(0.75, 0.85, 1.0), 120.0, 1.4)
+		"revert": WorldFx.ring(view.overlay_layer, pos, Color(1.0, 0.95, 0.8), 90.0, 1.2)
+		"counter": WorldFx.ring(view.overlay_layer, pos, Art.GOLD, 80.0, 0.7)
 	record_event("creature_fx", d)
 
 func disturbance(pos: Vector2) -> void:
@@ -653,19 +673,15 @@ func shake_furniture_near(pos: Vector2) -> void:
 # --- Floors --------------------------------------------------------------------------
 
 ## Stepping onto a staircase cell takes a hunter to the linked floor.
-func _check_stairs(h: Player) -> void:
-	if h.remote or h.dead:
+## Stairs are taken deliberately ([E] / [Space]); walking onto them does nothing.
+func _take_stairs(h: Player, cell: Vector2i) -> void:
+	if h.dead:
 		return
-	if h.velocity.length() < 20.0:
-		return
-	var dest := map.stair_destination(h.global_position, h.get_meta("stair_lock", Vector2i(-99, -99)), h.velocity)
-	if dest == Vector2.INF:
-		if h.has_meta("stair_lock") and HouseMap.to_cell(h.global_position) != h.get_meta("stair_lock"):
-			h.remove_meta("stair_lock")
-		return
+	var dest := map.stair_target(cell)
 	h.global_position = dest
-	h.set_meta("stair_lock", HouseMap.to_cell(dest))
 	h.room_id = map.room_at(dest)
+	if h.remote:
+		Net.host_private(h.peer_id, "correct", {"x": dest.x, "y": dest.y, "floor": map.floor_at(dest)})
 	if h == player:
 		_apply_camera_limits(dest)
 		camera.reset_smoothing()
@@ -793,6 +809,11 @@ func on_creature_contact(c: Creature, p: Player) -> void:
 		sound_at("crucifix_burn", p.global_position)
 		record_event("blessing_repel", {"actor": p.actor_id})
 		return
+	# Counterattack: caught with the right stake in hand, you strike first.
+	var counter_item: String = {"vampire": "wooden_stake", "werewolf": "silver_stake"}.get(c.type_id, "")
+	if counter_item != "" and p.equipment and p.equipment.current() == counter_item and p.has_resource(counter_item):
+		_counterattack(p, c, counter_item)
+		return
 	match c.type_id:
 		"lost_one":
 			if c.wrath:
@@ -817,6 +838,15 @@ func on_creature_contact(c: Creature, p: Player) -> void:
 	_wound(p, c, "creature")
 	if not p.dead:
 		c.end_hunt()
+
+func _counterattack(p: Player, c: Creature, item: String) -> void:
+	p.invuln = 1.5
+	record_event("counter", {"actor": p.actor_id, "creature": c.type_id, "x": c.position.x, "y": c.position.y})
+	creature_fx("counter", c.position)
+	sound_at("stake_strike", c.position, 6.0, 0.85)
+	fx_shake(0.7)
+	announce_to(p, "COUNTERATTACK!", "You drive the %s home as it lunges." % Defs.EQUIPMENT[item]["name"].to_lower(), Art.GOLD, 1.6)
+	attempt_vanquish(p, c.type_id, item)
 
 ## A wound from any source (the entity, embers, the furnace). Two wounds kill.
 func _wound(p: Player, c: Creature, source: String) -> void:
@@ -871,7 +901,7 @@ func _place_keepsakes() -> void:
 		var pos := HouseMap.cell_center(map.random_free_cell(rid, rng))
 		var node := _item_sprite("items/%s.png" % names[i], pos, 24.0)
 		var k := {"kind": "keepsake", "item": names[i], "node": node, "pos": pos, "forbidden": i == forbidden,
-			"label": "Examine " + KEEPSAKES[names[i]][0], "hold": 0.0, "twitch_t": rng.randf_range(4.0, 8.0)}
+			"label": "Examine " + KEEPSAKES[names[i]][0].replace("the ", "").capitalize(), "hold": 0.0, "icon": "items/%s.png" % names[i], "twitch_t": rng.randf_range(4.0, 8.0)}
 		keepsakes.append(k)
 		pickups.append(k)
 
@@ -1354,7 +1384,7 @@ func _spawn_sigils() -> void:
 		view.add_child(light)
 		var s := {"node": node, "light": light, "lit": false, "room": rid, "pos": pos}
 		sigils.append(s)
-		pickups.append({"kind": "sigil", "sigil": s, "node": node, "pos": pos, "label": "Hold to light the sigil candle", "hold": 1.0})
+		pickups.append({"kind": "sigil", "sigil": s, "node": node, "pos": pos, "label": "Light Sigil Candle (hold)", "icon": "items/sigil_candle_unlit.png", "hold": 1.0})
 		record_event("sigil_spawn", {"x": pos.x, "y": pos.y, "id": node.name})
 
 func _light_sigil(p: Player, s: Dictionary) -> void:
@@ -1376,42 +1406,53 @@ func _light_sigil(p: Player, s: Dictionary) -> void:
 
 # --- Interaction -----------------------------------------------------------------------
 
+## What [E] / [Space] would act on: the nearest candidate, slightly favouring what
+## the hunter faces, so the same door / item is chosen every time.
 func find_interactable(p: Player, pos: Vector2) -> Dictionary:
-	var best := {}
-	var bd := 46.0
+	var cands: Array = []
 	for it in pickups:
 		if it["kind"] == "sigil" and it["sigil"]["lit"]:
 			continue
-		var d: float = pos.distance_to(it["pos"])
-		if d < bd:
-			bd = d
-			best = it
+		cands.append([it, 46.0])
 	for it in placed:
 		if it["type"] in ["ghost_book", "crucifix"] and it["owner"] == p:
-			var d: float = pos.distance_to(it["pos"])
-			if d < bd:
-				bd = d
-				best = {"kind": "retrieve", "item": it, "pos": it["pos"], "label": "Retrieve " + Defs.EQUIPMENT[it["type"]]["name"], "hold": 0.0}
-	if best.is_empty():
-		var li := -1
-		var ld := 64.0
-		for i in view.lights.size():
-			if view.can_extinguish(i) and not view.lights[i]["on"]:
-				var d: float = pos.distance_to(view.lights[i]["pos"])
-				if d < ld:
-					ld = d
-					li = i
-		if li >= 0:
-			return {"kind": "relight", "i": li, "pos": view.lights[li]["pos"], "label": "Hold to relight the flame", "hold": 0.7}
-		var di := view.door_index_at(pos, 42.0)
-		if di >= 0:
-			var dopen: bool = view.doors[di]["open"]
-			if not (dopen and _someone_in_doorway(di) and pos.distance_to(HouseMap.cell_center(view.doors[di]["cell"])) < 30.0):
-				return {"kind": "door", "i": di, "pos": HouseMap.cell_center(view.doors[di]["cell"]), "label": "Close the door" if dopen else "Open the door", "hold": 0.0}
+			cands.append([{"kind": "retrieve", "item": it, "pos": it["pos"], "icon": Defs.EQUIPMENT[it["type"]]["icon"],
+				"label": "Retrieve " + Defs.EQUIPMENT[it["type"]]["name"], "hold": 0.0}, 46.0])
+	for i in view.lights.size():
+		if view.can_extinguish(i) and not view.lights[i]["on"]:
+			var what: String = {"candle": "Candle", "lamp": "Lamp", "hearth": "Fire", "room": "Lamp"}.get(view.lights[i]["kind"], "Flame")
+			cands.append([{"kind": "relight", "i": i, "pos": view.lights[i]["pos"], "icon": "items/sigil_candle_lit.png",
+				"label": "Relight " + what, "hold": 0.7}, 64.0])
+	for i in view.doors.size():
+		var dc: Vector2 = HouseMap.cell_center(view.doors[i]["cell"])
+		var dopen: bool = view.doors[i]["open"]
+		if dopen and _someone_in_doorway(i) and pos.distance_to(dc) < 30.0:
+			continue   # never close a door on yourself
+		cands.append([{"kind": "door", "i": i, "pos": dc, "icon": "icons/ui_house.png",
+			"label": "Close Door" if dopen else "Open Door", "hold": 0.0}, DOOR_REACH])
+	var sc := map.nearest_stair(pos, STAIR_REACH)
+	if sc != Vector2i(-99, -99):
+		var dest := map.stair_target(sc)
+		var down := map.floor_at(dest) < map.floor_at(HouseMap.cell_center(sc))
+		cands.append([{"kind": "stairs", "cell": sc, "pos": HouseMap.cell_center(sc), "icon": "icons/ui_house.png",
+			"label": "Use Stairs (Down)" if down else "Use Stairs (Up)", "hold": 0.0}, STAIR_REACH])
+	var best := {}
+	var bs := INF
+	for c in cands:
+		var it: Dictionary = c[0]
+		var to: Vector2 = it["pos"] - pos
+		var d := to.length()
+		if d >= float(c[1]):
+			continue
+		var score := d - (10.0 * cos(angle_difference(p.aim_angle, to.angle())) if d > 4.0 else 10.0)
+		if score < bs:
+			bs = score
+			best = it
 	if best.is_empty() and int(p.resources.get("silverware", 0)) >= Defs.SILVERWARE_NEEDED:
 		for f in map.furniture_with("melt"):
 			if (f["rect"] as Rect2).grow(28.0).has_point(pos):
-				return {"kind": "melt", "pos": (f["rect"] as Rect2).get_center(), "label": "Hold to melt silverware into a silver stake", "hold": 2.0}
+				return {"kind": "melt", "pos": (f["rect"] as Rect2).get_center(), "icon": "icons/eq_silver_stake.png",
+					"label": "Melt Silverware (hold)", "hold": 2.0}
 	return best
 
 ## Positions of pickups near pos (faint highlight), nearest first.
@@ -1471,6 +1512,8 @@ func do_interact(p: Player, it: Dictionary) -> void:
 			add_investigation(p, 0, "relight")
 		"door":
 			set_door(it["i"], not view.doors[it["i"]]["open"])
+		"stairs":
+			_take_stairs(p, it["cell"])
 		"keepsake":
 			_examine_keepsake(p, it)
 
@@ -1657,7 +1700,7 @@ func hud_state(h: Player) -> Dictionary:
 		"prompt": eq.prompt, "hold": eq.hold_progress(), "slots": eq.slots, "sel": eq.selected,
 		"charges": eq.slots.map(func(id): return eq.charge_text(id)), "wounds": h.wounds, "invuln": h.invuln,
 		"suspect": h.suspect, "dead": h.dead, "room": h.room_id, "shove_cd": h.shove_cd, "uv": h.uv_light.visible,
-		"cam": eq.current() == "orb_camera", "nd": snappedf(eq.needle, 0.01),
+		"cam": eq.current() == "orb_camera", "nd": snappedf(eq.needle, 0.01), "pi": eq.interact_icon,
 		"ip": [] if eq.interact_pos == Vector2.INF else [snappedf(eq.interact_pos.x, 0.1), snappedf(eq.interact_pos.y, 0.1)],
 		"near": eq.near_items.map(func(v): return [snappedf(v.x, 0.1), snappedf(v.y, 0.1)])}
 

@@ -36,7 +36,7 @@ everyone on one network) and join by its address.
 
 | Input | Action |
 |---|---|
-| Space | **Shove** the rival in front of you (close range, ~5 s cooldown) |
+| G | **Shove** the rival in front of you (close range, ~5 s cooldown) |
 | Tab / Shift+Tab | Choose your suspected entity (all entities are listed) |
 | Esc | Menu — pauses the match for **everyone** (see below) |
 | Click / Q (when dead) | Switch which surviving hunter you spectate |

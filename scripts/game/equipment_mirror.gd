@@ -14,6 +14,7 @@ var hint := ""
 var prompt := ""
 var _hold := 0.0
 var interact_pos := Vector2.INF
+var interact_icon := ""
 var near_items: Array = []
 var needle := 0.0
 var _charges: Array = []
@@ -29,6 +30,7 @@ func apply(d: Dictionary) -> void:
 	interact_pos = Vector2(ip[0], ip[1]) if ip.size() == 2 else Vector2.INF
 	near_items = d.get("near", []).map(func(a): return Vector2(a[0], a[1]))
 	needle = float(d.get("nd", 0.0))
+	interact_icon = str(d.get("pi", ""))
 	var new_slots: Array = d["slots"]
 	var new_charges: Array = d["charges"]
 	if new_slots != slots or int(d["sel"]) != selected or new_charges != _charges:

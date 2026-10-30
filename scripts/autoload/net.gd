@@ -24,7 +24,7 @@ const REPLAY_CHUNK := 48000
 const PUBLIC_EVENTS := ["decal", "decal_remove", "decal_swap", "flicker", "darkness", "sfx", "screen_shake", "shake",
 	"mirror", "say", "npc", "npc_flee", "npc_gone", "hunt_start", "hunt_end", "harbinger", "bound", "sigil",
 	"sigil_spawn", "death", "attack", "vanquish", "shove", "left", "floor", "orb", "orb_clear", "creature_meta",
-	"door", "light", "shimmer", "npc_burn", "embers", "furnace", "creature_fx"]
+	"door", "light", "shimmer", "escalate", "counter", "npc_burn", "embers", "furnace", "creature_fx"]
 
 var peer: ENetMultiplayerPeer
 var lobby := {}               # peer_id -> {name, ready}

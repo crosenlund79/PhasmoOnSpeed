@@ -52,6 +52,29 @@ var wrath_target: Player = null
 var _hop_acc := 0.0         # Blightness lurches
 var _hops := 0
 var _distort: ShaderMaterial
+var wolf := false           # werewolf: human until dread brings the full moon
+var reverted := false       # werewolf / shapeshifter after banishment: their human form
+var _show_t := 0.0          # forced visibility (transformations, defeat)
+
+const GLISTEN_SHADER := """
+shader_type canvas_item;
+uniform float t = 0.0;
+void fragment() {
+	vec4 c = texture(TEXTURE, UV);
+	float g = dot(c.rgb, vec3(0.3, 0.59, 0.11)) * 1.1 + 0.08;
+	float band = pow(max(0.0, sin((UV.x + UV.y * 0.7) * 11.0 - t * 4.0)), 16.0);
+	float spark = pow(max(0.0, sin(UV.x * 63.0 + t * 2.0) * sin(UV.y * 57.0 - t * 1.7)), 40.0);
+	COLOR = vec4(vec3(g) + band * 0.75 + spark * 0.8, c.a) * COLOR;
+}
+"""
+
+## Colourless, wet-looking, glistening: the shapeshifter's own face.
+static func glisten_material() -> ShaderMaterial:
+	var sh := Shader.new()
+	sh.code = GLISTEN_SHADER
+	var m := ShaderMaterial.new()
+	m.shader = sh
+	return m
 
 func setup(p_run: Run, p_type: String, p_lair: String, start: Vector2) -> void:
 	run = p_run
@@ -63,7 +86,7 @@ func setup(p_run: Run, p_type: String, p_lair: String, start: Vector2) -> void:
 	position = start
 	room_id = map.room_at(start)
 	var size := 58.0 if p_type == "harbinger" else 44.0
-	token = TokenSprite.new(def["token"], size)
+	token = TokenSprite.new(def["token"] if p_type != "werewolf" else "tokens/werewolf_human.png", size)
 	add_child(token)
 	glow = PointLight2D.new()
 	glow.texture = Art.tex("lights/soft.png")
@@ -97,6 +120,10 @@ func _glow_color() -> Color:
 	return Art.SPECTRAL
 
 func current_token() -> String:
+	if type_id == "werewolf" and (not wolf or reverted):
+		return "tokens/werewolf_human.png"
+	if type_id == "shapeshifter" and reverted:
+		return "tokens/shapeshifter_human.png"
 	if type_id == "shapeshifter":
 		if exposed_t <= 0.0 and form == "human":
 			return run.disguise["token"]
@@ -185,11 +212,56 @@ func bind_at(pos: Vector2) -> void:
 func banish() -> void:
 	state = "banished"
 	target_alpha = 0.0
+	alpha = maxf(alpha, 1.0)
+	modulate.a = 1.0
+	match type_id:
+		"vampire":
+			# Crumbles to dust: greys, cracks, and blows away.
+			run.creature_fx("dust", position)
+			var tw := create_tween()
+			tw.tween_property(token.sprite, "modulate", Color(0.55, 0.52, 0.5), 0.35)
+			tw.tween_property(token, "scale", Vector2(1.15, 0.9), 0.25)
+			tw.parallel().tween_property(self, "modulate:a", 0.0, 1.2).set_delay(0.2)
+			return
+		"werewolf", "shapeshifter":
+			# The beast / the borrowed faces fall away: a human body is left behind.
+			reverted = true
+			if type_id == "shapeshifter":
+				token.sprite.material = glisten_material()
+			token.set_token(current_token())
+			token.sprite.modulate = Color(3.0, 3.0, 3.0)
+			run.creature_fx("revert", position)
+			var tw := create_tween()
+			tw.tween_property(token.sprite, "modulate", Color.WHITE, 0.6)
+			tw.tween_interval(1.4)
+			tw.tween_property(self, "modulate:a", 0.0, 0.8)
+			return
 	var tw := create_tween()
 	tw.set_parallel(true)
 	tw.tween_property(token, "scale", Vector2(2.2, 2.2), 1.6)
 	tw.tween_property(self, "modulate:a", 0.0, 1.6)
 	tw.tween_property(glow, "energy", 3.0, 0.4)
+
+## The full moon: the human form tears into the wolf, visibly and for good.
+func transform_to_wolf() -> void:
+	if wolf or type_id != "werewolf":
+		return
+	_show_t = 3.2
+	run.sound_at("werewolf_howl", position, 4.0)
+	run.creature_fx("transform", position)
+	var tw := create_tween()
+	for i in 8:
+		tw.tween_property(token, "rotation", 0.12 if i % 2 == 0 else -0.12, 0.08)
+		tw.parallel().tween_property(token, "scale", Vector2.ONE * (1.0 + i * 0.04), 0.08)
+	tw.tween_callback(func():
+		wolf = true
+		token.set_token(current_token())
+		token.sprite.modulate = Color(2.5, 2.2, 2.0)
+		run.sound_at("werewolf_growl", position, 2.0))
+	tw.tween_property(token.sprite, "modulate", Color.WHITE, 0.5)
+	tw.parallel().tween_property(token, "scale", Vector2(1.3, 1.3), 0.25)
+	tw.tween_property(token, "scale", Vector2.ONE, 0.4)
+	tw.parallel().tween_property(token, "rotation", 0.0, 0.2)
 
 func _set_form(f: String, announce: bool) -> void:
 	if f == form:
@@ -207,7 +279,11 @@ func _set_form(f: String, announce: bool) -> void:
 
 func _process(delta: float) -> void:
 	if state == "banished":
+		if token.sprite.material and type_id == "shapeshifter":
+			state_t += delta
+			token.sprite.material.set_shader_parameter("t", state_t)
 		return
+	_show_t = maxf(0.0, _show_t - delta)
 	state_t += delta
 	cooldown_t = maxf(0.0, cooldown_t - delta)
 	exposed_t = maxf(0.0, exposed_t - delta)
@@ -263,8 +339,8 @@ func _update_visibility(delta: float) -> void:
 		if is_ghost_like():
 			# Ghosts blink in and out while hunting: readable but unsettling.
 			want = 0.9 if fmod(state_t, 0.9) < 0.62 else 0.25
-	if wrath:
-		want = 1.0   # the Lost One shows itself in its fury
+	if wrath or _show_t > 0.0:
+		want = 1.0   # the Lost One's fury; a transformation in full view
 	# A roaming flesh-and-blood creature caught in the beam shows only as a shadow.
 	var silhouette := state == "roam" and want == 0.5 and _glimpsed()
 	token.sprite.modulate = Color(0.12, 0.11, 0.13) if silhouette else Color.WHITE
@@ -418,7 +494,7 @@ func _hunt(delta: float) -> void:
 	var base := speed_for_hunt()
 	if sees:
 		last_seen = player.global_position
-		if type_id == "werewolf":
+		if type_id == "werewolf" and wolf:
 			chase_speed = minf(chase_speed + 28.0 * delta, 288.0 * (0.85 if run.difficulty == "beginner" else 1.0))
 		else:
 			chase_speed = move_toward(chase_speed, base, 60.0 * delta)

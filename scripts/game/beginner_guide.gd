@@ -57,7 +57,7 @@ func _process(delta: float) -> void:
 		if not e.is_empty():
 			_once("tool_" + tool, e["name"], e.get("desc", ""), e["icon"])
 	if eq.prompt != "" and _t > 3.0:
-		_once("interact", "Interacting", "Things you can use or pick up show a prompt at the top of the screen — press E. Hold V to perform a rite when you are ready.", "icons/ui_quill.png")
+		_once("interact", "Interacting", "Doors, stairs and anything you can pick up show a small prompt beside them — press E or Space. Hold V to perform a rite when you are ready.", "icons/ui_quill.png")
 	if _t > 40.0 and p.journal.active_entries().is_empty():
 		_once("hunting_tips", "Where to look", "Ghosts send the Witch's Needle into a frenzy, freeze rooms, answer the Whisper Box, leave handprints under the Wraithlight Lantern, ghost writing and orbs. Flesh-and-blood creatures leave marks instead: bite marks, blood, fur, claws, footprints… Sweep the house with your lantern lit.", "icons/eq_emf.png")
 	if run.is_harbinger():

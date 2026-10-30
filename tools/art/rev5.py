@@ -10,7 +10,8 @@ import math
 import numpy as np
 
 import objects as O
-from core import INK, blur, catmull, col, dilate, ellipse_pts, gradient, noise_tex, radial, rng, save
+from core import INK, OUT, blur, catmull, col, dilate, ellipse_pts, gradient, noise_tex, radial, rng, save
+OUT_TOK = OUT / "tokens"
 from objects import BRASS, P, glow_at, gloss, poly_rot
 
 
@@ -311,7 +312,43 @@ TOKENS5 = [blightness, crawler, lost_one]
 
 
 def build_tokens(only=None):
-    for f in TOKENS5:
+    for f in TOKENS5 + [werewolf_human, shapeshifter_human]:
         if only and f.__name__ not in only:
             continue
         f()
+
+
+# --------------------------------------------------------------------------
+# revision 6: human forms
+# --------------------------------------------------------------------------
+def werewolf_human():
+    """The werewolf before the moon: a rough, unshaven man in a torn brown coat."""
+    import tokens as T
+    T.occupant("werewolf_human", "#3a2a1c", "#6a4a2a", "#4a3626", "#7a2a1a", "b")
+
+
+def shapeshifter_human():
+    """Its true human form: colourless, wet-looking, unnaturally glistening."""
+    import tokens as T
+    from PIL import Image, ImageChops, ImageDraw, ImageFilter
+    T.occupant("shapeshifter_human", "#8a8a8a", "#b0b0b0", "#8a8a8a", "#c0c0c0", "c", pale=True)
+    p = OUT_TOK / "shapeshifter_human.png"
+    im = Image.open(p).convert("RGBA")
+    a = im.getchannel("A")
+    g = im.convert("L").point(lambda v: min(255, int(v * 1.15 + 10)))
+    rgb = Image.merge("RGB", (g, g, g.point(lambda v: min(255, v + 8))))
+    sheen = Image.new("L", im.size, 0)
+    d = ImageDraw.Draw(sheen)
+    for k, (x0, w) in enumerate(((30, 10), (58, 6), (80, 4))):
+        d.polygon([(x0, 18), (x0 + w, 18), (x0 + w - 26, 110), (x0 - 26, 110)], fill=150 - k * 30)
+    sheen = sheen.filter(ImageFilter.GaussianBlur(3))
+    sheen = ImageChops.multiply(sheen, a)
+    rgb = Image.composite(Image.new("RGB", im.size, (255, 255, 255)), rgb, sheen)
+    out = rgb.convert("RGBA")
+    out.putalpha(a)
+    out.save(p)
+
+
+def build_rev6():
+    werewolf_human()
+    shapeshifter_human()

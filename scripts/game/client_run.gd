@@ -137,7 +137,6 @@ func _process(delta: float) -> void:
 	fx.tick(delta)
 	player.input.poll_local(player.input_enabled and not player.dead and state == "playing")
 	player.room_id = map.room_at(player.global_position, player.room_id)
-	_local_stairs()
 	_send_acc += delta
 	if _send_acc >= 1.0 / 60.0 and not player.dead:
 		_send_acc = 0.0
@@ -147,22 +146,6 @@ func _process(delta: float) -> void:
 		player.flashlight_on = not player.flashlight_on
 		Sfx.play("flashlight_click", -4.0)
 	_update_puppets(delta)
-
-func _local_stairs() -> void:
-	if player.velocity.length() < 20.0:
-		return
-	var dest := map.stair_destination(player.global_position, player.get_meta("stair_lock", Vector2i(-99, -99)), player.velocity)
-	if dest == Vector2.INF:
-		if player.has_meta("stair_lock") and HouseMap.to_cell(player.global_position) != player.get_meta("stair_lock"):
-			player.remove_meta("stair_lock")
-		return
-	player.global_position = dest
-	player.set_meta("stair_lock", HouseMap.to_cell(dest))
-	_apply_camera_limits(dest)
-	camera.reset_smoothing()
-	Sfx.play("footstep", -2.0, 0.7)
-	view.set_basement_view(map.floor_at(dest) < 0)
-	Sfx.set_loop_pitch("ambience", 0.78 if map.floor_at(dest) < 0 else 1.0)
 
 # --- Host → client ---------------------------------------------------------------------------
 
@@ -251,6 +234,8 @@ func _update_puppets(delta: float) -> void:
 			tk.sprite.modulate = Color(0.12, 0.11, 0.13) if silhouette else Color.WHITE
 			node.get_meta("glow").energy = 0.0 if silhouette else node.modulate.a * 0.9
 			# The same unnatural looks the host draws: a warping blot, a floor shadow.
+			if tk.token_path == "tokens/shapeshifter_human.png" and tk.sprite.material == null:
+				tk.sprite.material = Creature.glisten_material()
 			if tk.token_path == "tokens/blightness.png" and tk.sprite.material == null:
 				tk.sprite.material = WorldFx.distort_material(0.016, Color(0.78, 0.92, 0.55), 0.5)
 			if tk.sprite.material:
@@ -328,8 +313,14 @@ func apply_private(kind: String, d: Dictionary) -> void:
 				view.set_basement_view(map.floor_at(last) < 0)
 				camera.reset_smoothing())
 		"correct":
+			var was := map.floor_at(player.global_position)
 			player.global_position = Vector2(d["x"], d["y"])
 			_apply_camera_limits(player.global_position)
+			if map.floor_at(player.global_position) != was:
+				# Taken the stairs (the host moves us; walking onto steps does nothing).
+				camera.reset_smoothing()
+				view.set_basement_view(map.floor_at(player.global_position) < 0)
+				Sfx.set_loop_pitch("ambience", 0.78 if map.floor_at(player.global_position) < 0 else 1.0)
 		"dead":
 			player.dead = true
 			player.input_enabled = false

@@ -5,9 +5,9 @@ extends RefCounted
 const HELP := [
 	["WASD / Arrows", "Move"], ["Shift", "Sprint"], ["Mouse", "Aim / facing"], ["F", "Lantern"],
 	["1 – 9", "Equipment"], ["Q / Mouse wheel", "Cycle items"], ["Left click", "Use item"],
-	["E (hold)", "Interact / pick up / retrieve / melt / light"],
+	["E / Space", "Interact: doors, stairs, pick up, relight (hold to melt / light sigils)"],
 	["Tab / Shift+Tab", "Choose suspected entity"], ["V (hold)", "Perform banishing rite"],
-	["Space", "Shove a rival (multiplayer)"], ["R (hold)", "Restart run (solo)"], ["H", "Controls"], ["Esc", "Pause / menu"],
+	["G", "Shove a rival (multiplayer)"], ["R (hold)", "Restart run (solo)"], ["H", "Controls"], ["Esc", "Pause / menu"],
 ]
 
 static func register() -> void:
@@ -17,10 +17,10 @@ static func register() -> void:
 	_key("move_right", [KEY_D, KEY_RIGHT])
 	_key("sprint", [KEY_SHIFT])
 	_key("flashlight", [KEY_F])
-	_key("interact", [KEY_E])
+	_key("interact", [KEY_E, KEY_SPACE])
 	_key("rite", [KEY_V])
 	_key("suspect", [KEY_TAB])
-	_key("shove", [KEY_SPACE])
+	_key("shove", [KEY_G])
 	_key("suspect_prev", [])   # synthesised from Shift+Tab by PlayerInput
 	_key("cycle", [KEY_Q])
 	_key("restart", [KEY_R])

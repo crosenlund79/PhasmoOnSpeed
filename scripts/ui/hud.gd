@@ -95,39 +95,56 @@ class Highlighter extends Node2D:
 ## the presence (level 1–5) grows.
 class NeedleGauge extends Control:
 	var level := 0.0
-	var _phase := 0.0
+	var _y := 0.0          # needle tip deflection (px), a damped spring
+	var _v := 0.0
 	var _flash := 0.0
 	var _shake := Vector2.ZERO
+	var _strikes: Array = []   # recent strike marks [y_sign, age]
+	const RATE := [0.0, 0.15, 1.6, 3.2, 6.5, 18.0]      # kicks per second by level
+	const KICK := [0.0, 25.0, 70.0, 165.0, 210.0, 260.0]  # kick strength (px/s)
+	func _lerp_tab(tab: Array, lv: float) -> float:
+		var i := clampi(int(floor(lv)), 0, 4)
+		return lerpf(tab[i], tab[i + 1], clampf(lv - i, 0.0, 1.0))
 	func _process(delta: float) -> void:
 		var lv := clampf(level, 0.0, 5.0)
-		_phase += delta * (0.6 + pow(maxf(lv - 1.0, 0.0), 1.7) * 2.6) * TAU
-		_flash = maxf(0.0, _flash - delta * 6.0)
-		_shake = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * (1.2 if lv >= 4.9 else 0.0)
+		var inner := size.y * 0.32 - 2.0
+		# Random kicks from the presence, faster and harder as it grows.
+		if randf() < _lerp_tab(RATE, lv) * delta:
+			_v += _lerp_tab(KICK, lv) * (1.0 if randf() < 0.5 else -1.0)
+		_v += (-140.0 * _y - 7.0 * _v) * delta
+		_y += _v * delta
+		if absf(_y) >= inner:
+			_y = signf(_y) * inner
+			if absf(_v) > 30.0:
+				_flash = clampf(absf(_v) / 200.0, 0.4, 1.0)
+				_strikes.append([signf(_y), 0.0])
+				_shake = Vector2(randf_range(-1, 1), signf(_y)) * clampf(absf(_v) / 120.0, 0.0, 2.5)
+			_v = -_v * 0.45
+		_flash = maxf(0.0, _flash - delta * 5.0)
+		_shake = _shake.move_toward(Vector2.ZERO, delta * 12.0)
+		for st in _strikes:
+			st[1] += delta
+		_strikes = _strikes.filter(func(st): return st[1] < 0.35)
 		queue_redraw()
 	func _draw() -> void:
 		var w := size.x
 		var h := size.y
-		var o := _shake
+		var o := _shake + (Vector2(randf_range(-1.5, 1.5), randf_range(-1.0, 1.0)) if level >= 4.9 else Vector2.ZERO)
 		var cy := h * 0.5
 		var tube := Rect2(Vector2(h * 0.3, h * 0.18) + o, Vector2(w - h * 1.6, h * 0.64))
-		var inner := tube.size.y * 0.5 - 2.0
-		# Needle: pivots near the cork, its tip swings inside the glass.
-		var lv := clampf(level, 0.0, 5.0)
-		var amp := 0.4 + maxf(lv - 1.0, 0.0) / 4.0 * inner * 1.9
-		var swing := sin(_phase) * amp + (sin(_phase * 2.7) * amp * 0.3 if lv > 3.0 else 0.0)
-		if lv >= 4.9:
-			swing += randf_range(-inner, inner)
-		if absf(swing) >= inner:
-			swing = signf(swing) * inner
-			_flash = 1.0    # struck the glass
 		var pivot := Vector2(tube.end.x - 6.0, cy) + o
-		var tip := Vector2(tube.position.x + 8.0, cy + swing) + o
+		var tip := Vector2(tube.position.x + 8.0, cy + _y) + o
 		draw_rect(tube, Color(0.86, 0.84, 0.74, 0.32))   # pale old glass behind the needle
+		for st in _strikes:
+			# Where the needle hit: a white chip of light and a hairline crack-glint.
+			var a: float = 1.0 - st[1] / 0.35
+			var yy: float = tube.position.y + 2.0 if st[0] < 0.0 else tube.end.y - 2.0
+			draw_line(Vector2(tube.position.x + 4.0, yy), Vector2(tube.position.x + 22.0, yy), Color(1.0, 0.95, 0.8, a * 0.9), 2.0)
 		draw_line(pivot, tip, Color(0.05, 0.04, 0.05), 3.4, true)
 		draw_line(pivot, tip, Color(0.55, 0.55, 0.6, 0.9), 1.0, true)
 		draw_circle(pivot, 2.4, Color(0.25, 0.22, 0.2))
 		if _flash > 0.0:
-			draw_circle(tip + Vector2(0, signf(swing) * 2.0), 3.0 * _flash + 1.0, Color(1.0, 0.95, 0.8, _flash * 0.9))
+			draw_circle(tip, 2.0 + 5.0 * _flash, Color(1.0, 0.95, 0.8, _flash * 0.9))
 		# Glass: outline, rounded end and a highlight.
 		draw_rect(tube, Color(0.9, 0.86, 0.76, 0.75), false, 1.5)
 		draw_arc(Vector2(tube.position.x, cy) + o, tube.size.y * 0.5, PI * 0.5, PI * 1.5, 16, Color(0.9, 0.86, 0.76, 0.75), 1.5, true)
@@ -152,6 +169,9 @@ var evidence_panel: PanelContainer
 var evidence_grid: GridContainer
 var info_main: Label
 var needle_gauge: NeedleGauge
+var prompt_chip: PanelContainer
+var prompt_icon: TextureRect
+var prompt_text: Label
 var info_sub: Label
 var hold_bar: ProgressBar
 var timer_label: Label
@@ -207,6 +227,7 @@ func setup(p_run) -> void:
 	_build_centre(root)
 	_build_suspect(root)
 	_build_toasts(root)
+	_build_prompt_chip(root)
 	_build_guide(root)
 	_build_big_message(root)
 	_build_suspect_picker(root)
@@ -405,15 +426,16 @@ func _build_centre(root: Control) -> void:
 	iv.alignment = BoxContainer.ALIGNMENT_CENTER
 	info.add_child(iv)
 	needle_gauge = NeedleGauge.new()
-	needle_gauge.custom_minimum_size = Vector2(_px(300), _px(30))
+	needle_gauge.custom_minimum_size = Vector2(_px(320), _px(38))
 	needle_gauge.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	needle_gauge.visible = false
 	iv.add_child(needle_gauge)
-	info_main = _outlined("", _px(24), BONE, Art.font_numeric, 4)
+	# Same typography as the EQUIPMENT / EVIDENCE panels: heading face, outlined.
+	info_main = _outlined("", _px(15), Art.GOLD, Art.font_heading, 3)
 	info_main.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	info_main.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	iv.add_child(info_main)
-	info_sub = _outlined("", _px(15), Color(1.0, 0.87, 0.55), Art.font_heading, 3)
+	info_sub = _outlined("", _px(11), BONE, Art.font_heading, 3)
 	info_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	info_sub.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	iv.add_child(info_sub)
@@ -969,14 +991,52 @@ func _update_info(eq, p) -> void:
 		var col: Color = eq.reading_color
 		col.a = 1.0 if eq.reading_active else 0.7
 		info_main.add_theme_color_override("font_color", col)
-		info_sub.text = eq.prompt if eq.prompt != "" else eq.hint
+		info_sub.text = eq.hint
 	else:
-		info_main.text = eq.hint
-		info_main.add_theme_color_override("font_color", BONE)
-		info_sub.text = eq.prompt
+		info_main.text = eq.hint.to_upper()
+		info_main.add_theme_color_override("font_color", Art.GOLD)
+		# Object actions get their own prompt beside the object; rites stay here.
+		info_sub.text = eq.prompt if eq.prompt.begins_with("[V]") else ""
+	_update_prompt_chip(eq, p)
 	var hp: float = eq.hold_progress()
 	hold_bar.value = hp
 	hold_bar.modulate.a = 1.0 if hp > 0.0 else 0.0
+
+## A small chip beside the highlighted object: icon + "E / SPACE — Open Door".
+func _build_prompt_chip(root: Control) -> void:
+	prompt_chip = PanelContainer.new()
+	var sb := _panel_style()
+	sb.border_color = Color(Art.GOLD.r, Art.GOLD.g, Art.GOLD.b, 0.85)
+	sb.content_margin_top = _px(3)
+	sb.content_margin_bottom = _px(3)
+	prompt_chip.add_theme_stylebox_override("panel", sb)
+	prompt_chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	prompt_chip.visible = false
+	root.add_child(prompt_chip)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", _px(6))
+	prompt_chip.add_child(h)
+	prompt_icon = Art.icon_rect("icons/ui_quill.png", _px(22))
+	h.add_child(prompt_icon)
+	prompt_text = _outlined("", _px(13), BONE, Art.font_heading, 3)
+	h.add_child(prompt_text)
+
+func _update_prompt_chip(eq, p) -> void:
+	var show: bool = not p.dead and not spectating and eq.interact_pos != Vector2.INF and eq.prompt.begins_with("E /")
+	prompt_chip.visible = show
+	if not show:
+		return
+	if prompt_text.text != eq.prompt:
+		prompt_text.text = eq.prompt
+		prompt_icon.texture = Art.tex(eq.interact_icon if eq.interact_icon != "" else "icons/ui_quill.png")
+		prompt_chip.reset_size()
+	var vs := get_viewport().get_visible_rect().size
+	var at: Vector2 = get_viewport().get_canvas_transform() * eq.interact_pos
+	var sz := prompt_chip.size
+	var pos := at + Vector2(-sz.x * 0.5, -sz.y - 34.0)
+	pos.x = clampf(pos.x, 190.0, vs.x - 190.0 - sz.x)
+	pos.y = clampf(pos.y, 200.0, vs.y - 170.0 - sz.y)
+	prompt_chip.position = pos
 
 func _update_notifications(delta: float, p) -> void:
 	var y := -58.0

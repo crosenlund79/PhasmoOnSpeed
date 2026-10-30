@@ -287,8 +287,8 @@ func _build_stairs() -> void:
 				var wide: Vector2i = pair[3]
 				s.position = (HouseMap.cell_center(cell) + HouseMap.cell_center(wide)) * 0.5
 				width = C * 2.0
-			s.scale = Vector2(width / maxf(1.0, ts.x), C * 1.25 / maxf(1.0, ts.y))
-			s.position += Vector2(cell - land) * C * 0.12   # the flight drops past the cell edge
+			# Exactly the stair cells: flush with the walls, never into a neighbouring room.
+			s.scale = Vector2(width / maxf(1.0, ts.x), C / maxf(1.0, ts.y))
 			under_layer.add_child(s)
 
 func _build_furniture() -> void:
@@ -572,10 +572,54 @@ func set_basement_view(on: bool) -> void:
 	create_tween().tween_property(modulate_node, "color", _effective_darkness(), 0.6)
 
 func _effective_darkness() -> Color:
-	return _darkness * Color(0.74, 0.76, 0.84) if basement_view else _darkness
+	var c := _darkness * Color(0.74, 0.76, 0.84) if basement_view else _darkness
+	match mood:
+		"moon": c *= Color(0.95, 1.05, 1.35)    # full moon: a cold, brighter blue
+		"mist": c *= Color(1.3, 0.62, 0.64)     # blood mist: everything reddens
+	return c
+
+## Dread escalation: "moon" (werewolf) or "mist" (vampire). Permanent once set.
+var mood := ""
+var _mist: Array = []
+
+func set_mood(m: String) -> void:
+	if mood == m:
+		return
+	mood = m
+	create_tween().tween_property(modulate_node, "color", _effective_darkness(), 2.5)
+	if m == "moon":
+		for l in lights:
+			if l["kind"] == "moon":
+				l["base"] = float(l["base"]) * 2.4
+				l["light"].color = Color(0.78, 0.86, 1.0)
+	elif m == "mist":
+		# Two drifting layers of thick red fog over the whole house; thin enough to see through.
+		var ws := Vector2(map.w, map.h) * C
+		for k in 2:
+			var s := Sprite2D.new()
+			s.texture = Art.tex("decor/damp.png")
+			s.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+			s.region_enabled = true
+			s.region_rect = Rect2(Vector2.ZERO, ws * (0.7 + k * 0.25))
+			s.scale = Vector2.ONE / (0.7 + k * 0.25)
+			s.centered = false
+			var mat := ShaderMaterial.new()
+			mat.shader = _mask_shader
+			mat.set_shader_parameter("tint", Color(0.42, 0.03, 0.04, 0.42 - k * 0.1))
+			s.material = mat
+			s.modulate.a = 0.0
+			s.z_index = 2 + k
+			overlay_layer.add_child(s)
+			create_tween().tween_property(s, "modulate:a", 1.0, 4.0)
+			_mist.append(s)
 
 func _process(delta: float) -> void:
 	_t += delta
+	for k in _mist.size():
+		var s: Sprite2D = _mist[k]
+		var r := s.region_rect
+		r.position = Vector2(_t * (9.0 if k == 0 else -6.0), sin(_t * 0.07 + k) * 40.0 + _t * 3.0)
+		s.region_rect = r
 	if _flicker_time > 0.0:
 		_flicker_time -= delta
 		if _flicker_time <= 0.0:
