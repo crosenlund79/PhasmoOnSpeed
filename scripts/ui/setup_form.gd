@@ -12,7 +12,10 @@ const INK_SOFT := Color(0.3, 0.22, 0.15)
 
 var setup := {}
 var editable := true
-var on_parchment := false      # dark ink labels (lobby panel) instead of pale ones (backdrop)
+var on_parchment := false
+var marker_in_normal := true   # solo: the Ghost Marker is offered for both game types
+var _marker_row: HBoxContainer
+var _marker_buttons := {}      # dark ink labels (lobby panel) instead of pale ones (backdrop)
 var _mode_buttons := {}
 var _diff_buttons := {}
 var _moon_buttons := {}
@@ -63,6 +66,11 @@ func _ready() -> void:
 	_custom_rows.append(_row("Blood Moon", func(row):
 		for m in [["on", "On"], ["off", "Off"], ["random", "Random"]]:
 			_moon_buttons[m[0]] = _toggle(row, m[1], "blood_moon", m[0], 140)))
+	_marker_row = _row("Ghost Marker", func(row):
+		for m in [["off", "Off"], ["on", "Always Show"]]:
+			_marker_buttons[m[0]] = _toggle(row, m[1], "ghost_marker", m[0], 180)
+		var note := Art.label("playtesting aid", 14, INK_SOFT if on_parchment else Color(0.7, 0.66, 0.6), Art.font_italic)
+		row.add_child(note))
 	_summary = Art.label("", 16, INK_SOFT if on_parchment else Color(0.82, 0.78, 0.7), Art.font_italic)
 	_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -114,6 +122,10 @@ func refresh() -> void:
 		_moon_buttons[k].set_pressed_no_signal(setup["blood_moon"] == k)
 	for r in _custom_rows:
 		r.visible = custom
+	_marker_row.visible = custom or marker_in_normal
+	for k in _marker_buttons:
+		_marker_buttons[k].set_pressed_no_signal(str(setup.get("ghost_marker", "off")) == k)
+		_marker_buttons[k].disabled = not editable
 	_house_pick.select(maxi(0, _house_ids.find(setup["house"])))
 	_entity_pick.select(maxi(0, _entity_ids.find(setup["entity"])))
 	for b in _mode_buttons.values() + _diff_buttons.values() + _moon_buttons.values():
@@ -150,6 +162,8 @@ static func summary_text(s: Dictionary) -> String:
 		text = "Chosen: " + ", ".join(fixed) + ".  "
 	if not rolled.is_empty():
 		text += "Left to chance: " + ", ".join(rolled) + "."
+	if str(s.get("ghost_marker", "off")) == "on":
+		text += "  The entity is always marked."
 	if s["difficulty"] != "random":
 		text += "\n" + Defs.DIFFICULTY_INFO[s["difficulty"]]["desc"]
 	return text

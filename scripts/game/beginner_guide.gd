@@ -70,7 +70,8 @@ func _process(delta: float) -> void:
 		if found.size() == 1:
 			_once("first_evidence", "Evidence recorded!", "It now glows in the EVIDENCE panel (top-right). Every entity leaves exactly three kinds of evidence — each one you find rules some out.", Defs.EVIDENCE[found[0]]["icon"], true)
 		if found.size() >= 1:
-			var fits: Array = Defs.ORDINARY_CREATURES.filter(func(id): return found.all(func(ev): return ev in Defs.CREATURES[id]["evidence"]))
+			var j: Journal = p.journal
+			var fits: Array = Defs.ORDINARY_CREATURES.filter(func(id): return found.all(func(ev): return ev in Defs.CREATURES[id]["evidence"]) and not Defs.CREATURES[id]["evidence"].any(func(ev): return j.state(ev) == "ruled_out"))
 			var names: Array = fits.map(func(id): return Defs.creature_name(id))
 			var text := ""
 			if fits.is_empty():

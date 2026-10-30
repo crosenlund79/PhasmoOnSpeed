@@ -351,6 +351,7 @@ func _build_settings(root: Control) -> void:
 	_slider(v, "Card size", "ev_notify_size", 0.6, 1.6, 0.05, false)
 	v.add_child(Art.label("Occupants", 18, Color(0.35, 0.22, 0.12), Art.font_heading))
 	_check(v, "Show occupant names", "npc_names")
+	_check(v, "Safe names (original characters; off = famous fictional names, private use)", "safe_names")
 	v.add_child(Art.button("Close", func(): settings_panel.visible = false))
 
 func _build_help(root: Control) -> void:

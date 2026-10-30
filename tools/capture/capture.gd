@@ -238,6 +238,18 @@ func _shot(s: String) -> void:
 		run.creature.set_process(false)
 		await _wait(60)
 		await _save(s)
+	elif s == "deduction":
+		# Ruled-out evidence, a found one, the crossed-out suspects and the ghost marker.
+		var run: Run = Game.start_run("ashgrove", 5, "blightness", "normal", false, {"ghost_marker": true})
+		await _wait(5)
+		run.creature.position = run.player.global_position + Vector2(130, -30)
+		run.discover(run.player, "writing", run.player.room_id)
+		for ev in ["freezing", "orbs", "bite_marks"]:
+			run.hud.toggle_ruled_out(ev)
+		run.player.suspect = "blightness"
+		run.hud.refresh()
+		await _wait(60)
+		await _save("deduction")
 	elif s.begins_with("overview_"):
 		var run: Run = Game.start_run(s.substr(9), 5, "shade")
 		await _wait(10)

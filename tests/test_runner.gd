@@ -25,6 +25,7 @@ func _ready() -> void:
 		"test_environment", "test_witch_needle", "test_voodoo_doll", "test_new_ghosts",
 		"test_counterattacks", "test_escalations", "test_prompt_and_needle", "test_audio_overrides",
 		"test_audio_export", "test_game_setup",
+		"test_blightness_rushes", "test_safe_names", "test_temperatures", "test_ghost_marker_and_ruled_out",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -956,3 +957,96 @@ func test_game_setup() -> void:
 	await _frames(200)
 	check(SaveData.house_record("blackwood", "hellbound")["runs"] == 1, "recorded as a Hellbound run")
 	SaveData.reset_all()
+
+# --- Playtesting refinements ------------------------------------------------------------
+
+func test_blightness_rushes() -> void:
+	var run := await _start("blackwood", "blightness", 31)
+	var c := run.creature
+	c.wait_t = 0.0
+	var dt := 1.0 / 60.0
+	var fast := 0
+	var still_runs: Array = []
+	var still := 0
+	var prev := c.position
+	for i in 600:
+		await get_tree().process_frame
+		var v: float = c.position.distance_to(prev) / dt
+		prev = c.position
+		check(run.map.walkable(HouseMap.to_cell(c.position)), "never inside a wall")
+		if v > 330.0:
+			fast += 1
+			if still > 0:
+				still_runs.append(still)
+			still = 0
+		elif v < 1.0:
+			still += 1
+	check(fast > 10, "it rushes (%d fast frames)" % fast)
+	check(still_runs.any(func(n): return n >= 22), "and stops to shudder ~0.5 s between rushes (%s)" % str(still_runs.slice(0, 6)))
+	# Hunting: the same lunges, closing on a hunter it can see.
+	run.player.global_position = HouseMap.cell_center(run.map.nearest_walkable(HouseMap.to_cell(c.position + Vector2(160, 0))))
+	run.player.invuln = 99.0
+	c.begin_hunt(c.position, false)
+	var d0 := c.position.distance_to(run.player.global_position)
+	await _frames(200)
+	check(c.position.distance_to(run.player.global_position) < d0 or run.player.invuln < 99.0, "hunting, it lunges after the hunter")
+
+func test_safe_names() -> void:
+	SaveData.set_setting("safe_names", true)
+	var run := await _start("ashgrove", "shade", 32)
+	var o: Occupant = run.occupants[0]
+	var nid: int = o.person["name_id"]
+	var personality: String = o.person["personality"]
+	check(o.person["name"] == Occupants.NAMES[nid], "safe names by default")
+	var r: Dictionary = Rankings.table("Me", 0)[0]
+	check(r["name"] == "Professor Spookwell", "original legends by default")
+	_cleanup_scene()
+	await get_tree().process_frame
+	SaveData.set_setting("safe_names", false)
+	var run2 := await _start("ashgrove", "shade", 32)
+	var o2: Occupant = run2.occupants[0]
+	check(o2.person["name_id"] == nid and o2.person["personality"] == personality, "same identity and personality")
+	check(o2.person["name"] == Occupants.FICTION_NAMES[nid], "recognisable name with Safe Names off (%s)" % o2.person["name"])
+	var names: Array = Rankings.table("Me", 0).map(func(x): return x["name"])
+	check("Harry Potter" in names and "Abraham Van Helsing" in names and Rankings.rank_for(9000) == Rankings.rank_for(9000), "fictional rivals, same rankings")
+	SaveData.set_setting("safe_names", true)
+
+func test_temperatures() -> void:
+	var run := await _start("ashgrove", "shade", 33)
+	var ph := run.phenomena
+	var outdoor: Array = run.map.rooms.filter(func(r): return r["outdoor"])
+	var indoor: Array = run.map.indoor_rooms().filter(func(r): return r["id"] != run.creature.lair_room)
+	var avg := func(rs: Array) -> float:
+		var t := 0.0
+		for r in rs:
+			t += ph.temperature(r["id"])
+		return t / maxf(1.0, rs.size())
+	check(absf(avg.call(outdoor) - avg.call(indoor)) < 2.0, "outdoors ≈ indoors (%.1f vs %.1f)" % [avg.call(outdoor), avg.call(indoor)])
+	check(ph.temperature(run.creature.lair_room) < 0.0, "a freezing ghost's room still freezes")
+
+func test_ghost_marker_and_ruled_out() -> void:
+	var run: Run = Game.start_run("ashgrove", 34, "shapeshifter", "normal", false, {"ghost_marker": true})
+	await _frames(3)
+	var markers: Array = run.world_text.get_children().filter(func(n): return n is WorldFx.GhostMarker)
+	check(markers.size() == 1 and markers[0].visible and markers[0].position == run.creature.position, "marker follows the entity")
+	# Ruled-out evidence: a reversible deduction, overridden by a real find, never scored.
+	var j: Journal = run.player.journal
+	run.hud.toggle_ruled_out("wrong_reflection")
+	check(j.state("wrong_reflection") == "ruled_out" and run.hud._ev_discs["wrong_reflection"].ruled, "ruled out and crossed through")
+	run.player.suspect = "shapeshifter"
+	run.hud.refresh()
+	var live: Array = run.hud.suspect_box.get_children().filter(func(n): return not n.is_queued_for_deletion())
+	var row: HBoxContainer = live[1]
+	var idx := Defs.ORDINARY_CREATURES.find("shapeshifter")
+	check(row.get_child(idx).get_child(0).ruled, "a contradicted entity is crossed in the suspect list but still selectable")
+	run.hud.toggle_ruled_out("wrong_reflection")
+	check(j.state("wrong_reflection") == "unknown", "restored")
+	run.hud.toggle_ruled_out("shed_skin")
+	run.discover(run.player, "shed_skin", run.player.room_id)
+	check(j.state("shed_skin") == "found" and not run.hud._ev_discs["shed_skin"].ruled, "found after all: Found wins")
+	run.hud.toggle_ruled_out("mimic_voice")
+	check(run.build_summary()["true_evidence"] == 1, "ruling out earns nothing")
+	_cleanup_scene()
+	await get_tree().process_frame
+	var plain := await _start("ashgrove", "shade", 34)
+	check(plain.world_text.get_children().filter(func(n): return n is WorldFx.GhostMarker).is_empty(), "no marker by default")

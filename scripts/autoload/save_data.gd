@@ -22,7 +22,7 @@ func _defaults() -> Dictionary:
 			"equip_labels": true, "ev_labels": true, "suspect_labels": true,
 			"equip_hud_opacity": 0.9, "hud_scale": 1.0, "difficulty": "normal",
 			"ev_notify": true, "ev_notify_opacity": 0.95, "ev_notify_size": 1.0,
-			"npc_names": true, "last_address": "127.0.0.1", "last_port": 24680},
+			"npc_names": true, "safe_names": true, "last_address": "127.0.0.1", "last_port": 24680},
 		"records": {"best_score": 0, "best_score_time": 0.0, "best_score_house": "", "houses": {}},
 		"stats": {},
 		"history": [],

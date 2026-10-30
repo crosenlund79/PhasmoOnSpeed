@@ -129,6 +129,11 @@ func _ready() -> void:
 	add_child(hud)
 	hud.setup(self)
 	player.journal.discovered.connect(hud.on_discovered)
+	if setup_info.get("ghost_marker", false):
+		var gm := WorldFx.GhostMarker.new()
+		gm.z_index = 50
+		gm.source = func(): return [] if creature == null or creature.state == "banished" else [creature.position, creature.is_hunting()]
+		world_text.add_child(gm)
 	if Defs.rules(difficulty) == "beginner":
 		var guide := BeginnerGuide.new()
 		guide.setup(self)
@@ -226,7 +231,8 @@ func _spawn_creature(type_id: String, lair: String) -> void:
 	record_event("creature", {"actor": _creature_actor_id(), "type": type_id, "lair": lair, "size": creature.token.diameter,
 		"token": creature.current_token(), "disguise": disguise.get("name", "") if type_id == "shapeshifter" else ""})
 	# Every entity gets a (possibly unused) disguise name so the network never hints at its type.
-	record_event("creature_meta", {"actor": _creature_actor_id(), "disguise": disguise.get("name", ""), "size": creature.token.diameter})
+	record_event("creature_meta", {"actor": _creature_actor_id(), "disguise": disguise.get("name", ""),
+		"disguise_id": int(disguise.get("name_id", -1)), "size": creature.token.diameter})
 
 func _creature_actor_id() -> String:
 	return creature.actor_id + ("h" if creature.type_id == "harbinger" else "")
@@ -285,7 +291,7 @@ func _spawn_occupants() -> void:
 		occupants.append(o)
 		recorder.register_actor(o.actor_id, "npc", o.token_path, 36.0)
 		recorder.data["actors"][o.actor_id]["name"] = o.person["name"]
-		record_event("npc", {"actor": o.actor_id, "name": o.person["name"], "token": o.token_path})
+		record_event("npc", {"actor": o.actor_id, "name": o.person["name"], "name_id": int(o.person.get("name_id", -1)), "token": o.token_path})
 
 # --- Queries used by actors ---------------------------------------------------------
 

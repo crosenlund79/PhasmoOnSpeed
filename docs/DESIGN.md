@@ -133,6 +133,25 @@ the replay and statistics.
   cast over the house and a red moon beside the hearts. It coexists with the
   werewolf's full moon (which stays red) and the vampire's mist. Stored in replays.
 
+## Playtesting refinements
+
+* **Blightness** moves in rushes: it picks the furthest point of its path it can
+  reach in a straight, clear line (≤ 140 px roaming, 200 px hunting), launches at
+  430 / 640 px/s, slams to a stop and shudders for ~0.5 s, then picks the next line.
+  Every hunting rush pings. Walls and furniture stop a rush dead; it never steers.
+* **Safe Names** (Settings, default ON): original names. OFF swaps occupants and the
+  offline legends for recognisable fictional characters (private use only). Names
+  are display-only over stable ids (`name_id`, legend `id`); personalities, scores
+  and saves are unaffected. Each multiplayer player sees names per their own setting.
+* **Temperatures**: outdoors 12–14.5 °C, ordinary rooms 12.5–15 °C; the entity's
+  room 4–8 °C, below zero only for freezing ghosts.
+* **Always Show Ghost Marker** (setup, default Off; solo always, matches in Custom
+  Game): a marker above the entity, red while it hunts. Visual only.
+* **Ruled-out evidence**: right-click an evidence icon to mark it ruled out (red
+  cross) and again to restore it. A local, unscored deduction; finding it later
+  makes it Found. Entities contradicted by a ruled-out type are crossed in the
+  SUSPECTED list but stay selectable.
+
 ## Beginner Mode
 
 A guided first investigation (`scripts/game/beginner_guide.gd`): one-off tips

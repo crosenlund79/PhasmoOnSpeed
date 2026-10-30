@@ -87,6 +87,7 @@ func _build_room() -> void:
 	# Match setup — the host decides for everyone; rivals see it update live.
 	setup_form = SetupForm.new(Net.options.get("setup", {}), Net.is_host())
 	setup_form.on_parchment = true
+	setup_form.marker_in_normal = false   # matches: a Custom Game option only
 	setup_form.changed.connect(func(st): Net.set_option("setup", st))
 	room_box.add_child(setup_form)
 	var opts := HBoxContainer.new()

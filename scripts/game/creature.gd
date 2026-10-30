@@ -49,8 +49,14 @@ var _talk_t := 8.0
 var angered_t := 0.0        # voodoo doll: enraged flesh-and-blood creature
 var wrath := false          # Lost One: its keepsake was touched
 var wrath_target: Player = null
-var _hop_acc := 0.0         # Blightness lurches
-var _hops := 0
+# Blightness: rush in a straight line, stop, shake/recover ~0.5 s, pick a new line.
+const BLIGHT_RUSH_SPEED := {"roam": 430.0, "hunt": 640.0}
+const BLIGHT_RUSH_REACH := {"roam": 140.0, "hunt": 200.0}
+var _rush_dir := Vector2.ZERO
+var _rush_left := 0.0
+var _rush_target_i := -1
+var _recover_t := 0.0
+var _rushes := 0
 var _distort: ShaderMaterial
 var wolf := false           # werewolf: human until dread brings the full moon
 var reverted := false       # werewolf / shapeshifter after banishment: their human form
@@ -395,17 +401,7 @@ func _move_along(delta: float, speed: float) -> bool:
 	if path_i >= path.size():
 		return false
 	if type_id == "blightness":
-		# It does not glide: it lurches, and every lurch pings.
-		_hop_acc += delta
-		var interval := 0.3 if is_hunting() else 0.55
-		if _hop_acc < interval:
-			return true
-		delta = _hop_acc
-		_hop_acc = 0.0
-		_hops += 1
-		if is_hunting() or _hops % 2 == 0:
-			run.sound_at("blight_ping", position, -6.0 if is_hunting() else -14.0, rng.randf_range(0.95, 1.05), 900.0)
-			run.creature_fx("ping", position)
+		return _blight_move(delta)
 	var target_pt := path[path_i]
 	var to := target_pt - position
 	if to.length() > 90.0:
@@ -423,9 +419,83 @@ func _move_along(delta: float, speed: float) -> bool:
 		token.face(to.angle(), delta, 10.0)
 	return path_i < path.size()
 
+## The Blightness never steers: it launches along a straight, clear line toward
+## the furthest point of its path it can reach, slams to a stop, shudders for half
+## a second, then picks the next line. Same pattern roaming and hunting.
+func _blight_move(delta: float) -> bool:
+	var mode := "hunt" if is_hunting() else "roam"
+	if _rush_left > 0.0:
+		var step := minf(float(BLIGHT_RUSH_SPEED[mode]) * delta, _rush_left)
+		var nxt := position + _rush_dir * step
+		if map.walkable(HouseMap.to_cell(nxt)):
+			position = nxt
+			_rush_left -= step
+		else:
+			_rush_left = 0.0   # hit a wall or furniture: stop dead
+		token.face(_rush_dir.angle(), delta, 30.0)
+		token.scale = Vector2(1.4, 0.75)   # smeared out by its own speed
+		if _rush_left <= 0.0:
+			if _rush_target_i >= 0:
+				path_i = maxi(path_i, _rush_target_i + 1)
+			_recover_t = rng.randf_range(0.42, 0.58)
+		return true
+	if _recover_t > 0.0:
+		# Shaking itself back together.
+		_recover_t -= delta
+		var k := clampf(_recover_t / 0.5, 0.0, 1.0)
+		token.scale = Vector2.ONE * (1.0 + 0.08 * k)
+		token.position = Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1)) * 3.5 * k
+		token.rotation = rng.randf_range(-0.25, 0.25) * k
+		if _distort:
+			_distort.set_shader_parameter("strength", 0.016 + 0.03 * k)
+		return path_i < path.size() or _recover_t > 0.0
+	token.position = Vector2.ZERO
+	token.rotation = 0.0
+	token.scale = Vector2.ONE
+	if path_i >= path.size():
+		return false
+	if position.distance_to(path[path_i]) > 90.0:
+		position = path[path_i]   # staircase link between floors
+		path_i += 1
+		_recover_t = 0.3
+		return true
+	# The furthest point ahead it can reach in one straight, unobstructed rush.
+	var best := -1
+	var reach: float = BLIGHT_RUSH_REACH[mode]
+	for k in range(path_i, mini(path_i + 10, path.size())):
+		if k > path_i and path[k].distance_to(path[k - 1]) > 90.0:
+			break
+		if position.distance_to(path[k]) > reach or not _clear_line(position, path[k]):
+			break
+		best = k
+	if best < 0:
+		best = path_i
+	var tgt := path[best]
+	if position.distance_to(tgt) < 4.0:
+		path_i = best + 1
+		return path_i < path.size()
+	_rush_dir = (tgt - position).normalized()
+	_rush_left = position.distance_to(tgt)
+	_rush_target_i = best
+	_rushes += 1
+	if _distort:
+		_distort.set_shader_parameter("strength", 0.016)
+	if is_hunting() or _rushes % 2 == 0:
+		run.sound_at("blight_ping", position, -6.0 if is_hunting() else -14.0, rng.randf_range(0.95, 1.05), 900.0)
+		run.creature_fx("ping", position)
+	return true
+
+func _clear_line(a: Vector2, b: Vector2) -> bool:
+	var n := int(ceil(a.distance_to(b) / 8.0))
+	for i in range(1, n + 1):
+		if not map.walkable(HouseMap.to_cell(a.lerp(b, float(i) / n))):
+			return false
+	return true
+
 func _set_path_to(p: Vector2) -> void:
 	path = map.path(position, p)
 	path_i = 0
+	_rush_target_i = -1   # (a rush already under way keeps its line; it just won't skip ahead)
 
 func _roam(delta: float) -> void:
 	if wait_t > 0.0:

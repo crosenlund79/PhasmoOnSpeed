@@ -102,6 +102,15 @@ func _ready() -> void:
 	add_child(hud)
 	hud.setup(self)
 	player.journal.discovered.connect(hud.on_discovered)
+	if setup_info.get("ghost_marker", false):
+		var gm := WorldFx.GhostMarker.new()
+		gm.z_index = 50
+		gm.source = func():
+			for id in _actors:
+				if str(id).begins_with("creature"):
+					return [_actors[id].global_position, hud != null and hud._hunting]
+			return []
+		world_text.add_child(gm)
 	if Defs.rules(difficulty) == "beginner":
 		var guide := BeginnerGuide.new()
 		guide.setup(self)
@@ -271,10 +280,14 @@ func apply_event(type: String, d: Dictionary) -> void:
 		"screen_shake":
 			hud.shake(float(d["amount"]))
 		"npc":
-			_npc_names[d["actor"]] = d["name"]
+			# Names follow this player's own Safe Names setting (same identity everywhere).
+			var nm: String = Occupants.display_name(int(d["name_id"])) if int(d.get("name_id", -1)) >= 0 else d["name"]
+			_npc_names[d["actor"]] = nm
 			if _npc_tags.has(d["actor"]):
-				_npc_tags[d["actor"]].set_name(d["name"])
+				_npc_tags[d["actor"]].set_name(nm)
 		"creature_meta":
+			if int(d.get("disguise_id", -1)) >= 0:
+				d["disguise"] = Occupants.display_name(int(d["disguise_id"]))
 			_creature_meta[d["actor"]] = d
 			if _actors.has(d["actor"]) and _actors[d["actor"]].has_meta("tag"):
 				_actors[d["actor"]].get_meta("tag").set_name(d.get("disguise", ""))

@@ -112,7 +112,7 @@ func show_match_results(results: Dictionary, replay: Dictionary) -> void:
 ##   {mode: "normal"|"custom", house: id|"random", entity: id|"random",
 ##    difficulty: id|"random", blood_moon: "on"|"off"|"random"}
 ## A Normal Game always rolls house, entity and Blood Moon; only the difficulty is chosen.
-const DEFAULT_SETUP := {"mode": "normal", "house": "random", "entity": "random", "difficulty": "normal", "blood_moon": "random"}
+const DEFAULT_SETUP := {"mode": "normal", "house": "random", "entity": "random", "difficulty": "normal", "blood_moon": "random", "ghost_marker": "off"}
 
 ## Resolves every "random" once. The entity stays "" when random: the run itself
 ## rolls it from its seed (so nobody — not even a multiplayer client — learns it early).
@@ -135,6 +135,7 @@ func resolve_setup(setup: Dictionary, rng: RandomNumberGenerator = null) -> Dict
 	out["difficulty"] = Defs.RANDOM_DIFFICULTIES[rng.randi_range(0, Defs.RANDOM_DIFFICULTIES.size() - 1)] if out["rolled"]["difficulty"] else s["difficulty"]
 	out["rolled"]["blood_moon"] = s["blood_moon"] == "random"
 	out["blood_moon"] = (rng.randf() < Defs.BLOOD_MOON_CHANCE) if out["rolled"]["blood_moon"] else s["blood_moon"] == "on"
+	out["ghost_marker"] = str(s.get("ghost_marker", "off")) == "on"   # playtesting aid, never random
 	return out
 
 ## Solo: resolve the chosen setup and start the run.

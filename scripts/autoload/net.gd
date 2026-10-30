@@ -250,7 +250,9 @@ func start_match(creature_override: String = "", run_seed: int = -1) -> void:
 	var rs := Game.resolve_setup(options["setup"])
 	house = rs["house"]
 	var entity: String = creature_override if creature_override != "" else rs["entity"]
-	var shared := {"difficulty": rs["difficulty"], "blood_moon": rs["blood_moon"], "mode": rs["mode"], "rolled": rs["rolled"]}
+	rs["ghost_marker"] = rs["ghost_marker"] and rs["mode"] == "custom"   # a Custom Game option in matches
+	var shared := {"difficulty": rs["difficulty"], "blood_moon": rs["blood_moon"], "mode": rs["mode"], "rolled": rs["rolled"],
+		"ghost_marker": rs["ghost_marker"]}
 	s_start.rpc(house, seed_value, r, options, shared)
 	host_run = Game.start_match_host(house, seed_value, entity, r, rs["difficulty"], rs["blood_moon"], rs)
 

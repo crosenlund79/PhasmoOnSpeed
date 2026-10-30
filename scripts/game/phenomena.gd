@@ -50,7 +50,9 @@ func start_for(c: Creature) -> void:
 	source = c.type_id
 	evidence = Defs.CREATURES[source]["evidence"]
 	for r in map.rooms:
-		temps[r["id"]] = rng.randf_range(6.0, 9.0) if r["outdoor"] else rng.randf_range(11.0, 16.0)
+		# Ordinary rooms and the outdoors sit close together (12–15 °C) so the entity's
+		# cold room stands out; only freezing ghosts drop it below zero.
+		temps[r["id"]] = rng.randf_range(12.0, 14.5) if r["outdoor"] else rng.randf_range(12.5, 15.0)
 	if source != "harbinger":
 		temps[c.lair_room] = rng.randf_range(-7.0, -2.5) if "freezing" in evidence else rng.randf_range(4.0, 8.0)
 	_interact_t = rng.randf_range(4.0, 8.0)

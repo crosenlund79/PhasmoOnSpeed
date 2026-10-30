@@ -9,6 +9,21 @@ const NAMES := [
 	"Dorothea Vane", "Percival Moss", "Euphemia Grey", "Barnaby Stroud", "Hester Lark", "Ignatius Pole",
 	"Clementine Ash", "Rupert Hale",
 ]
+## Safe Names OFF (private experimentation): recognisable characters from gothic
+## and supernatural fiction, by the same index as NAMES — the stable identity.
+const FICTION_NAMES := [
+	"Mina Harker", "Jonathan Harker", "Lucy Westenra", "Arthur Holmwood", "Carmilla Karnstein", "R. M. Renfield",
+	"Dorian Gray", "Victor Frankenstein", "Elizabeth Lavenza", "Henry Jekyll", "Edward Hyde", "Ichabod Crane",
+	"Katrina Van Tassel", "Roderick Usher", "Madeline Usher", "Quincey Morris", "Jacob Marley", "Ebenezer Scrooge",
+	"Laura Hollis", "Basil Hallward",
+]
+
+## The name shown for a NAMES entry, following the Safe Names setting.
+static func display_name(name_id: int) -> String:
+	if name_id < 0 or name_id >= NAMES.size():
+		return "Stranger"
+	return NAMES[name_id] if SaveData.settings().get("safe_names", true) else FICTION_NAMES[name_id]
+
 const TOKENS := ["tokens/occupant_a.png", "tokens/occupant_b.png", "tokens/occupant_c.png",
 	"tokens/occupant_d.png", "tokens/occupant_e.png", "tokens/occupant_f.png"]
 
@@ -83,17 +98,19 @@ static func cast_for(_map: HouseMap, rng: RandomNumberGenerator, count: int) -> 
 	_shuffle(kinds, rng)
 	var out: Array = []
 	for i in count:
-		out.append({"name": names[i], "token": tokens[i % tokens.size()], "personality": kinds[i % kinds.size()]})
+		var nid := NAMES.find(names[i])
+		out.append({"name": display_name(nid), "name_id": nid, "token": tokens[i % tokens.size()], "personality": kinds[i % kinds.size()]})
 	return out
 
 static func disguise_for(rng: RandomNumberGenerator, taken: Array) -> Dictionary:
-	var used_names := taken.map(func(p): return p["name"])
+	var used_ids := taken.map(func(p): return int(p.get("name_id", NAMES.find(p["name"]))))
 	var used_tokens := taken.map(func(p): return p["token"])
 	# A disguise is a plausible extra occupant: an unused name and an unused look.
-	var names := NAMES.filter(func(n): return not (n in used_names))
+	var ids: Array = range(NAMES.size()).filter(func(i): return not (i in used_ids))
 	var tokens := TOKENS.filter(func(t): return not (t in used_tokens))
 	var kinds := PERSONALITIES.keys()
-	return {"name": names[rng.randi_range(0, names.size() - 1)],
+	var nid: int = ids[rng.randi_range(0, ids.size() - 1)]
+	return {"name": display_name(nid), "name_id": nid,
 		"token": tokens[rng.randi_range(0, tokens.size() - 1)] if not tokens.is_empty() else TOKENS[0],
 		"personality": kinds[rng.randi_range(0, kinds.size() - 1)]}
 

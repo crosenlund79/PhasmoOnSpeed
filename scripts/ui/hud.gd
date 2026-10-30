@@ -51,7 +51,20 @@ class Disc extends Control:
 		icon.size = Vector2(d * 0.64, d * 0.64)
 		add_child(icon)
 
+	var ruled := false   # the player believes this evidence is absent
+
+	func set_ruled(r: bool) -> void:
+		ruled = r
+		if r:
+			ring = Color(0.55, 0.1, 0.08, 0.95)
+			ring_w = 2.0
+			glow = 0.0
+			fill = Color(0.12, 0.05, 0.05, 0.9)
+			icon.modulate = Color(0.35, 0.3, 0.3, 0.4)
+		queue_redraw()
+
 	func set_state(on: bool, strong: bool = false) -> void:
+		ruled = false
 		ring = Art.GOLD if on else RING_OFF
 		ring_w = 3.0 if strong else (2.0 if on else 1.5)
 		glow = 0.4 if strong else (0.16 if on else 0.0)
@@ -66,6 +79,12 @@ class Disc extends Control:
 			draw_circle(c, r + 3.0, Color(Art.GOLD.r, Art.GOLD.g, Art.GOLD.b, glow))
 		draw_circle(c, r - 1.0, fill)
 		draw_arc(c, r - ring_w * 0.5 - 0.5, 0.0, TAU, 48, ring, ring_w, true)
+		if ruled:
+			# Ruled out by the player: a bold red ink cross over the dimmed icon.
+			var d := r * 0.55
+			for pair in [[Vector2(-d, -d), Vector2(d, d)], [Vector2(d, -d), Vector2(-d, d)]]:
+				draw_line(c + pair[0], c + pair[1], Color(0, 0, 0, 0.7), 4.5, true)
+				draw_line(c + pair[0], c + pair[1], Color(0.8, 0.12, 0.08), 2.5, true)
 
 ## Gold rings around what can be picked up or used nearby: a bright pulsing ring
 ## on what [E] would act on, faint rings on other pickups close by.
@@ -419,6 +438,14 @@ func _build_evidence(root: Control) -> void:
 		var cell := _cell(Defs.EVIDENCE[id]["icon"], Defs.EVIDENCE[id]["short"], show)
 		evidence_grid.add_child(cell[0])
 		_ev_discs[id] = cell[1]
+		# Right-click: "I've looked hard — it isn't here" (the player's deduction, reversible).
+		var disc: Disc = cell[1]
+		var eid: String = id
+		disc.mouse_filter = Control.MOUSE_FILTER_STOP
+		disc.tooltip_text = "%s — right-click to rule out / restore" % Defs.EVIDENCE[id]["name"]
+		disc.gui_input.connect(func(ev):
+			if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_RIGHT:
+				toggle_ruled_out(eid))
 
 func _build_centre(root: Control) -> void:
 	var col := VBoxContainer.new()
@@ -574,6 +601,8 @@ func _rebuild_suspect() -> void:
 	for ev in d["evidence"]:
 		var cell := _cell(Defs.EVIDENCE[ev]["icon"], Defs.EVIDENCE[ev]["short"], show, 34.0)
 		cell[1].set_state(j.has(ev))
+		if j.state(ev) == "ruled_out":
+			cell[1].set_ruled(true)
 		row.add_child(cell[0])
 	var sep := ColorRect.new()
 	sep.color = Color(Art.GOLD.r, Art.GOLD.g, Art.GOLD.b, 0.4)
@@ -604,6 +633,13 @@ func _suspect_choices(sus: String) -> HBoxContainer:
 			cell[2].add_theme_color_override("font_color", Art.GOLD)
 		else:
 			cell[2].modulate = Color(1, 1, 1, 0.5)
+		# Contradicted by an evidence type you ruled out: crossed through, still selectable.
+		var j: Journal = run.player.journal
+		if Defs.CREATURES[id]["evidence"].any(func(ev): return j.state(ev) == "ruled_out"):
+			cell[1].set_ruled(true)
+			if on:
+				cell[1].ring = Art.GOLD
+			cell[0].modulate = Color(1, 1, 1, 0.75)
 		choices.add_child(cell[0])
 	return choices
 
@@ -925,6 +961,12 @@ func _notify_evidence(entry: Dictionary) -> void:
 	bt.tween_property(book, "rotation", -0.15, 0.12)
 	bt.tween_property(book, "rotation", 0.0, 0.12)
 
+## Mark / unmark evidence as ruled out (local to this player; never scored).
+func toggle_ruled_out(id: String) -> void:
+	if run.player.journal.toggle_ruled_out(id):
+		Sfx.play("pencil_scribble", -16.0, 1.4)
+		refresh()
+
 func refresh() -> void:
 	var j: Journal = run.player.journal
 	var voided := {}
@@ -933,6 +975,8 @@ func refresh() -> void:
 	for id in _ev_discs:
 		var disc: Disc = _ev_discs[id]
 		disc.set_state(j.has(id))
+		if j.state(id) == "ruled_out":
+			disc.set_ruled(true)
 		if not j.has(id) and voided.has(id):
 			disc.ring = Color(0.5, 0.2, 0.15, 0.6)    # found before the Harbinger: no longer counts
 			disc.queue_redraw()

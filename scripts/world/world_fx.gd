@@ -52,6 +52,29 @@ static func distort_material(strength: float, tint: Color, own: float, round_mas
 	m.set_shader_parameter("round_mask", 1.0 if round_mask else 0.0)
 	return m
 
+## Playtesting aid ("Always Show Ghost Marker"): a marker that floats above the
+## entity wherever it is, visible or not. `source` returns [position, hunting] or []
+## while there is no entity. Drawn on the unlit text layer; changes nothing else.
+class GhostMarker extends Node2D:
+	var source: Callable
+	var _t := 0.0
+	func _process(delta: float) -> void:
+		_t += delta
+		var info: Array = source.call()
+		visible = not info.is_empty()
+		if visible:
+			position = info[0]
+			set_meta("hunting", info[1])
+		queue_redraw()
+	func _draw() -> void:
+		var hunting: bool = get_meta("hunting", false)
+		var c := Color(1.0, 0.2, 0.15) if hunting else Color(0.55, 0.95, 1.0)
+		var y := -34.0 + sin(_t * 4.0) * 3.0
+		var tri := PackedVector2Array([Vector2(-9, y - 12), Vector2(9, y - 12), Vector2(0, y)])
+		draw_colored_polygon(tri, Color(0, 0, 0, 0.6))
+		draw_colored_polygon(PackedVector2Array([tri[0] + Vector2(2, 1.5), tri[1] + Vector2(-2, 1.5), tri[2] + Vector2(0, -2.5)]), c)
+		draw_arc(Vector2.ZERO, 22.0, 0.0, TAU, 32, Color(c.r, c.g, c.b, 0.55), 1.5, true)
+
 ## An expanding, fading ring (Blightness pings, rage, furnace flare) that frees itself.
 class FxRing extends Node2D:
 	var color := Color(0.75, 0.9, 0.45)
