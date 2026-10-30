@@ -118,6 +118,21 @@ them (4 s grace between burns; two wounds kill as always) for 25 s, then ashes.
 With no occupant left, the ghost turns on the stabber instead. Uses are recorded in
 the replay and statistics.
 
+## Game setup (Normal / Custom), difficulties and Blood Moon
+
+* **Normal Game:** house, entity and Blood Moon (15 %) are rolled; the player picks
+  the difficulty, or Random (Normal / Nightmare / Hellbound / Abyssal — never Beginner).
+* **Custom Game:** house, entity, difficulty and Blood Moon (On / Off / Random), each
+  fixed or random. Same form (`SetupForm`) for solo and the multiplayer host.
+* Everything random is resolved once (`Game.resolve_setup`) — on the host in
+  multiplayer; a random entity is rolled by the run itself and never sent to clients.
+  A rolled difficulty and a Blood Moon are announced at the start; the entity never is.
+* **Hellbound / Abyssal** play by Nightmare's rules for now (`Defs.DIFFICULTY_INFO[...]
+  ["rules"]`), with their own names and personal records.
+* **Blood Moon** is atmosphere only: red, slowly breathing moonlight, a faint red
+  cast over the house and a red moon beside the hearts. It coexists with the
+  werewolf's full moon (which stays red) and the vampire's mist. Stored in replays.
+
 ## Beginner Mode
 
 A guided first investigation (`scripts/game/beginner_guide.gd`): one-off tips

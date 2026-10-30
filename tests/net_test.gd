@@ -62,15 +62,26 @@ func _host() -> void:
 	check(Net.host(port, "Host") == OK, "host could open the port")
 	var all_in := await _until(func(): return Net.lobby.size() == clients + 1, 20.0)
 	check(all_in, "all %d clients joined (lobby %d)" % [clients, Net.lobby.size()])
+	# A fixed Custom Game keeps the scenario deterministic (house layout matters for the shove).
+	Net.set_option("setup", {"mode": "custom", "house": "ashgrove", "entity": "random", "difficulty": "normal", "blood_moon": "off"})
+	if scenario == "setup":
+		Net.set_option("setup", {"mode": "custom", "house": "random", "entity": "random", "difficulty": "random", "blood_moon": "on"})
 	Net.set_ready(true)
 	if scenario == "pause":
 		Net.set_option("difficulty", "nightmare")
 	await _until(func(): return Net.can_start(), 10.0)
 	check(Net.can_start(), "everyone ready")
-	Net.start_match("werewolf", 777)
+	Net.start_match("werewolf" if scenario != "setup" else "", 777)
 	await _wait(0.5)
 	var run: Run = Net.host_run
 	check(run != null and run.hunters.size() == clients + 1, "host run has every hunter")
+	if scenario == "setup":
+		check(run.blood_moon and run.view.blood_moon, "forced Blood Moon on the host")
+		check(run.difficulty in Defs.RANDOM_DIFFICULTIES, "random difficulty never Beginner (%s)" % run.difficulty)
+		_say("SETUP house=%s difficulty=%s moon=%s" % [run.house_id, run.difficulty, run.blood_moon])
+		await _wait(4.0)
+		_done()
+		return
 	var spawn := HouseMap.cell_center(run.map.spawn_cell)
 	await _wait(3.0)
 	for h in run.hunters:
@@ -217,6 +228,11 @@ func _client() -> void:
 		return
 	var cr: ClientRun = Net.client_run
 	await _wait(0.5)
+	if scenario == "setup":
+		check(cr.blood_moon and cr.view.blood_moon, "Blood Moon reached this client")
+		_say("SETUP house=%s difficulty=%s moon=%s" % [cr.house_id, cr.difficulty, cr.blood_moon])
+		_done()
+		return
 	if scenario == "pause":
 		await _wait(2.5)
 		await _client_pause(cr)

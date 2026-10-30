@@ -26,7 +26,9 @@ var run_seed := 0
 var creature_override := ""
 var roster: Array = []             # [{peer_id, name}] — empty means solo
 var multiplayer_match := false
-var difficulty := "normal"         # "beginner", "normal" or "nightmare"
+var difficulty := "normal"         # a Defs.DIFFICULTIES id; Defs.rules() gives its rule set
+var blood_moon := false            # atmosphere only (no gameplay effect yet)
+var setup_info := {}               # the resolved setup: mode and which parts were rolled
 var rng := RandomNumberGenerator.new()
 var map: HouseMap
 var world: Node2D
@@ -73,9 +75,11 @@ var _haunt_t := 14.0
 var _dread_noise_t := 12.0
 
 ## roster empty → solo. Otherwise [{peer_id, name}], the host first.
-func setup(p_house: String, p_seed: int, p_override: String, p_roster: Array = [], p_difficulty: String = "normal") -> void:
+func setup(p_house: String, p_seed: int, p_override: String, p_roster: Array = [], p_difficulty: String = "normal", p_blood_moon: bool = false, p_setup: Dictionary = {}) -> void:
 	house_id = p_house
 	difficulty = p_difficulty
+	blood_moon = p_blood_moon
+	setup_info = p_setup
 	run_seed = p_seed if p_seed >= 0 else int(Time.get_unix_time_from_system() * 1000.0) % 2147483647
 	creature_override = p_override
 	roster = p_roster
@@ -91,13 +95,17 @@ func _ready() -> void:
 	recorder = ReplayRecorder.new(house_id, run_seed)
 	recorder.data["multiplayer"] = multiplayer_match
 	recorder.data["difficulty"] = difficulty
+	recorder.data["blood_moon"] = blood_moon
+	recorder.data["setup"] = {"mode": setup_info.get("mode", "custom"), "rolled": setup_info.get("rolled", {})}
 	world = Node2D.new()
 	world.name = "World"
 	add_child(world)
 	view = HouseView.new()
 	view.build(map, true, true)
-	if difficulty == "nightmare":
+	if Defs.rules(difficulty) == "nightmare":
 		view.build_nightmare()
+	if blood_moon:
+		view.set_blood_moon(true)
 	world.add_child(view)
 	world_text = CanvasLayer.new()
 	world_text.layer = 1
@@ -113,7 +121,7 @@ func _ready() -> void:
 	_place_resources()
 	_place_keepsakes()
 	_spawn_occupants()
-	if difficulty == "nightmare":
+	if Defs.rules(difficulty) == "nightmare":
 		critters = Critters.new()
 		view.actor_layer.add_child(critters)
 		critters.setup(self, run_seed)
@@ -121,7 +129,7 @@ func _ready() -> void:
 	add_child(hud)
 	hud.setup(self)
 	player.journal.discovered.connect(hud.on_discovered)
-	if difficulty == "beginner":
+	if Defs.rules(difficulty) == "beginner":
 		var guide := BeginnerGuide.new()
 		guide.setup(self)
 		add_child(guide)
@@ -129,7 +137,12 @@ func _ready() -> void:
 	Sfx.start_loop("ambience", "ambience_house", -6.0, 1.5)
 	record_event("start", {"house": house_id})
 	tell_all(map.name + " — something is here.", "icons/ui_house.png")
-	if not multiplayer_match and difficulty != "beginner" and int(SaveData.data.get("runs_started", 0)) <= 3:
+	# Reveal what was rolled (never the entity).
+	if setup_info.get("rolled", {}).get("difficulty", false):
+		tell_all("The dice chose %s." % Defs.difficulty_name(difficulty), "icons/ui_skull.png")
+	if blood_moon:
+		announce("BLOOD MOON", "The moon hangs red over %s." % map.name, Color(0.8, 0.12, 0.08), 2.2)
+	if not multiplayer_match and Defs.rules(difficulty) != "beginner" and int(SaveData.data.get("runs_started", 0)) <= 3:
 		# Brief onboarding for the first few runs; never blocks play.
 		var tw := create_tween()
 		tw.tween_interval(3.0)
@@ -267,7 +280,7 @@ func _spawn_occupants() -> void:
 		var o := Occupant.new()
 		var r: Dictionary = rooms[rng.randi_range(0, rooms.size() - 1)]
 		o.setup(self, "npc_%d" % (i + 1), cast[i], HouseMap.cell_center(map.random_free_cell(r["id"], rng)))
-		o.fear = 2.0 if difficulty == "nightmare" else 1.0
+		o.fear = 2.0 if Defs.rules(difficulty) == "nightmare" else 1.0
 		view.actor_layer.add_child(o)
 		occupants.append(o)
 		recorder.register_actor(o.actor_id, "npc", o.token_path, 36.0)
@@ -334,7 +347,7 @@ func _process(delta: float) -> void:
 	_environment_tick(delta)
 	_keepsake_tick(delta)
 	_hazard_tick(delta)
-	if difficulty == "nightmare":
+	if Defs.rules(difficulty) == "nightmare":
 		_nightmare_noises(delta)
 	_record(delta)
 	if multiplayer_match:
@@ -379,7 +392,7 @@ func _actor_states() -> Dictionary:
 
 func _update_threat(delta: float) -> void:
 	# Beginner: dread builds more slowly and the first hunt comes much later.
-	threat = minf(100.0, threat + THREAT_PER_SECOND * delta * (0.6 if difficulty == "beginner" else 1.0))
+	threat = minf(100.0, threat + THREAT_PER_SECOND * delta * (0.6 if Defs.rules(difficulty) == "beginner" else 1.0))
 	if not escalated and threat >= ESCALATE_AT and creature and creature.type_id in ["werewolf", "vampire"] and creature.state != "banished":
 		_escalate()
 	if creature == null or creature.state != "roam" or creature.cooldown_t > 0.0:
@@ -389,7 +402,7 @@ func _update_threat(delta: float) -> void:
 		if forced_hunt_t <= 0.0:
 			trigger_hunt(forced_hunt_reckless)
 		return
-	if not is_harbinger() and elapsed < GRACE_PERIOD * (2.0 if difficulty == "beginner" else 1.0):
+	if not is_harbinger() and elapsed < GRACE_PERIOD * (2.0 if Defs.rules(difficulty) == "beginner" else 1.0):
 		return
 	hunt_roll_t -= delta
 	if hunt_roll_t > 0.0:
@@ -858,7 +871,7 @@ func _wound(p: Player, c: Creature, source: String) -> void:
 	if p.wounds >= 2:
 		_hunter_dies(p, c)
 		return
-	p.invuln = Player.INVULN_AFTER_HIT * (1.6 if difficulty == "beginner" else 1.0)
+	p.invuln = Player.INVULN_AFTER_HIT * (1.6 if Defs.rules(difficulty) == "beginner" else 1.0)
 	sound_to(p, "player_hurt", 0.0)
 	if p.is_local:
 		hud.wound()
@@ -1663,7 +1676,7 @@ func restart() -> void:
 	if multiplayer_match:
 		return
 	Sfx.stop_all_loops()
-	Game.start_run(house_id)
+	Game.start_run(house_id, -1, creature_override, difficulty, blood_moon, setup_info)   # same resolved setup
 
 func set_paused(p: bool) -> void:
 	if multiplayer_match:

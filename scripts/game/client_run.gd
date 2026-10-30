@@ -13,6 +13,8 @@ var roster: Array = []
 var my_peer := 0
 var multiplayer_match := true
 var difficulty := "normal"
+var blood_moon := false
+var setup_info := {}
 var map: HouseMap
 var world: Node2D
 var view: HouseView
@@ -36,9 +38,11 @@ var _creature_meta := {}     # actor id -> {disguise, size}
 var _send_acc := 0.0
 var _last_snapshot_t := 0.0
 
-func setup(p_house: String, p_seed: int, p_roster: Array, p_my_peer: int, p_difficulty: String = "normal") -> void:
+func setup(p_house: String, p_seed: int, p_roster: Array, p_my_peer: int, p_difficulty: String = "normal", p_blood_moon: bool = false, p_setup: Dictionary = {}) -> void:
 	house_id = p_house
 	difficulty = p_difficulty
+	blood_moon = p_blood_moon
+	setup_info = p_setup
 	run_seed = p_seed
 	roster = p_roster
 	my_peer = p_my_peer
@@ -49,8 +53,10 @@ func _ready() -> void:
 	add_child(world)
 	view = HouseView.new()
 	view.build(map, true, true)
-	if difficulty == "nightmare":
+	if Defs.rules(difficulty) == "nightmare":
 		view.build_nightmare()
+	if blood_moon:
+		view.set_blood_moon(true)
 	world.add_child(view)
 	world_text = CanvasLayer.new()
 	world_text.layer = 1
@@ -87,7 +93,7 @@ func _ready() -> void:
 	camera.offset = Vector2.ZERO
 	player.add_child(camera)
 	_apply_camera_limits(player.global_position)
-	if difficulty == "nightmare":
+	if Defs.rules(difficulty) == "nightmare":
 		# Cosmetic and local to this machine, like everyone's own vermin.
 		var critters := Critters.new()
 		view.actor_layer.add_child(critters)
@@ -96,7 +102,7 @@ func _ready() -> void:
 	add_child(hud)
 	hud.setup(self)
 	player.journal.discovered.connect(hud.on_discovered)
-	if difficulty == "beginner":
+	if Defs.rules(difficulty) == "beginner":
 		var guide := BeginnerGuide.new()
 		guide.setup(self)
 		add_child(guide)

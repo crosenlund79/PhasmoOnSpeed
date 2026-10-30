@@ -226,6 +226,18 @@ func _shot(s: String) -> void:
 			run.on_creature_contact(run.creature, run.player)
 		await _wait(28)
 		await _save("defeat_%s" % cr)
+	elif s == "custom_setup":
+		SaveData.set_setting("setup", {"mode": "custom", "house": "blackwood", "entity": "random", "difficulty": "nightmare", "blood_moon": "on"})
+		Game.goto_house_select()
+		await _wait(20)
+		await _save("custom_setup")
+		SaveData.set_setting("setup", {})
+	elif s.begins_with("bloodmoon_"):
+		var run: Run = Game.start_run(s.substr(10), 5, "shade", "normal", true)
+		await _wait(5)
+		run.creature.set_process(false)
+		await _wait(60)
+		await _save(s)
 	elif s.begins_with("overview_"):
 		var run: Run = Game.start_run(s.substr(9), 5, "shade")
 		await _wait(10)

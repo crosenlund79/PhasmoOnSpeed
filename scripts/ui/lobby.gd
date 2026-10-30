@@ -12,8 +12,7 @@ var addr_edit: LineEdit
 var port_edit: LineEdit
 var ready_button: Button
 var start_button: Button
-var house_buttons := {}
-var difficulty_buttons := {}
+var setup_form: SetupForm
 var pause_limit_check: CheckBox
 var _ready_state := false
 
@@ -85,29 +84,15 @@ func _build_room() -> void:
 	players_box = VBoxContainer.new()
 	players_box.add_theme_constant_override("separation", 4)
 	room_box.add_child(players_box)
-	room_box.add_child(Art.heading("House", 22))
-	var houses := HBoxContainer.new()
-	houses.add_theme_constant_override("separation", 8)
-	room_box.add_child(houses)
-	for id in Game.house_ids:
-		var hid: String = id
-		var b := Art.button(Game.house(id)["name"], func(): Net.set_house(hid), 200)
-		b.add_theme_font_size_override("font_size", 16)
-		b.toggle_mode = true
-		houses.add_child(b)
-		house_buttons[id] = b
-	# Match options — the host decides for everyone.
+	# Match setup — the host decides for everyone; rivals see it update live.
+	setup_form = SetupForm.new(Net.options.get("setup", {}), Net.is_host())
+	setup_form.on_parchment = true
+	setup_form.changed.connect(func(st): Net.set_option("setup", st))
+	room_box.add_child(setup_form)
 	var opts := HBoxContainer.new()
 	opts.add_theme_constant_override("separation", 8)
+	opts.alignment = BoxContainer.ALIGNMENT_CENTER
 	room_box.add_child(opts)
-	opts.add_child(Art.heading("Difficulty", 22))
-	for d in [["beginner", "Beginner"], ["normal", "Normal"], ["nightmare", "Nightmare"]]:
-		var did: String = d[0]
-		var b := Art.button(d[1], func(): Net.set_option("difficulty", did), 150)
-		b.add_theme_font_size_override("font_size", 16)
-		b.toggle_mode = true
-		opts.add_child(b)
-		difficulty_buttons[did] = b
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(24, 0)
 	opts.add_child(gap)
@@ -161,14 +146,8 @@ func _refresh() -> void:
 		var p: Dictionary = Net.lobby[id]
 		var line := "%s%s   —   %s" % [p["name"], "  (host)" if id == 1 else "", "READY" if p["ready"] else "not ready"]
 		players_box.add_child(Art.label(line, 19, Art.INK if p["ready"] else Color(0.4, 0.32, 0.25), Art.font_heading))
-	for hid in house_buttons:
-		var b: Button = house_buttons[hid]
-		b.button_pressed = hid == Net.house
-		b.disabled = not Net.is_host()
-	for did in difficulty_buttons:
-		var db: Button = difficulty_buttons[did]
-		db.button_pressed = Net.options.get("difficulty", "normal") == did
-		db.disabled = not Net.is_host()
+	setup_form.editable = Net.is_host()
+	setup_form.show_setup(Net.options.get("setup", {}))
 	pause_limit_check.set_pressed_no_signal(Net.options.get("pause_limit", true))
 	pause_limit_check.disabled = not Net.is_host()
 	ready_button.text = "Not ready" if _ready_state else "Ready"

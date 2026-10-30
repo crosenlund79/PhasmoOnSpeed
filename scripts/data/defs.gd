@@ -259,6 +259,29 @@ const FURNITURE := {
 static func evidence_name(id: String) -> String:
 	return EVIDENCE.get(id, {}).get("name", id)
 
+# --- Difficulty & match setup --------------------------------------------------
+## Selectable difficulties, in menu order. Each names the rule set it plays by:
+## Hellbound and Abyssal use Nightmare's rules for now (their own records and
+## names), so later iterations can give them distinct behaviour here.
+const DIFFICULTIES := ["beginner", "normal", "nightmare", "hellbound", "abyssal"]
+const DIFFICULTY_INFO := {
+	"beginner": {"name": "Beginner", "rules": "beginner", "desc": "A guided first investigation: tips as you go, and gentler hunts."},
+	"normal": {"name": "Normal", "rules": "normal", "desc": "The suspect panel shows each entity's evidence and what it takes to vanquish it."},
+	"nightmare": {"name": "Nightmare", "rules": "nightmare", "desc": "Only a name and description on the suspect panel. Terrified occupants, vermin, blood and noises in the walls."},
+	"hellbound": {"name": "Hellbound", "rules": "nightmare", "desc": "Nightmare's rules — for now. Its records are kept apart."},
+	"abyssal": {"name": "Abyssal", "rules": "nightmare", "desc": "Nightmare's rules — for now. Its records are kept apart."},
+}
+## "Random" difficulty never picks Beginner.
+const RANDOM_DIFFICULTIES := ["normal", "nightmare", "hellbound", "abyssal"]
+const BLOOD_MOON_CHANCE := 0.15
+
+## The rule set a difficulty plays by ("beginner", "normal" or "nightmare").
+static func rules(difficulty: String) -> String:
+	return DIFFICULTY_INFO.get(difficulty, DIFFICULTY_INFO["normal"])["rules"]
+
+static func difficulty_name(difficulty: String) -> String:
+	return DIFFICULTY_INFO.get(difficulty, {}).get("name", difficulty.capitalize())
+
 static func creature_name(id: String) -> String:
 	return CREATURES.get(id, {}).get("name", id)
 

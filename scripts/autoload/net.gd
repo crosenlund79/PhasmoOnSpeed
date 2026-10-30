@@ -13,7 +13,7 @@ signal connection_lost(reason: String)
 
 const DEFAULT_PORT := 24680
 const MAX_PLAYERS := 4
-const PROTOCOL := "spectral-run-mp-3"
+const PROTOCOL := "spectral-run-mp-4"
 ## Shared menu pause: at most this long (real seconds) when the host limits it,
 ## then no new pause for PAUSE_COOLDOWN so the match can never stall for long.
 const PAUSE_LIMIT := 10.0
@@ -30,7 +30,7 @@ var peer: ENetMultiplayerPeer
 var lobby := {}               # peer_id -> {name, ready}
 var house := "ashgrove"
 ## Host-chosen match options, mirrored to every client with the lobby.
-var options := {"difficulty": "normal", "pause_limit": true}
+var options := {"setup": {}, "pause_limit": true}
 var pause_by := 0               # peer whose menu holds the shared pause (0 = running)
 var _pause_ends_ms := 0         # real-time deadline; 0 = no limit
 var _pause_cooldown_ms := 0
@@ -205,14 +205,22 @@ func _apply_ready(id: int, r: bool) -> void:
 		_broadcast_lobby()
 
 func set_house(house_id: String) -> void:
-	if multiplayer.is_server():
-		house = house_id
-		_broadcast_lobby()
+	set_option("house", house_id)
 
-## Host: difficulty ("normal"/"nightmare") or pause_limit (bool) for the whole match.
+## Host: the match setup (Game.DEFAULT_SETUP keys: mode, house, entity,
+## difficulty, blood_moon — singly or as "setup") or pause_limit (bool).
 func set_option(key: String, value) -> void:
 	if multiplayer.is_server() and not in_match:
-		options[key] = value
+		if key == "setup":
+			options["setup"] = value
+		elif Game.DEFAULT_SETUP.has(key):
+			var s: Dictionary = options["setup"].duplicate()
+			s[key] = value
+			if key in ["house", "entity", "blood_moon"]:
+				s["mode"] = "custom"
+			options["setup"] = s
+		else:
+			options[key] = value
 		_broadcast_lobby()
 
 func can_start() -> bool:
@@ -237,14 +245,22 @@ func start_match(creature_override: String = "", run_seed: int = -1) -> void:
 	var r := roster()
 	pause_by = 0
 	_pause_cooldown_ms = 0
-	s_start.rpc(house, seed_value, r, options)
-	host_run = Game.start_match_host(house, seed_value, creature_override, r, str(options["difficulty"]))
+	# Everything random is rolled once, here on the host; clients receive the result.
+	# A random entity is rolled by the host's run from the seed and never sent.
+	var rs := Game.resolve_setup(options["setup"])
+	house = rs["house"]
+	var entity: String = creature_override if creature_override != "" else rs["entity"]
+	var shared := {"difficulty": rs["difficulty"], "blood_moon": rs["blood_moon"], "mode": rs["mode"], "rolled": rs["rolled"]}
+	s_start.rpc(house, seed_value, r, options, shared)
+	host_run = Game.start_match_host(house, seed_value, entity, r, rs["difficulty"], rs["blood_moon"], rs)
 
 @rpc("authority", "reliable")
-func s_start(house_id: String, seed_value: int, r: Array, opts: Dictionary) -> void:
+func s_start(house_id: String, seed_value: int, r: Array, opts: Dictionary, shared: Dictionary) -> void:
 	in_match = true
 	options = opts
-	client_run = Game.start_match_client(house_id, seed_value, r, my_peer_id(), str(opts.get("difficulty", "normal")))
+	house = house_id
+	client_run = Game.start_match_client(house_id, seed_value, r, my_peer_id(), str(shared.get("difficulty", "normal")),
+		bool(shared.get("blood_moon", false)), shared)
 
 # --- Match: shared menu pause --------------------------------------------------------------
 # Any hunter opening their menu asks the host; the host alone decides, freezes

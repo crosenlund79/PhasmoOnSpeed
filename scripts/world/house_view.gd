@@ -574,9 +574,25 @@ func set_basement_view(on: bool) -> void:
 func _effective_darkness() -> Color:
 	var c := _darkness * Color(0.74, 0.76, 0.84) if basement_view else _darkness
 	match mood:
-		"moon": c *= Color(0.95, 1.05, 1.35)    # full moon: a cold, brighter blue
+		"moon": c *= Color(1.25, 0.95, 0.95) if blood_moon else Color(0.95, 1.05, 1.35)   # full moon: cold blue (red under a Blood Moon)
 		"mist": c *= Color(1.3, 0.62, 0.64)     # blood mist: everything reddens
+	if blood_moon:
+		c *= Color(1.12, 0.88, 0.88)            # a faint, ominous red cast
 	return c
+
+## Blood Moon: the moonlight turns a sinister red and pulses faintly; the whole
+## house takes a slight red cast. Purely atmospheric, and independent of the
+## werewolf's full moon (which stays red under a Blood Moon) and the vampire's mist.
+var blood_moon := false
+const BLOOD_MOONLIGHT := Color(0.95, 0.28, 0.22)
+
+func set_blood_moon(on: bool) -> void:
+	blood_moon = on
+	for l in lights:
+		if l["kind"] == "moon":
+			l["light"].color = BLOOD_MOONLIGHT if on else Color(0.55, 0.65, 0.9)
+			l["base"] = float(l["base"]) * (1.25 if on else 1.0 / 1.25)
+	modulate_node.color = _effective_darkness()
 
 ## Dread escalation: "moon" (werewolf) or "mist" (vampire). Permanent once set.
 var mood := ""
@@ -591,7 +607,7 @@ func set_mood(m: String) -> void:
 		for l in lights:
 			if l["kind"] == "moon":
 				l["base"] = float(l["base"]) * 2.4
-				l["light"].color = Color(0.78, 0.86, 1.0)
+				l["light"].color = BLOOD_MOONLIGHT if blood_moon else Color(0.78, 0.86, 1.0)
 	elif m == "mist":
 		# Two drifting layers of thick red fog over the whole house; thin enough to see through.
 		var ws := Vector2(map.w, map.h) * C
@@ -630,6 +646,8 @@ func _process(delta: float) -> void:
 		if not l["on"]:
 			light.energy = move_toward(light.energy, 0.0, delta * 3.0)
 			continue
+		if blood_moon and l["kind"] == "moon":
+			e *= 1.0 + 0.14 * sin(_t * 0.7 + l["phase"])   # a slow, ominous breathing
 		if l["flicker"] > 0.0:
 			e *= 1.0 + sin(_t * 9.0 + l["phase"]) * l["flicker"] * 0.5 + sin(_t * 23.0 + l["phase"] * 3.0) * l["flicker"] * 0.3
 			if l["flame"]:

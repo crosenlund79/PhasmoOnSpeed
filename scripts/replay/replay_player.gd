@@ -39,8 +39,10 @@ func _ready() -> void:
 	map = HouseMap.from_data(Game.house(replay.get("house", "ashgrove")))
 	view = HouseView.new()
 	view.build(map, false, true)
-	if replay.get("difficulty", "normal") == "nightmare":
+	if Defs.rules(replay.get("difficulty", "normal")) == "nightmare":
 		view.build_nightmare()
+	if replay.get("blood_moon", false):
+		view.set_blood_moon(true)
 	add_child(view)
 	text_layer = CanvasLayer.new()
 	text_layer.layer = 1

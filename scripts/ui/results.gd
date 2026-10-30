@@ -179,9 +179,9 @@ func _build_panel(root: Control, won: bool) -> void:
 	buttons.add_theme_constant_override("h_separation", 8)
 	buttons.add_theme_constant_override("v_separation", 8)
 	v.add_child(buttons)
-	var again := Art.button("Hunt Again", func(): Game.start_run(summary["house"]), 230)
+	var again := Art.button("Hunt Again", func(): Game.start_setup(preload("res://scripts/ui/house_select.gd").saved_setup()), 230)
 	buttons.add_child(again)
-	buttons.add_child(Art.button("Choose House", func(): Game.goto_house_select(), 230))
+	buttons.add_child(Art.button("New Setup", func(): Game.goto_house_select(), 230))
 	buttons.add_child(Art.button("Rankings", func(): Game.goto_rankings(), 230))
 	buttons.add_child(Art.button("Main Menu", func(): Game.goto_menu(), 230))
 	again.grab_focus()
@@ -251,4 +251,4 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.keycode == KEY_ESCAPE:
 			Game.goto_menu()
 		elif event.keycode == KEY_R:
-			Game.start_run(summary["house"])
+			Game.start_setup(preload("res://scripts/ui/house_select.gd").saved_setup())

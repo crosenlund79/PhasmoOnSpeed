@@ -161,6 +161,21 @@ class NeedleGauge extends Control:
 			pts.append(sc + Vector2.from_angle(-PI * 0.5 + i * TAU * 2.0 / 5.0) * sr * 0.75)
 		draw_polyline(pts, Art.GOLD, 1.0, true)
 
+## The red moon beside your hearts while a Blood Moon hangs over the house.
+class BloodMoonGlyph extends Control:
+	var _t := 0.0
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var c := size * 0.5
+		var r := minf(size.x, size.y) * 0.42
+		draw_circle(c, r * (1.35 + 0.1 * sin(_t * 0.8)), Color(0.8, 0.1, 0.05, 0.18))
+		draw_circle(c, r, Color(0.62, 0.08, 0.05))
+		draw_circle(c + Vector2(-r * 0.3, -r * 0.2), r * 0.22, Color(0.45, 0.05, 0.03))
+		draw_circle(c + Vector2(r * 0.35, r * 0.3), r * 0.15, Color(0.45, 0.05, 0.03))
+		draw_arc(c, r, 0.0, TAU, 24, Color(0.1, 0.02, 0.02), 1.2, true)
+
 var run
 var k := 1.0                    # HUD scale setting
 var equip_panel: PanelContainer
@@ -253,7 +268,7 @@ func _px(v: float) -> int:
 	return int(round(v * k))
 
 func nightmare() -> bool:
-	return str(run.get("difficulty")) == "nightmare"
+	return Defs.rules(str(run.get("difficulty"))) == "nightmare"
 
 # --- Construction ------------------------------------------------------------------------
 
@@ -471,6 +486,11 @@ func _build_centre(root: Control) -> void:
 		var h := Art.icon_rect("icons/ui_heart.png", _px(22))
 		top.add_child(h)
 		hearts.append(h)
+	if run.get("blood_moon"):
+		var moon := BloodMoonGlyph.new()
+		moon.custom_minimum_size = Vector2(_px(22), _px(22))
+		moon.tooltip_text = "Blood Moon"
+		top.add_child(moon)
 	dread_fill = _bar(sv, Color(0.62, 0.1, 0.07))
 	stamina_fill = _bar(sv, Color(0.62, 0.72, 0.78))
 	status_line = _outlined("", _px(12), Color(0.85, 0.8, 0.7), Art.font_italic, 3)
@@ -942,6 +962,8 @@ func _process(delta: float) -> void:
 	stamina_fill.size = Vector2(sw * p.stamina, _px(4))
 	stamina_fill.color = Color(0.62, 0.72, 0.78) if p.stamina > 0.25 else Color(0.8, 0.4, 0.3)
 	var line: String = "◆ " + run.map.room_name(p.room_id)
+	if str(run.get("difficulty")) != "normal":
+		line += "  ·  " + Defs.difficulty_name(str(run.get("difficulty")))
 	if run.multiplayer_match:
 		var parts: Array = []
 		for h in run.hunters:

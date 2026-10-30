@@ -24,7 +24,7 @@ func _ready() -> void:
 		"test_suspect_display", "test_beginner", "test_replay_moments", "test_ui_scaling",
 		"test_environment", "test_witch_needle", "test_voodoo_doll", "test_new_ghosts",
 		"test_counterattacks", "test_escalations", "test_prompt_and_needle", "test_audio_overrides",
-		"test_audio_export",
+		"test_audio_export", "test_game_setup",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -906,3 +906,53 @@ func test_audio_export() -> void:
 	check(Sfx.source_of("pencil_scribble") == "creator", "exported build uses the creator journal sound")
 	check(Sfx.stream("pencil_scribble").resource_path == path, "loaded as an imported resource from the pack")
 	print("EXPORT AUDIO OK: ", Sfx.stream("pencil_scribble").resource_path, " raw file present: ", FileAccess.file_exists(path))
+
+# --- Normal / Custom games ------------------------------------------------------------
+
+func test_game_setup() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 99
+	# Normal Game: house, entity and Blood Moon always left to chance.
+	var houses := {}
+	var moons := 0
+	for i in 400:
+		var r := Game.resolve_setup({"mode": "normal", "house": "ashgrove", "entity": "vampire", "difficulty": "nightmare", "blood_moon": "on"}, rng)
+		houses[r["house"]] = true
+		check(r["entity"] == "" and r["rolled"]["entity"] and r["difficulty"] == "nightmare", "normal game rolls the entity, keeps the difficulty")
+		if r["blood_moon"]:
+			moons += 1
+	check(houses.size() == Game.house_ids.size(), "normal game visits every house (%d)" % houses.size())
+	check(moons > 20 and moons < 120, "Blood Moon at its chance in a normal game (%d / 400)" % moons)
+	# Random difficulty: never Beginner, every other one appears.
+	var diffs := {}
+	for i in 400:
+		diffs[Game.resolve_setup({"difficulty": "random"}, rng)["difficulty"]] = true
+	check(not diffs.has("beginner") and diffs.size() == Defs.RANDOM_DIFFICULTIES.size(), "random difficulty: %s" % str(diffs.keys()))
+	# Custom Game: what is chosen is kept; Blood Moon on / off.
+	var c := Game.resolve_setup({"mode": "custom", "house": "blackwood", "entity": "random", "difficulty": "hellbound", "blood_moon": "on"}, rng)
+	check(c["house"] == "blackwood" and c["entity"] == "" and c["difficulty"] == "hellbound" and c["blood_moon"], "custom choices kept")
+	check(not c["rolled"]["house"] and c["rolled"]["entity"] and not c["rolled"]["difficulty"], "rolled flags")
+	var off := 0
+	for i in 50:
+		if Game.resolve_setup({"mode": "custom", "blood_moon": "off"}, rng)["blood_moon"]:
+			off += 1
+	check(off == 0, "Blood Moon off never rises")
+	# A custom match actually starts as configured, with Hellbound on Nightmare's rules.
+	SaveData.reset_all()
+	var run: Run = Game.start_setup({"mode": "custom", "house": "blackwood", "entity": "vampire", "difficulty": "hellbound", "blood_moon": "on"})
+	await get_tree().process_frame
+	check(run.house_id == "blackwood" and run.creature.type_id == "vampire", "house and entity as chosen")
+	check(run.difficulty == "hellbound" and Defs.rules(run.difficulty) == "nightmare", "Hellbound plays by Nightmare's rules")
+	check(run.critters != null and run.occupants.all(func(o): return o.fear > 1.0) and run.hud.nightmare(), "Nightmare features active")
+	check(run.blood_moon and run.view.blood_moon and run.view.lights.filter(func(l): return l["kind"] == "moon").all(func(l): return l["light"].color == HouseView.BLOOD_MOONLIGHT), "Blood Moon lighting")
+	check(run.recorder.data["blood_moon"] and run.recorder.data["difficulty"] == "hellbound", "the replay keeps the resolved setup")
+	# …and can still be completed and recorded under its own difficulty.
+	run.player.add_resource("garlic")
+	run.player.add_resource("wooden_stake")
+	run.creature.set_process(false)
+	run.player.global_position = run.creature.position + Vector2(-30, 0)
+	run.player.aim_angle = 0.0
+	run.strike(run.player, "wooden_stake")
+	await _frames(200)
+	check(SaveData.house_record("blackwood", "hellbound")["runs"] == 1, "recorded as a Hellbound run")
+	SaveData.reset_all()
