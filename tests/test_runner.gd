@@ -23,7 +23,8 @@ func _ready() -> void:
 		"test_hud_layout", "test_nightmare",
 		"test_suspect_display", "test_beginner", "test_replay_moments", "test_ui_scaling",
 		"test_environment", "test_witch_needle", "test_voodoo_doll", "test_new_ghosts",
-		"test_counterattacks", "test_escalations", "test_prompt_and_needle",
+		"test_counterattacks", "test_escalations", "test_prompt_and_needle", "test_audio_overrides",
+		"test_audio_export",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -840,3 +841,68 @@ func test_prompt_and_needle() -> void:
 		counts.append(hits)
 	check(counts[0] == 0, "still at level 1 (%s)" % str(counts))
 	check(counts[1] < counts[2] and counts[2] < counts[3], "more strikes as the presence grows (%s)" % str(counts))
+
+# --- Audio overrides --------------------------------------------------------------------
+
+func test_audio_overrides() -> void:
+	var made: Array = []
+	var put := func(rel: String, from_id: String) -> void:
+		var src := FileAccess.get_file_as_bytes("res://assets/audio/%s.wav" % from_id)
+		var path: String = AudioCatalog.CREATOR_DIR + rel
+		var f := FileAccess.open(path, FileAccess.WRITE)
+		f.store_buffer(src)
+		f.close()
+		made.append(path)
+	Sfx.clear_cache()
+	# Without creator audio every cue resolves to its placeholder.
+	for id in AudioCatalog.CUES:
+		check(Sfx.source_of(id) == "placeholder" and Sfx.stream(id) != null, "%s plays its placeholder" % id)
+	for f in DirAccess.get_files_at("res://assets/audio/"):
+		if f.ends_with(".wav"):
+			check(AudioCatalog.CUES.has(f.get_basename()), "%s is in the catalog" % f)
+	var doc := FileAccess.get_file_as_string("res://docs/AUDIO_CATALOG.md")
+	for id in AudioCatalog.CUES:
+		check(doc.contains("`%s`" % id) and doc.contains(AudioCatalog.CUES[id][0]), "%s documented with its creator path" % id)
+	# A replacement takes priority; only the asset changes.
+	put.call("evidence/journal_write.wav", "ui_hover")
+	put.call("player/footstep_01.wav", "pickup")
+	put.call("player/footstep_02.wav", "place_item")
+	put.call("entities/hunt_loop.wav", "ui_click")      # second-choice format is accepted
+	Sfx.clear_cache()
+	check(Sfx.source_of("pencil_scribble") == "creator", "journal_write.wav replaces the pencil")
+	var js: AudioStreamWAV = Sfx.stream("pencil_scribble")
+	check(is_equal_approx(js.get_length(), load("res://assets/audio/ui_hover.wav").get_length()), "the creator file is what plays")
+	var steps := {}
+	for i in 40:
+		steps[Sfx.stream("footstep")] = true
+	check(steps.size() == 2, "footstep variants alternate (%d)" % steps.size())
+	Sfx.play("pencil_scribble", 0.0, 1.0, 0.0)
+	Sfx.play("pencil_scribble", 0.0, 1.0, 5.0)   # inside its cooldown: suppressed as before
+	var playing := Sfx._pool.filter(func(p): return p.playing and p.stream == js).size()
+	check(playing == 1, "one play, no duplicate (%d)" % playing)
+	Sfx.start_loop("test_hunt", "hunt_loop", -60.0, 0.01)
+	var lp: AudioStreamPlayer = Sfx._loops["test_hunt"]
+	check(lp.stream is AudioStreamWAV and lp.stream.loop_mode == AudioStreamWAV.LOOP_FORWARD, "a replaced loop still loops")
+	Sfx.stop_loop("test_hunt", 0.01)
+	var holder := Node2D.new()
+	get_tree().root.add_child(holder)
+	Sfx.play_at("pencil_scribble", Vector2(100, 50), holder, -60.0)
+	var p2d: Array = holder.get_children().filter(func(c): return c is AudioStreamPlayer2D)
+	check(p2d.size() == 1 and p2d[0].stream == js and p2d[0].position == Vector2(100, 50), "positional playback uses the replacement")
+	holder.queue_free()
+	# Removing the files restores the placeholders.
+	for path in made:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	Sfx.clear_cache()
+	check(Sfx.source_of("pencil_scribble") == "placeholder" and Sfx.source_of("footstep") == "placeholder", "placeholders restored")
+
+## Run inside an exported pack that contains evidence/journal_write.wav (see
+## docs/AUDIO_CATALOG.md); a no-op in ordinary test runs.
+func test_audio_export() -> void:
+	var path := AudioCatalog.CREATOR_DIR + "evidence/journal_write.wav"
+	if not ResourceLoader.exists(path):
+		return
+	Sfx.clear_cache()
+	check(Sfx.source_of("pencil_scribble") == "creator", "exported build uses the creator journal sound")
+	check(Sfx.stream("pencil_scribble").resource_path == path, "loaded as an imported resource from the pack")
+	print("EXPORT AUDIO OK: ", Sfx.stream("pencil_scribble").resource_path, " raw file present: ", FileAccess.file_exists(path))

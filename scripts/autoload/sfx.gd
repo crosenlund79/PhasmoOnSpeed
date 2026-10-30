@@ -1,6 +1,9 @@
 extends Node
 ## Sound playback: one-shots (with anti-spam cooldowns), positional sounds and
-## named loops. Sounds are referenced by file stem in res://assets/audio/.
+## named loops. Sounds are referenced by a stable id — the file stem of the
+## generated placeholder in res://assets/audio/. A creator file listed in
+## AudioCatalog (res://assets/creator/audio/…) replaces the placeholder's audio;
+## everything about *how* the sound plays stays as below.
 
 const AUDIO_DIR := "res://assets/audio/"
 const POOL_SIZE := 12
@@ -11,7 +14,8 @@ const GAIN := {
 	"ambience_house": -2.0, "music_menu": -4.0, "hunt_loop": -1.0, "pencil_scribble": -1.0,
 }
 
-var _streams := {}
+var _streams := {}          # id -> Array[AudioStream] (creator variants, or the placeholder)
+var _sources := {}          # id -> "creator" / "placeholder" (for checks and the catalog)
 var _pool: Array[AudioStreamPlayer] = []
 var _next := 0
 var _last_played := {}
@@ -39,19 +43,61 @@ func _loop_db(key: String, base_db: float) -> float:
 		return base_db + linear_to_db(maxf(music_volume, 0.0001))
 	return base_db
 
+## The stream to play for a cue. Creator files win; with several variants one is
+## picked at random each time (loops always use their first file so they never
+## restart mid-play). Missing everything → null, and callers simply stay silent.
 func stream(sound: String) -> AudioStream:
-	if _streams.has(sound):
-		return _streams[sound]
-	var s: AudioStream = null
+	if not _streams.has(sound):
+		_streams[sound] = _resolve(sound)
+	var list: Array = _streams[sound]
+	if list.is_empty():
+		return null
+	if list.size() == 1 or sound in LOOP_NAMES:
+		return list[0]
+	return list[randi() % list.size()]
+
+func source_of(sound: String) -> String:
+	stream(sound)
+	return _sources.get(sound, "missing")
+
+## Forget resolved streams (after adding or removing creator files at runtime).
+func clear_cache() -> void:
+	_streams.clear()
+	_sources.clear()
+
+func _resolve(sound: String) -> Array:
+	var out: Array = []
+	var seen := {}
+	for path in AudioCatalog.candidates(sound):
+		var base: String = path.get_basename()
+		if seen.has(base):
+			continue   # a cue's .wav and .ogg with the same name count once (preferred format first)
+		var s := AudioCatalog.load_stream(path)
+		if s:
+			seen[base] = true
+			out.append(_prepared(sound, s))
+	if not out.is_empty():
+		_sources[sound] = "creator"
+		return out
 	var path := AUDIO_DIR + sound + ".wav"
 	if ResourceLoader.exists(path):
-		s = load(path)
-		if s is AudioStreamWAV and sound in LOOP_NAMES:
-			s = s.duplicate()
-			s.loop_mode = AudioStreamWAV.LOOP_FORWARD
-			s.loop_begin = 0
-			s.loop_end = int(s.get_length() * s.mix_rate)
-	_streams[sound] = s
+		_sources[sound] = "placeholder"
+		return [_prepared(sound, load(path))]
+	_sources[sound] = "missing"
+	return []
+
+## Looping cues loop whatever file supplies them.
+func _prepared(sound: String, s: AudioStream) -> AudioStream:
+	if not (sound in LOOP_NAMES):
+		return s
+	if s is AudioStreamWAV:
+		s = s.duplicate()
+		s.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		s.loop_begin = 0
+		s.loop_end = int(s.get_length() * s.mix_rate)
+	elif s is AudioStreamOggVorbis:
+		s = s.duplicate()
+		s.loop = true
 	return s
 
 ## Plays a non-positional one-shot. min_interval suppresses spam of the same sound.
