@@ -54,12 +54,12 @@ FLOORS = ["wood_dark", "wood_light", "parquet", "carpet_red", "carpet_blue", "ca
 TOKENS = ["investigator", "occupant_a", "occupant_b", "occupant_c", "occupant_bitten", "occupant_d", "occupant_e",
           "occupant_f", "occupant_a_bitten", "occupant_b_bitten", "occupant_c_bitten", "occupant_d_bitten",
           "occupant_e_bitten", "occupant_f_bitten", "shade", "poltergeist",
-          "vampire", "werewolf", "shapeshifter", "cat", "harbinger", "blightness", "crawler", "lost_one", "werewolf_human",
+          "vampire", "werewolf", "shapeshifter", "cat", "harbinger", "blightness", "crawler", "lost_one", "drowned_sailor", "plague_doctor", "werewolf_human",
           "shapeshifter_human"]
 ITEMS = ["garlic", "wooden_stake", "silverware", "silver_stake", "hand_mirror", "iron_nails", "ghost_book",
          "ghost_book_written", "salt_pile", "crucifix_placed", "sigil_candle_unlit", "sigil_candle_lit",
          "blood_drops", "coffin_soil", "claw_marks", "fur_tuft", "paw_print", "shed_skin", "uv_handprint", "orb",
-         "voodoo_doll", "music_box", "locket", "child_shoe", "ashes", "embers"]
+         "voodoo_doll", "music_box", "locket", "child_shoe", "ashes", "embers", "puddle", "wet_footprint"]
 ICONS = ["ev_emf5", "ev_freezing", "ev_spirit_box", "ev_uv", "ev_writing", "ev_orbs", "ev_bite_marks",
          "ev_blood_drops", "ev_coffin_soil", "ev_claw_marks", "ev_fur", "ev_footprints", "ev_wrong_reflection",
          "ev_shed_skin", "ev_mimic_voice", "eq_flashlight", "eq_emf", "eq_thermometer", "eq_uv", "eq_spirit_box",

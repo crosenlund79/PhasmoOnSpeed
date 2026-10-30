@@ -32,6 +32,8 @@ const REQUIREMENTS := {
 	"blightness": {"items": ["crucifix"], "method": "Crucifix in its room · Rite of Severance there (hold V)"},
 	"crawler": {"items": ["holy_water"], "method": "Holy water in hand · Rite of Drowning in its room (hold V)"},
 	"lost_one": {"items": ["ghost_book", "salt"], "method": "Book and salt in its room · Rite of Rest (hold V) · never touch its keepsake"},
+	"drowned_sailor": {"items": ["salt", "holy_water"], "method": "Salt its room, holy water in hand · Rite of the Tides there (hold V)"},
+	"plague_doctor": {"items": ["crucifix", "ghost_book"], "method": "Crucifix and book in its room · Rite of Cleansing there (hold V)"},
 }
 
 ## A circular icon slot. Styled by state; drawn, so it scales cleanly.

@@ -204,12 +204,16 @@ func creature_tick(c: Creature, delta: float) -> void:
 			run.record_event("mirror", {"index": idx, "on": false})
 	var indoors: bool = not map.room(c.room_id).get("outdoor", true)
 	match source:
-		"shade", "poltergeist", "blightness", "crawler", "lost_one":
+		"shade", "poltergeist", "blightness", "crawler", "lost_one", "drowned_sailor", "plague_doctor":
 			_interact_t -= delta
 			if _interact_t <= 0.0:
 				_interact_t = float(c.def["interaction_interval"]) * rng.randf_range(0.6, 1.4)
 				_ghost_interaction(c)
 			_tick_book(c, delta)
+			if source == "drowned_sailor":
+				run.sailor_tick(c, delta)
+			elif source == "plague_doctor":
+				run.plague_tick(c, delta)
 		"vampire":
 			_drop_t -= delta
 			if _drop_t <= 0.0 and indoors and c.state != "warn":

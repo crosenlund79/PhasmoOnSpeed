@@ -233,7 +233,7 @@ func _moment_for(type: String, d: Dictionary) -> Array:
 		"attack":
 			if int(d.get("wounds", 1)) >= 2:
 				return []    # the death moment follows
-			var how: String = {"hellfire": " by hellfire", "abyss": " in the Abyss"}.get(str(d.get("source", "")), "")
+			var how: String = {"hellfire": " by hellfire", "abyss": " in the Abyss", "miasma": " in the miasma"}.get(str(d.get("source", "")), "")
 			return ["icons/ui_heart_wounded.png", "%s wounded%s" % [_who(d), how]]
 		"portal":
 			return ["tokens/blightness.png", "A portal tore open"]

@@ -174,6 +174,9 @@ func apply(type: String, d: Dictionary) -> bool:
 				"transform": ring(view.overlay_layer, Vector2(d["x"], d["y"]), Color(0.75, 0.85, 1.0), 120.0, 1.4)
 				"revert": ring(view.overlay_layer, Vector2(d["x"], d["y"]), Color(1.0, 0.95, 0.8), 90.0, 1.2)
 				"counter": ring(view.overlay_layer, Vector2(d["x"], d["y"]), Art.GOLD, 80.0, 0.7)
+				"lights": view.flicker_near(Vector2(d["x"], d["y"]), 170.0, 1.2)
+				"emerge": view.emerge_splash(Vector2(d["x"], d["y"]))
+				"miasma": view.miasma(Vector2(d["x"], d["y"]), float(d.get("r", 70.0)), float(d.get("dur", 9.0)))
 				"twitch":
 					if decals.has(d["id"]) and is_instance_valid(decals[d["id"]]):
 						twitch(decals[d["id"]])

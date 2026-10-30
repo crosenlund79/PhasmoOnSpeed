@@ -8,10 +8,10 @@ missing. The code-side list lives in `scripts/core/audio_catalog.gd`
 
 | | |
 |---|---|
-| Sound cues in the catalog | **56** |
-| …triggered by the game | **51** |
+| Sound cues in the catalog | **62** |
+| …triggered by the game | **57** |
 | …generated but currently never triggered | **5** (`camera_shutter`, `cat_meow`, `emf_beep`, `emf_spike`, `thermometer_tick`) |
-| Cues using generated placeholder audio | **56 of 56** — all made by `tools/audio/generate_audio.py` |
+| Cues using generated placeholder audio | **62 of 62** — all made by `tools/audio/generate_audio.py` |
 | Cues with creator (original) audio | **0** so far |
 | Suggested missing sounds | **24** (see the end) |
 
@@ -108,6 +108,10 @@ Status in every row below: **Existing placeholder** (generated) unless marked.
 | `blight_ping` | Blightness ping | `entities/blightness_ping.wav` | Every Blightness lurch while hunting (and every second lurch while roaming); its hunt start | one-shot, positional | Essential | The tell players learn — keep it distinctive. |
 | `crawl_drag` | Crawler drag | `entities/crawler_drag.wav` | Crawler hunt start; its grab; the Lost One's furnace drag | one-shot, positional | Essential | |
 | `music_box` | Lost One's lullaby | `entities/lost_one_music_box.wav` | Its keepsake twitches near a hunter; Lost One hunt start | one-shot, positional | Essential | |
+| `sea_whisper` | Drowned Sailor's shanty | `entities/drowned_sailor_whisper.wav` | Now and then while the Drowned Sailor wanders; its hunt start | one-shot, positional | Essential | Distant, breathy, under surf. |
+| `water_splash` | Rising from a puddle | `entities/drowned_sailor_emerge.wav` | The Drowned Sailor emerges from one of its puddles to hunt | one-shot, positional | Essential | |
+| `plague_breath` | Beaked breathing | `entities/plague_doctor_breath.wav` | The Plague Doctor's breathing (faster while hunting); each miasma cloud; its hunt start; a miasma wound | one-shot, positional | Essential | The tell players learn. |
+| `bottle_clink` | Medicine bottles | `entities/plague_doctor_bottles.wav` | Every 9–15 s while the Plague Doctor makes its rounds | one-shot, positional | Desirable | |
 | `reckless_reaction` | The house is angered | `entities/reckless_reaction.wav` | Wrong / reckless attempts; doll on a non-standard creature | one-shot, 2D | Desirable | |
 | `vanquish_success` | Vanquished | `entities/vanquish.wav` | The entity is vanquished | one-shot, 2D | Essential | |
 
@@ -121,6 +125,8 @@ Status in every row below: **Existing placeholder** (generated) unless marked.
 | `flame_snuff` | Flame snuffed | `environment/flame_snuff.wav` | The entity puts a flame out | one-shot, positional | Desirable | |
 | `ignite` | Supernatural fire | `environment/supernatural_ignite.wav` | Voodoo doll burns an occupant; walking into embers (high) | one-shot, positional | Essential | |
 | `furnace_roar` | Furnace roar | `environment/furnace_roar.wav` | The Lost One's furnace sequence | one-shot, positional | Essential | |
+| `water_drip` | Dripping sea water | `environment/water_drip.wav` | Every few seconds near the Drowned Sailor | one-shot, positional | Desirable | |
+| `wood_creak` | Ship's timbers | `environment/timber_creak.wav` | The boards groan as the Drowned Sailor walks | one-shot, positional | Desirable | |
 | `nm_knock` | Knocking in the walls | `environment/nightmare_knock.wav` | Nightmare Mode ambient noise (every 7–16 s) | one-shot, positional | Desirable | |
 | `nm_drag` | Something dragged | `environment/nightmare_drag.wav` | Nightmare noise; the vampire's blood mist rising | one-shot, positional | Desirable | |
 | `critter_squish` | Critter squashed | `environment/critter_squish.wav` | Stepping on a spider, roach or rat (Nightmare) | one-shot, positional, local | Optional | |
@@ -194,6 +200,6 @@ Suggested ids and paths follow the same scheme so they slot in later.
 5. `hunt_start` + `hunt_loop` → `entities/…`
 6. `door_creak` / `door_slam` → `environment/…`
 7. `spirit_box_static` + `spirit_box_voice` → `equipment/whisper_box_…`
-8. The creature signatures: `vampire_hiss`, `werewolf_howl`, `blight_ping`, `crawl_drag`, `music_box`
+8. The creature signatures: `vampire_hiss`, `werewolf_howl`, `blight_ping`, `crawl_drag`, `music_box`, `sea_whisper`, `plague_breath`
 9. `results_win` / `results_lose`, `vanquish_success`
 10. `menu_music`

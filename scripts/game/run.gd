@@ -268,15 +268,16 @@ func _place_resources() -> void:
 			pickups.append({"kind": "resource", "res": res, "node": node, "pos": pos, "icon": Defs.EQUIPMENT[res]["icon"],
 				"label": "Pick Up " + Defs.EQUIPMENT[res]["name"], "hold": 0.0})
 
-func _item_sprite(path: String, pos: Vector2, size: float) -> Sprite2D:
+func _item_sprite(path: String, pos: Vector2, size: float, rot: float = 0.0) -> Sprite2D:
 	var s := Sprite2D.new()
 	s.texture = Art.tex(path)
 	s.position = pos
+	s.rotation = rot
 	var k := size / maxf(1.0, s.texture.get_size().x)
 	s.scale = Vector2(k, k)
 	s.name = "item_%d" % next_uid()
 	view.decal_layer.add_child(s)
-	record_event("decal", {"id": s.name, "sprite": path, "x": pos.x, "y": pos.y, "rot": 0.0, "size": size})
+	record_event("decal", {"id": s.name, "sprite": path, "x": pos.x, "y": pos.y, "rot": snappedf(rot, 0.01), "size": size})
 	return s
 
 func _remove_sprite(s: Node) -> void:
@@ -857,6 +858,9 @@ func creature_fx(kind: String, pos: Vector2, extra: Dictionary = {}) -> void:
 		"transform": WorldFx.ring(view.overlay_layer, pos, Color(0.75, 0.85, 1.0), 120.0, 1.4)
 		"revert": WorldFx.ring(view.overlay_layer, pos, Color(1.0, 0.95, 0.8), 90.0, 1.2)
 		"counter": WorldFx.ring(view.overlay_layer, pos, Art.GOLD, 80.0, 0.7)
+		"lights": view.flicker_near(pos, 170.0, 1.2)
+		"emerge": view.emerge_splash(pos)
+		"miasma": view.miasma(pos, float(d.get("r", 70.0)), float(d.get("dur", 9.0)))
 	record_event("creature_fx", d)
 
 func disturbance(pos: Vector2) -> void:
@@ -929,6 +933,12 @@ func trigger_hunt(reckless: bool) -> void:
 func _fair_hunt_start() -> Vector2:
 	var alive := living_hunters()
 	var cpos := creature.position
+	if creature.type_id == "drowned_sailor" and rng.randf() < 0.7:
+		var from := _fair_puddle(alive)
+		if from != Vector2.INF:
+			creature_fx("emerge", from)
+			sound_at("water_splash", from, 2.0)
+			return from
 	var vampire := creature.type_id == "vampire"
 	var victim: Player = nearest_hunter(cpos)
 	var min_d := INF
@@ -976,6 +986,8 @@ func _on_hunt_started(c: Creature) -> void:
 		"poltergeist", "shade": sound_at("ghost_wail", c.position, -2.0)
 		"blightness": sound_at("blight_ping", c.position, 4.0, 0.8)
 		"crawler": sound_at("crawl_drag", c.position, 0.0)
+		"drowned_sailor": sound_at("sea_whisper", c.position, 2.0, 0.8)
+		"plague_doctor": sound_at("plague_breath", c.position, 2.0, 0.85)
 		"lost_one":
 			if c.wrath:
 				sound_at("ghost_wail", c.position, 2.0, 1.4)
@@ -1261,6 +1273,9 @@ func _burn_occupant(o: Occupant) -> void:
 			oo.react(pos))
 
 func _hazard_tick(delta: float) -> void:
+	for h: Player in living_hunters():
+		h.set_meta("ember_cd", maxf(0.0, float(h.get_meta("ember_cd", 0.0)) - delta))
+	_miasma_tick(delta)
 	for hz in hazards.duplicate():
 		if elapsed >= hz["until"]:
 			hazards.erase(hz)
@@ -1270,10 +1285,11 @@ func _hazard_tick(delta: float) -> void:
 			if is_instance_valid(hz["light"]):
 				hz["light"].queue_free()
 			continue
+		if hz.get("kind", "") == "miasma":
+			continue
 		if is_instance_valid(hz["light"]):
 			hz["light"].energy = 0.8 + sin(elapsed * 9.0 + hz["pos"].x) * 0.15
 		for h: Player in living_hunters():
-			h.set_meta("ember_cd", maxf(0.0, float(h.get_meta("ember_cd", 0.0)) - delta))
 			if h.global_position.distance_to(hz["pos"]) < hz["radius"] and h.invuln <= 0.0 and float(h.get_meta("ember_cd", 0.0)) <= 0.0:
 				# Burned: a wound, with a grace period so one step never counts twice.
 				h.set_meta("ember_cd", 4.0)
@@ -1283,6 +1299,122 @@ func _hazard_tick(delta: float) -> void:
 				if hell:
 					h.set_meta("hellfire_burns", int(h.get_meta("hellfire_burns", 0)) + 1)
 				_wound(h, null, "hellfire" if hell else "embers")
+
+# --- The Drowned Sailor and the Plague Doctor ---------------------------------------------
+
+const PUDDLE_MAX := 6
+const MIASMA_RADIUS := 70.0
+const MIASMA_LIFE := 9.0
+const MIASMA_GROW := 1.6       # (matches HouseView.Miasma.GROW)
+const MIASMA_EXPOSURE := 1.2   # seconds inside a cloud before it wounds
+var puddles: Array = []        # [{node, pos, until}]
+var _footprints: Array = []    # [{node, until}]
+var _sailor_t := {"step": 0.0, "puddle": 6.0, "drip": 2.0, "whisper": 25.0, "creak": 8.0, "lights": 0.0}
+var _plague_t := {"breath": 3.0, "bottle": 7.0, "cloud": 0.0}
+
+## Salt water follows it: wet footprints, puddles, drips, creaking timbers, and
+## lights that stutter as it passes. None of it is evidence.
+func sailor_tick(c: Creature, delta: float) -> void:
+	for k in _sailor_t:
+		_sailor_t[k] -= delta
+	for f in _footprints.duplicate():
+		if elapsed >= f["until"]:
+			_footprints.erase(f)
+			_remove_sprite(f["node"])
+	for pd in puddles.duplicate():
+		if elapsed >= pd["until"]:
+			puddles.erase(pd)
+			_remove_sprite(pd["node"])
+	if c.state == "banished" or c.state == "bound":
+		return
+	var indoors: bool = not map.room(c.room_id).get("outdoor", true)
+	var moving := c.path_i < c.path.size()
+	if moving and indoors and _sailor_t["step"] <= 0.0:
+		_sailor_t["step"] = 0.6 if c.is_hunting() else 1.3
+		var side := Vector2.from_angle(c.token.facing + PI * 0.5) * (5.0 if _footprints.size() % 2 == 0 else -5.0)
+		var node := _item_sprite("items/wet_footprint.png", c.position + side, 18.0, c.token.facing + PI * 0.5)
+		_footprints.append({"node": node, "until": elapsed + 26.0})
+		if _footprints.size() > 24:
+			_remove_sprite(_footprints.pop_front()["node"])
+	if indoors and _sailor_t["puddle"] <= 0.0 and c.state == "roam":
+		_sailor_t["puddle"] = rng.randf_range(9.0, 15.0)
+		var cell := map.nearest_walkable(HouseMap.to_cell(c.position))
+		var pos := HouseMap.cell_center(cell) + Vector2(rng.randf_range(-6, 6), rng.randf_range(-6, 6))
+		puddles.append({"node": _item_sprite("items/puddle.png", pos, 36.0), "pos": pos, "until": elapsed + 70.0})
+		if puddles.size() > PUDDLE_MAX:
+			_remove_sprite(puddles.pop_front()["node"])
+	if _sailor_t["drip"] <= 0.0:
+		_sailor_t["drip"] = rng.randf_range(2.5, 4.5)
+		sound_at("water_drip", c.position, -10.0, rng.randf_range(0.9, 1.1), 700.0)
+	if _sailor_t["creak"] <= 0.0 and moving:
+		_sailor_t["creak"] = rng.randf_range(7.0, 12.0)
+		sound_at("wood_creak", c.position, -8.0, rng.randf_range(0.85, 1.05), 900.0)
+	if _sailor_t["whisper"] <= 0.0:
+		_sailor_t["whisper"] = rng.randf_range(28.0, 45.0)
+		sound_at("sea_whisper", c.position, -6.0, 1.0, 1000.0)
+	if _sailor_t["lights"] <= 0.0:
+		for l in view.lights:
+			if l["on"] and l["kind"] != "moon" and l["pos"].distance_to(c.position) < 170.0:
+				_sailor_t["lights"] = 2.4
+				creature_fx("lights", c.position)
+				break
+
+## A fair place for the Drowned Sailor to rise from: one of its puddles, far
+## enough from every hunter (the same rule as any hunt start). INF if none.
+func _fair_puddle(alive: Array) -> Vector2:
+	var fair: Array = []
+	for pd in puddles:
+		var ok := true
+		for h: Player in alive:
+			if pd["pos"].distance_to(h.global_position) < 300.0:
+				ok = false
+		if ok:
+			fair.append(pd["pos"])
+	return Vector2.INF if fair.is_empty() else fair[rng.randi_range(0, fair.size() - 1)]
+
+## Rasping breath and clinking glass while it makes its rounds; while it hunts,
+## a cloud of miasma every few seconds where it has just walked.
+func plague_tick(c: Creature, delta: float) -> void:
+	for k in _plague_t:
+		_plague_t[k] -= delta
+	if c.state == "banished" or c.state == "bound":
+		return
+	if _plague_t["breath"] <= 0.0:
+		_plague_t["breath"] = rng.randf_range(5.0, 8.0) if not c.is_hunting() else 2.5
+		sound_at("plague_breath", c.position, -8.0, rng.randf_range(0.9, 1.05), 800.0)
+	if _plague_t["bottle"] <= 0.0:
+		_plague_t["bottle"] = rng.randf_range(9.0, 15.0)
+		sound_at("bottle_clink", c.position, -8.0, rng.randf_range(0.9, 1.15), 800.0)
+	if c.state == "hunt" and _plague_t["cloud"] <= 0.0:
+		_plague_t["cloud"] = 3.2
+		spawn_miasma(c.position)
+
+func spawn_miasma(pos: Vector2) -> void:
+	hazards.append({"pos": pos, "born": elapsed, "until": elapsed + MIASMA_LIFE, "radius": MIASMA_RADIUS, "node": null, "light": null, "kind": "miasma"})
+	creature_fx("miasma", pos, {"r": MIASMA_RADIUS, "dur": MIASMA_LIFE})
+	sound_at("plague_breath", pos, -4.0, 0.7, 900.0)
+
+## Lingering in a cloud (it swells over 1.6 s) wounds after a moment, with the
+## same grace period as fire so a single cloud never counts twice.
+func _miasma_tick(delta: float) -> void:
+	for h: Player in living_hunters():
+		var inside := false
+		for hz in hazards:
+			if hz.get("kind", "") != "miasma" or elapsed >= hz["until"]:
+				continue
+			var r: float = hz["radius"] * clampf((elapsed - hz["born"]) / MIASMA_GROW, 0.15, 1.0)
+			if h.global_position.distance_to(hz["pos"]) < r:
+				inside = true
+				break
+		var t := float(h.get_meta("miasma_t", 0.0))
+		t = t + delta if inside else maxf(0.0, t - delta * 2.0)
+		h.set_meta("miasma_t", t)
+		if inside and t >= MIASMA_EXPOSURE and h.invuln <= 0.0 and float(h.get_meta("ember_cd", 0.0)) <= 0.0:
+			h.set_meta("ember_cd", 4.0)
+			h.set_meta("miasma_t", 0.0)
+			sound_to(h, "plague_breath", 0.0, 1.3)
+			tell(h, "The miasma burns your lungs!", "tokens/plague_doctor.png")
+			_wound(h, null, "miasma")
 
 # --- Shoving (competitive) -------------------------------------------------------------
 
@@ -1466,8 +1598,8 @@ func perform_rite(p: Player) -> void:
 		record_event("final_rite", {"actor": p.actor_id})
 		_victory(p)
 		return
-	if p.suspect == "crawler":
-		p.charges["holy_water"] = maxi(0, int(p.charges["holy_water"]) - 1)   # the Rite of Drowning spends a flask
+	if "holy_water" in Defs.CREATURES[p.suspect].get("rite_needs", []):
+		p.charges["holy_water"] = maxi(0, int(p.charges["holy_water"]) - 1)   # rites of water spend a flask
 		p.equipment.changed.emit()
 	attempt_vanquish(p, p.suspect, "rite")
 

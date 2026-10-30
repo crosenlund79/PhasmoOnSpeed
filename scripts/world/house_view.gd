@@ -53,6 +53,7 @@ var doors: Array = []          # [{cell, open, leaf: DoorLeaf, shape, occluder}]
 var _with_collision := false
 var _flicker_time := 0.0
 var _flicker_strength := 0.0
+var _local_flickers: Array = []   # [{pos, radius, until}] — lights near something passing
 var _t := 0.0
 var _darkness := DARKNESS
 
@@ -558,6 +559,48 @@ func flicker(duration: float, strength: float = 1.0) -> void:
 	_flicker_time = maxf(_flicker_time, duration)
 	_flicker_strength = maxf(_flicker_strength, strength)
 
+## Only the lights near pos stutter (something cold passing by).
+func flicker_near(pos: Vector2, radius: float, duration: float) -> void:
+	_local_flickers.append({"pos": pos, "radius": radius, "until": _t + duration})
+
+## The Plague Doctor's miasma: a sickly green cloud that swells, lingers, thins.
+func miasma(pos: Vector2, radius: float, dur: float) -> void:
+	var m := Miasma.new()
+	m.position = pos
+	m.radius = radius
+	m.dur = dur
+	m.z_index = 4
+	overlay_layer.add_child(m)
+
+class Miasma extends Node2D:
+	const GROW := 1.6
+	var radius := 70.0
+	var dur := 9.0
+	var _t := 0.0
+	func _ready() -> void:
+		var mt := CanvasItemMaterial.new()
+		mt.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED   # a hazard must read in any darkness
+		material = mt
+	func _process(delta: float) -> void:
+		_t += delta
+		if _t >= dur:
+			queue_free()
+		queue_redraw()
+	func _draw() -> void:
+		var r := radius * clampf(_t / GROW, 0.15, 1.0)
+		var fade := clampf((dur - _t) / 1.5, 0.0, 1.0)
+		for i in 7:
+			var a := i * TAU / 7.0 + _t * 0.25
+			var c := Vector2.from_angle(a) * r * 0.45 + Vector2(sin(_t * 0.9 + i), cos(_t * 0.7 + i * 2.0)) * 5.0
+			draw_circle(c, r * (0.55 + 0.08 * sin(_t * 1.3 + i)), Color(0.4, 0.5, 0.15, 0.2 * fade))
+		draw_circle(Vector2.ZERO, r * 0.7, Color(0.45, 0.55, 0.18, 0.26 * fade))
+		draw_arc(Vector2.ZERO, r, 0.0, TAU, 48, Color(0.65, 0.78, 0.3, 0.5 * fade), 2.0, true)
+
+## Water rising out of a puddle: the Drowned Sailor emerging to hunt.
+func emerge_splash(pos: Vector2) -> void:
+	WorldFx.ring(overlay_layer, pos, Color(0.45, 0.65, 0.75), 60.0, 1.0)
+	WorldFx.ring(overlay_layer, pos, Color(0.7, 0.85, 0.95), 110.0, 1.4)
+
 func set_darkness(c: Color, time: float = 1.0) -> void:
 	_darkness = c
 	create_tween().tween_property(modulate_node, "color", _effective_darkness(), time)
@@ -755,6 +798,7 @@ func _process(delta: float) -> void:
 		var r := s.region_rect
 		r.position = Vector2(_t * (9.0 if k == 0 else -6.0), sin(_t * 0.07 + k) * 40.0 + _t * 3.0)
 		s.region_rect = r
+	_local_flickers = _local_flickers.filter(func(lf): return lf["until"] > _t)
 	if _flicker_time > 0.0:
 		_flicker_time -= delta
 		if _flicker_time <= 0.0:
@@ -773,9 +817,13 @@ func _process(delta: float) -> void:
 				# Fire breathes: the glow swells and shifts a little with the flame.
 				light.texture_scale = l["scale"] * (1.0 + sin(_t * 6.3 + l["phase"]) * 0.04)
 				light.position = l["pos"] + Vector2(sin(_t * 5.3 + l["phase"]), cos(_t * 4.1 + l["phase"])) * 1.5
-		if _flicker_strength > 0.0 and l["kind"] != "moon":
+		var fs := _flicker_strength
+		for lf in _local_flickers:
+			if l["pos"].distance_to(lf["pos"]) < lf["radius"]:
+				fs = maxf(fs, 0.8)
+		if fs > 0.0 and l["kind"] != "moon":
 			var n := sin(_t * 37.0 + l["phase"] * 7.0) + sin(_t * 61.0 + l["phase"])
-			if n > 0.6 * (1.0 - _flicker_strength * 0.5):
+			if n > 0.6 * (1.0 - fs * 0.5):
 				e *= 0.08
 		light.energy = e
 

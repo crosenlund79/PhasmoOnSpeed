@@ -26,7 +26,7 @@ func _ready() -> void:
 		"test_counterattacks", "test_escalations", "test_prompt_and_needle", "test_audio_overrides",
 		"test_audio_export", "test_game_setup",
 		"test_blightness_rushes", "test_safe_names", "test_temperatures", "test_ghost_marker_and_ruled_out",
-		"test_hellbound", "test_abyssal",
+		"test_hellbound", "test_abyssal", "test_sailor_and_doctor",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -1128,3 +1128,82 @@ func test_abyssal() -> void:
 	check(o.visible and not run.creature.has_meta("abyss") and run.creature.visible, "occupant and entity returned")
 	check(run.recorder.data["events"].any(func(e): return e[1] == "abyss_return"), "return recorded for the replay")
 	check(run.build_summary()["abyss_escapes"] == 1, "escape counted in the results")
+
+# --- The Drowned Sailor and the Plague Doctor -------------------------------------------
+
+func _rite_in_lair(run: Run, id: String, items: Array) -> void:
+	var p := run.player
+	var lair := run.creature.lair_room
+	p.global_position = HouseMap.cell_center(run.map.random_free_cell(lair, run.rng))
+	p.room_id = lair
+	for it in items:
+		run.place_item(p, it, p.global_position)
+	p.journal.record(Defs.CREATURES[id]["evidence"][0], 10.0, lair, "Lair")
+	p.suspect = id
+	check(run.can_begin_rite(p), "%s: the %s can begin" % [id, Defs.CREATURES[id]["rite_name"]])
+	run.perform_rite(p)
+	check(run._outcome == "vanquished", "%s: vanquished by its rite" % id)
+
+func test_sailor_and_doctor() -> void:
+	# The Drowned Sailor: a trail of sea water, fair emergence, waterlogged surges.
+	var run := await _start("marrow_street", "drowned_sailor", 31)
+	for id in ["drowned_sailor", "plague_doctor"]:
+		check(Defs.ORDINARY_CREATURES.has(id) and Defs.ENCYCLOPEDIA_ORDER.has(id), "%s: selectable and in the encyclopedia" % id)
+		check(Defs.CREATURES[id]["evidence"].size() == 3 and run.hud.REQUIREMENTS.has(id), "%s: three evidence types and requirements" % id)
+		check(Art.tex(Defs.CREATURES[id]["token"]) != null, "%s: token art exists" % id)
+	var c := run.creature
+	c.position = HouseMap.cell_center(run.map.random_free_cell(c.lair_room, run.rng))
+	c.room_id = c.lair_room
+	c.wait_t = 0.01
+	run._sailor_t["puddle"] = 0.0
+	await _frames(90)
+	check(run.puddles.size() >= 1, "it leaves a puddle")
+	check(not run._footprints.is_empty(), "it leaves wet footprints")
+	check(run.recorder.data["events"].any(func(e): return e[1] == "decal" and e[2]["sprite"] == "items/puddle.png"), "puddles reach clients and replays")
+	var pd: Vector2 = run.puddles[0]["pos"]
+	run.player.global_position = pd + Vector2(40, 0)
+	check(run._fair_puddle([run.player]) == Vector2.INF, "never rises from a puddle beside a hunter")
+	run.player.global_position = pd + Vector2(400, 0)
+	check(run._fair_puddle([run.player]) == pd, "rises from a distant puddle")
+	var gaits := {}
+	for t in [0.5, 2.0]:
+		c.state_t = t
+		gaits[c.hunt_gait()] = true
+	check(gaits.size() == 2, "its hunt alternates heavy steps and lunges")
+	run.player.global_position = HouseMap.cell_center(run.map.spawn_cell)
+	c.cooldown_t = 0.0
+	run.trigger_hunt(false)
+	check(c.is_hunting() and c.position.distance_to(run.player.global_position) >= 300.0, "its hunt starts at a fair distance")
+	c.end_hunt()
+	run.player.charges["holy_water"] = 2
+	await _rite_in_lair(run, "drowned_sailor", ["salt"])
+	check(int(run.player.charges["holy_water"]) == 1, "the Rite of the Tides spends a flask")
+	_cleanup_scene()
+	await get_tree().process_frame
+	# The Plague Doctor: miasma during hunts that wounds only those who linger.
+	var pdr := await _start("hollow_lane", "plague_doctor", 32)
+	var d := pdr.creature
+	d.begin_hunt(d.position, false)
+	d.state = "hunt"
+	pdr._plague_t["cloud"] = 0.0
+	await _frames(3)
+	check(pdr.hazards.any(func(h): return h.get("kind", "") == "miasma"), "it leaves miasma while hunting")
+	check(pdr.recorder.data["events"].any(func(e): return e[1] == "creature_fx" and e[2]["kind"] == "miasma"), "the miasma reaches clients and replays")
+	d.end_hunt()
+	d.set_process(false)
+	pdr.hazards.clear()
+	var at := pdr.player.global_position
+	pdr.spawn_miasma(at)
+	await _frames(20)
+	check(pdr.player.wounds == 0, "passing through briefly does no harm")
+	await get_tree().create_timer(2.6).timeout
+	check(pdr.player.wounds == 1 and not pdr.player.dead, "lingering in it wounds")
+	pdr.player.global_position = at
+	await get_tree().create_timer(2.0).timeout
+	check(pdr.player.wounds == 1 and not pdr.player.dead, "a grace period: no second wound straight away")
+	var hz: Dictionary = pdr.hazards.filter(func(h): return h.get("kind", "") == "miasma")[0]
+	check(is_equal_approx(hz["until"] - hz["born"], Run.MIASMA_LIFE), "the cloud dissipates after a short time")
+	d.set_process(true)
+	pdr.player.wounds = 0
+	pdr.hazards.clear()
+	await _rite_in_lair(pdr, "plague_doctor", ["crucifix", "ghost_book"])

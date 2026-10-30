@@ -308,7 +308,125 @@ def lost_one():
     T.finish(cv, "tokens/lost_one.png")
 
 
-TOKENS5 = [blightness, crawler, lost_one]
+def drowned_sailor():
+    """An old sailor in a sodden, tattered pea coat and tricorn, seaweed in his
+    collar, a halo of sea water dripping from him."""
+    cv, T = _token_base("drowned_sailor", "#3a5a66", "#0e1416")
+    r = cv.rnd
+    g = np.clip(1 - radial(cv.W, cv.H, *cv.T(62, 62), cv.TR(44)), 0, 1) ** 1.5
+    cv.glow(g, (90, 150, 170), 0.3)
+    T.ground_shadow(cv, 60, 63, 26, 32)
+    # the wet halo: a dark spreading pool under him
+    pool = cv.mask().ellipse(58, 64, 30, 36, wobble=2.0)
+    cv.paint(blur(pool.arr, 2.0 * cv.ss), (30, 52, 62), 0.55)
+    # broad shoulders in a heavy coat, ragged at the hem
+    coat = cv.mask().poly(catmull([(70, 64), (68, 40), (54, 34), (42, 40), (36, 52), (34, 64), (36, 76), (42, 88), (54, 94), (68, 88), (70, 64)], 8), wobble=1.2)
+    T.P(cv, coat, gradient(cv.W, cv.H, "#3c4a52", "#10171c", 160), depth=3, hatch=0.6)
+    for k in range(7):
+        y0 = 40 + k * 8
+        cv.stroke([(37, y0), (31 - r.uniform(0, 4), y0 + r.uniform(-2, 2))], 1.0, (20, 28, 32), 0.85)   # tatters
+    for yy in (52, 60, 68, 76):
+        cv.paint(cv.mask().circle(69, yy, 1.4), "#9a8a5a")   # tarnished brass buttons
+    # sodden, bloated hands hanging forward
+    T.limb(cv, [(60, 38), (72, 36), (84, 42)], 6.5, "#2e3a42")
+    T.limb(cv, [(60, 90), (72, 92), (84, 86)], 6.5, "#2e3a42")
+    for (x, y) in ((86, 43), (86, 85)):
+        T.P(cv, cv.mask().circle(x, y, 3.6), "#9aaaa6", ow=1.6, depth=1.2, hatch=0.2)
+    # seaweed draped over the collar
+    for k in range(5):
+        a = -0.9 + k * 0.45
+        p0 = (64 + math.cos(a) * 9, 64 + math.sin(a) * 12)
+        cv.stroke(catmull([p0, (p0[0] - 10, p0[1] + r.normal(0, 3)), (p0[0] - 20, p0[1] + r.normal(0, 5))], 8), 2.2, (70, 130, 60), 0.9)
+    # a pale, drowned face under a battered tricorn
+    hd = cv.mask().ellipse(70, 64, 10, 10)
+    T.P(cv, hd, gradient(cv.W, cv.H, "#c4d2cc", "#6a7a78", 45), depth=1.6)
+    for yy in (60, 68):
+        cv.paint(cv.mask().ellipse(77.5, yy, 1.6, 2.0), (12, 20, 24))   # hollow eyes
+    cv.stroke([(79, 62), (79, 66)], 0.8, (60, 80, 80), 0.8)
+    hat = cv.mask().poly([(71, 64), (50, 48), (50, 80)], wobble=0.8)
+    T.P(cv, hat, gradient(cv.W, cv.H, "#2a2a28", "#0a0a0a", 45), depth=2, hatch=0.5)
+    cv.stroke([(69, 64), (52, 50)], 0.8, (110, 96, 64), 0.8)
+    cv.stroke([(69, 64), (52, 78)], 0.8, (110, 96, 64), 0.8)
+    # drops of sea water around him
+    for k in range(10):
+        a = r.uniform(0, 2 * math.pi)
+        d = r.uniform(34, 46)
+        x, y = 62 + math.cos(a) * d, 62 + math.sin(a) * d
+        cv.paint(cv.mask().ellipse(x, y, 1.4, 2.0), (150, 200, 215), 0.8)
+        cv.paint(cv.mask().circle(x - 0.4, y - 0.6, 0.5), (230, 245, 250), 0.9)
+    T.finish(cv, "tokens/drowned_sailor.png")
+
+
+def plague_doctor():
+    """Seen from above: a wide-brimmed black hat, dark waxed robes, and the long
+    pale beak of the mask jutting forward; round glass eyes catch the light."""
+    cv, T = _token_base("plague_doctor", "#5a6a3a", "#121410")
+    r = cv.rnd
+    g = np.clip(1 - radial(cv.W, cv.H, *cv.T(62, 62), cv.TR(44)), 0, 1) ** 1.6
+    cv.glow(g, (140, 170, 80), 0.25)
+    T.ground_shadow(cv, 60, 63, 26, 32)
+    # a faint sickly haze trailing behind
+    for k in range(5):
+        cv.paint(blur(cv.mask().circle(34 - k * 2, 50 + k * 7, 8 + k).arr, 3.0 * cv.ss), (110, 130, 50), 0.12)
+    robe = cv.mask().poly(catmull([(68, 64), (66, 38), (52, 32), (38, 38), (32, 52), (30, 64), (32, 76), (38, 90), (52, 96), (66, 90), (68, 64)], 8), wobble=0.6)
+    T.P(cv, robe, gradient(cv.W, cv.H, "#2c2a26", "#08080a", 160), depth=3.5, hatch=0.6)
+    for k in range(5):
+        cv.stroke(catmull([(64, 44 + k * 10), (48, 42 + k * 11), (34, 40 + k * 12)], 8), 0.7, (60, 56, 50), 0.6)   # folds of waxed cloth
+    # gloved hands and the cane held forward
+    T.limb(cv, [(58, 38), (70, 40), (80, 46)], 6.0, "#1c1a18")
+    T.limb(cv, [(58, 90), (70, 88), (80, 82)], 6.0, "#1c1a18")
+    cv.stroke([(82, 82), (100, 92)], 2.2, (60, 44, 30), 1.0)
+    cv.paint(cv.mask().circle(82, 82, 2.4), (30, 26, 22))
+    # medicine bottles at the belt
+    for (x, y, c) in ((50, 34, (120, 160, 90)), (44, 36, (150, 110, 70))):
+        T.P(cv, cv.mask().ellipse(x, y, 2.4, 3.2), c, ow=1.0, depth=0.8, hatch=0)
+    # the wide hat brim, crown, and the long beak jutting forward
+    brim = cv.mask().circle(62, 64, 17)
+    T.P(cv, brim, gradient(cv.W, cv.H, "#2e2c2a", "#0a0a0a", 45), depth=2, hatch=0.4)
+    crown = cv.mask().circle(61, 64, 9.5)
+    T.P(cv, crown, gradient(cv.W, cv.H, "#3a3632", "#121010", 45), ow=1.4, depth=1.6, hatch=0.3)
+    cv.stroke(ellipse_pts(61, 64, 10.5, 10.5, 40), 1.2, (90, 30, 26), 0.8)   # hatband
+    beak = cv.mask().poly(catmull([(74, 58), (92, 61), (104, 64), (92, 67), (74, 70)], 6))
+    T.P(cv, beak, gradient(cv.W, cv.H, "#d8cab0", "#7a6a50", 90), ow=1.8, depth=1.6, hatch=0.3)
+    for xx in (84, 92):
+        cv.stroke([(xx, 61.5), (xx, 66.5)], 0.7, (90, 74, 50), 0.8)   # stitched leather seams
+    for yy in (57, 71):
+        T.P(cv, cv.mask().circle(76, yy, 3.0), gradient(cv.W, cv.H, "#d8e4c0", "#4a5a3a", 45), ow=1.4, depth=0.8, hatch=0)
+        cv.paint(cv.mask().circle(75.2, yy - 0.8, 0.9), (250, 255, 230), 0.9)
+    T.finish(cv, "tokens/plague_doctor.png")
+
+
+def wet_footprint(cv, st):
+    """One bare, sea-wet footprint (toes toward -Y), dark and glistening."""
+    cx, cy = 32, 34
+    m = cv.mask().ellipse(cx, cy, 7.5, 13)
+    m.ellipse(cx, cy + 12, 5.6, 6)
+    for (dx, dy, rr) in ((-6.2, -15.5, 2.6), (-2.2, -17.6, 2.2), (1.6, -17.6, 1.9), (4.8, -16.2, 1.6), (7.2, -14, 1.4)):
+        m.circle(cx + dx, cy + dy, rr)
+    cv.paint(blur(m.arr, 2.0 * cv.ss), (40, 70, 80), 0.45)
+    cv.paint(m, gradient(cv.W, cv.H, "#3c5a64", "#1a2a30", 45), 0.8)
+    cv.paint(cv.mask().ellipse(cx - 2.5, cy - 4, 1.4, 5), (200, 230, 240), 0.55)   # wet sheen
+    for k in range(4):
+        x, y = cx + (k - 1.5) * 6, cy + 18 + (k % 2) * 3
+        cv.paint(cv.mask().ellipse(x, y, 1.1, 1.5), (120, 170, 185), 0.6)   # drips
+
+
+def puddle(cv, st):
+    """A pool of dark sea water on the boards, with a cold reflected sheen and ripples."""
+    r = rng("puddle")
+    m = cv.mask().ellipse(32, 32, 24, 16, wobble=2.5)
+    m.ellipse(42, 40, 12, 8, wobble=1.5)
+    cv.paint(blur(dilate(m.arr, 1.5 * cv.ss), 1.5 * cv.ss), (24, 34, 38), 0.55)
+    cv.paint(m, gradient(cv.W, cv.H, "#3a5862", "#0e1a20", 30), 0.82)
+    cv.paint(cv.mask().ellipse(24, 26, 9, 3, rot=-15), (170, 210, 225), 0.35)   # reflected light
+    for k, rr in enumerate((6, 11)):
+        cv.stroke(ellipse_pts(38, 36, rr, rr * 0.65, 40), 0.8, (150, 200, 215), 0.5 - k * 0.2)
+    for _ in range(3):
+        x, y = 32 + r.normal(0, 8), 32 + r.normal(0, 5)
+        cv.paint(cv.mask().circle(x, y, 0.8), (210, 235, 245), 0.7)
+
+
+TOKENS5 = [blightness, crawler, lost_one, drowned_sailor, plague_doctor]
 
 
 def build_tokens(only=None):

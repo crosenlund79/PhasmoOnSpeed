@@ -96,6 +96,32 @@ const CREATURES := {
 		"weaknesses": ["Harmless while you leave its keepsake alone.", "Placed crucifixes stop its hunts from starting.", "Holy water stuns it and ends a hunt."],
 		"vanquish": ["Find the room it haunts — and leave the twitching keepsake alone.", "Pour salt and lay the Ghost Writing Book in that room.", "Choose The Lost One as your suspect (Tab).", "Hold V inside its room to perform the Rite of Rest."],
 	},
+	"drowned_sailor": {
+		"name": "The Drowned Sailor", "kind": "ghost", "token": "tokens/drowned_sailor.png",
+		"evidence": ["freezing", "spirit_box", "writing"],
+		"hunt_threshold": 56.0, "hunt_cooldown": 29.0, "hunt_duration": 14.0,
+		"hunt_speed": 200.0, "roam_speed": 55.0, "interaction_interval": 10.0, "lair_bias": 0.6,
+		"difficulty": 1.1, "rite": "tides", "rite_needs": ["salt", "holy_water"], "rite_name": "Rite of the Tides",
+		"blurb": "An old sailor, still dripping from the sea that took him.",
+		"behaviour": "Wanders slowly in a tattered pea coat, swaying like a deck in a swell. It leaves salt-water puddles and wet bare footprints behind it, timbers creak and water drips where it passes, and nearby lights stutter as it goes by. Sometimes you hear a far-off sea shanty whispered.",
+		"hunting": "Hunts in waterlogged surges — heavy and slow, then a sudden lunge. It may rise out of one of its own puddles, so a wet floor is a warning. Never right beside you: it always emerges at a distance.",
+		"strengths": ["Can appear from any puddle it has left in the house.", "Its surges close distance quickly."],
+		"weaknesses": ["Puddles and wet footprints betray where it walks.", "Placed crucifixes stop its hunts from starting.", "Holy water stuns it and ends a hunt.", "Salt slows it while it hunts."],
+		"vanquish": ["Find the room it haunts.", "Pour salt in that room and carry at least one flask of holy water.", "Choose The Drowned Sailor as your suspect (Tab).", "Hold V inside its room to perform the Rite of the Tides (it uses one flask)."],
+	},
+	"plague_doctor": {
+		"name": "The Plague Doctor", "kind": "ghost", "token": "tokens/plague_doctor.png",
+		"evidence": ["emf5", "freezing", "writing"],
+		"hunt_threshold": 58.0, "hunt_cooldown": 30.0, "hunt_duration": 15.0,
+		"hunt_speed": 185.0, "roam_speed": 50.0, "interaction_interval": 11.0, "lair_bias": 0.7,
+		"difficulty": 1.15, "rite": "cleansing", "rite_needs": ["crucifix", "ghost_book"], "rite_name": "Rite of Cleansing",
+		"blurb": "Beaked, robed and patient. It is still making its rounds.",
+		"behaviour": "Walks with slow, deliberate steps, pausing as if to examine the room. You hear it before you see it: rasping breath through the beak and the clink of glass medicine bottles. It rarely shows itself.",
+		"hunting": "Hunts slowly, but leaves a sickly green miasma in its wake. The clouds swell for a moment, linger, then thin away — stay in one too long and it wounds you.",
+		"strengths": ["Its miasma closes corridors and rooms for a while.", "Silent while it wanders: only breath and glass give it away."],
+		"weaknesses": ["The slowest hunter of all — distance saves you.", "Placed crucifixes stop its hunts from starting.", "Holy water stuns it and ends a hunt.", "Salt slows it while it hunts."],
+		"vanquish": ["Find the room it haunts.", "Place a crucifix and lay the Ghost Writing Book in that room.", "Choose The Plague Doctor as your suspect (Tab).", "Hold V inside its room to perform the Rite of Cleansing."],
+	},
 	"vampire": {
 		"name": "Vampire", "kind": "physical", "token": "tokens/vampire.png",
 		"evidence": ["bite_marks", "blood_drops", "coffin_soil"],
@@ -149,8 +175,8 @@ const CREATURES := {
 		"vanquish": ["Find the three pale sigil candles and hold E or Space to light each one.", "When all three burn it is bound in its room and stops hunting.", "Stand beside it and hold V to perform the Final Rite."],
 	},
 }
-const ORDINARY_CREATURES := ["shade", "poltergeist", "blightness", "crawler", "lost_one", "vampire", "werewolf", "shapeshifter"]
-const ENCYCLOPEDIA_ORDER := ["shade", "poltergeist", "blightness", "crawler", "lost_one", "vampire", "werewolf", "shapeshifter", "harbinger"]
+const ORDINARY_CREATURES := ["shade", "poltergeist", "blightness", "crawler", "lost_one", "drowned_sailor", "plague_doctor", "vampire", "werewolf", "shapeshifter"]
+const ENCYCLOPEDIA_ORDER := ["shade", "poltergeist", "blightness", "crawler", "lost_one", "drowned_sailor", "plague_doctor", "vampire", "werewolf", "shapeshifter", "harbinger"]
 const SHAPESHIFTER_FORMS := ["human", "ghost", "vampire", "werewolf", "cat"]
 const FORM_TOKENS := {
 	"human": "tokens/occupant_d.png", "ghost": "tokens/shade.png", "vampire": "tokens/vampire.png",

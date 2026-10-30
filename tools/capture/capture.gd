@@ -167,6 +167,32 @@ func _shot(s: String) -> void:
 		run.on_creature_contact(run.creature, run.player)
 		await _wait(150)
 		await _save("furnace")
+	elif s == "sailor" or s == "plague":
+		var id := "drowned_sailor" if s == "sailor" else "plague_doctor"
+		var run: Run = Game.start_run("ashgrove", 12, id)
+		await _wait(5)
+		var c := run.creature
+		c.set_process(false)
+		var spot := HouseMap.cell_center(run.map.random_free_cell(c.lair_room, run.rng))
+		c.position = spot
+		c.alpha = 1.0
+		c.modulate.a = 1.0
+		c.glow.energy = 0.8
+		run.player.global_position = spot + Vector2(-110, 30)
+		run.player.input_enabled = false
+		run._apply_camera_limits(run.player.global_position)
+		run.camera.reset_smoothing()
+		if s == "sailor":
+			for k in 5:
+				var pos := spot + Vector2(-100 + k * 22, -20 + (k % 2) * 8)
+				run._item_sprite("items/wet_footprint.png", pos, 18.0, PI * 0.5)
+			run.puddles.append({"node": run._item_sprite("items/puddle.png", spot + Vector2(-30, -40), 36.0), "pos": spot + Vector2(-30, -40), "until": 999.0})
+			run.creature_fx("lights", spot)
+		else:
+			run.spawn_miasma(spot + Vector2(-40, -10))
+			run.spawn_miasma(spot + Vector2(30, 40))
+		await _wait(100)
+		await _save(s)
 	elif s.begins_with("ency:"):
 		Game.goto_encyclopedia()
 		await _wait(10)

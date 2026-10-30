@@ -1625,6 +1625,92 @@ def s_crawl_drag():
     return fades(remove_dc(fit(y, dur)), 0.02, 0.2)
 
 
+def s_water_drip():
+    """Two or three slow drops of sea water onto boards, in a hollow room."""
+    rng = rng_for(409)
+    dur = 1.4
+    y = np.zeros(N(dur))
+    for k, at in enumerate([0.03, 0.55, 1.0][:rng.integers(2, 4)]):
+        place(y, bubble(rng, 700, 1300, 1.4) * (1.0 - 0.25 * k), at)
+        m = N(0.05)
+        place(y, lp(rng.standard_normal(m), 900) * env_ad(m, 0.001, 0.01) * 0.25, at)
+    y = reverb(y, 1.2, 0.4, rng, 3500)
+    return fades(remove_dc(fit(y, dur)), 0.002, 0.2)
+
+
+def s_water_splash():
+    """Something heavy rising out of standing water."""
+    rng = rng_for(410)
+    dur = 1.6
+    n = N(dur)
+    t = tt(n)
+    env = interp_keys([(0, 0), (0.06, 1), (0.5, 0.5), (1.6, 0)], t)
+    y = bp(rng.standard_normal(n), 300, 3500) * env * 0.8
+    tc = 0.02
+    while tc < 1.2:
+        place(y, bubble(rng, 250, 1400, 2.0) * rng.uniform(0.3, 0.9), tc)
+        tc += rng.exponential(1 / 25)
+    place(y, thump(0.4, 90, 45, 0.1, rng, 0.5, 400) * 0.6, 0.0)
+    y = reverb(y, 1.3, 0.35, rng, 3000)
+    return fades(remove_dc(fit(y, dur)), 0.004, 0.3)
+
+
+def s_wood_creak():
+    """Ship's timbers: a long, low groan of wet wood under strain."""
+    rng = rng_for(411)
+    dur = 2.0
+    y = creak(dur, [(0, 22), (0.9, 40), (2.0, 18)], rng, (180, 420, 900), 0.3,
+              [(0, 0), (0.3, 1), (1.5, 0.8), (2.0, 0)])
+    y = reverb(lp(y, 2200), 1.6, 0.4, rng, 2500)
+    return fades(remove_dc(fit(y, dur)), 0.02, 0.3)
+
+
+def s_sea_whisper():
+    """A far-off, breathy shanty fragment under a wash of surf."""
+    rng = rng_for(412)
+    dur = 3.0
+    n = N(dur)
+    t = tt(n)
+    surf = lp(rng.standard_normal(n), 600) * (0.5 + 0.5 * np.sin(2 * np.pi * 0.35 * t - 1.2)) ** 2
+    y = surf * 0.35
+    keys_v = [(0, "h"), (0.2, "o"), (0.6, "o"), (0.8, "a"), (1.2, "a"), (1.5, "u"), (1.9, "h")]
+    amp = [(0, 0), (0.15, 0.8), (0.6, 1), (0.8, 0.5), (1.2, 1), (1.6, 0.6), (1.9, 0)]
+    a = voice(1.9, [(0, 140), (0.6, 155), (1.2, 130), (1.9, 120)], keys_v, amp, rng, breath=1.2,
+              voiced=0.35, vib_depth=0.03, vib_rate=4.0, jitter=0.03, fshift=0.92)
+    place(y, a * 0.8, 0.5)
+    y = lp(y, 2500, 2)
+    y = reverb(y, 2.6, 0.6, rng, damp=2000, predelay=0.04)
+    return fades(remove_dc(fit(y, dur)), 0.05, 0.6)
+
+
+def s_plague_breath():
+    """Slow, rasping breath drawn through a long leather beak."""
+    rng = rng_for(413)
+    dur = 2.4
+    n = N(dur)
+    t = tt(n)
+    inh = interp_keys([(0, 0), (0.5, 1), (0.9, 0.3), (1.0, 0)], t)
+    exh = interp_keys([(0, 0), (1.15, 0), (1.5, 0.9), (2.2, 0.2), (2.4, 0)], t)
+    noise = rng.standard_normal(n) * (1 + 0.8 * smooth_noise(n, 40, rng))
+    y = bp(noise, 400, 2400) * inh * 0.8 + bp(noise, 250, 1500) * exh
+    y = fft_filter(y, lambda f: 0.2 + 1 / (1 + ((f - 700) / 120) ** 2) + 0.6 / (1 + ((f - 1500) / 200) ** 2))
+    y = reverb(y, 0.8, 0.2, rng, 3000)
+    return fades(remove_dc(fit(y, dur)), 0.02, 0.3)
+
+
+def s_bottle_clink():
+    """Glass medicine bottles knocking together in a satchel."""
+    rng = rng_for(414)
+    dur = 1.2
+    y = np.zeros(N(dur))
+    for k, at in enumerate([0.02, 0.17, 0.29]):
+        m = N(0.6)
+        f0 = rng.uniform(2600, 3400)
+        place(y, modes(m, [f0, f0 * 2.3, f0 * 3.9], [0.18, 0.1, 0.05], [1, 0.4, 0.2], rng) * (1 - 0.3 * k), at)
+    y = reverb(y, 0.7, 0.25, rng, 6000)
+    return fades(remove_dc(fit(y, dur)), 0.001, 0.2)
+
+
 # name -> (generator, kind, expected duration (approx))
 SOUNDS = {
     "pencil_scribble": (s_pencil_scribble, "oneshot"),
@@ -1683,6 +1769,12 @@ SOUNDS = {
     "ignite": (s_ignite, "oneshot"),
     "furnace_roar": (s_furnace_roar, "oneshot"),
     "crawl_drag": (s_crawl_drag, "oneshot"),
+    "water_drip": (s_water_drip, "oneshot"),
+    "water_splash": (s_water_splash, "oneshot"),
+    "wood_creak": (s_wood_creak, "oneshot"),
+    "sea_whisper": (s_sea_whisper, "oneshot"),
+    "plague_breath": (s_plague_breath, "oneshot"),
+    "bottle_clink": (s_bottle_clink, "oneshot"),
 }
 
 

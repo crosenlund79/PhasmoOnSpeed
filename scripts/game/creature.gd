@@ -123,6 +123,8 @@ func _glow_color() -> Color:
 		"blightness": return Color(0.6, 0.85, 0.3)
 		"crawler": return Color(0.35, 0.25, 0.45)
 		"lost_one": return Color(0.85, 0.85, 1.0)
+		"drowned_sailor": return Color(0.45, 0.7, 0.8)
+		"plague_doctor": return Color(0.6, 0.75, 0.35)
 	return Art.SPECTRAL
 
 func current_token() -> String:
@@ -497,7 +499,18 @@ func _set_path_to(p: Vector2) -> void:
 	path_i = 0
 	_rush_target_i = -1   # (a rush already under way keeps its line; it just won't skip ahead)
 
+## Waterlogged surges (the Drowned Sailor: heavy, then a sudden lunge) and the
+## Plague Doctor's measured tread. 1.0 for everything else.
+func hunt_gait() -> float:
+	match type_id:
+		"drowned_sailor":
+			return 1.35 if fmod(state_t, 2.6) > 1.8 else 0.72
+		"plague_doctor":
+			return 0.75 + 0.3 * absf(sin(state_t * 2.2))
+	return 1.0
+
 func _roam(delta: float) -> void:
+	_sway(delta)
 	if wait_t > 0.0:
 		wait_t -= delta
 		if wait_t <= 0.0:
@@ -506,8 +519,27 @@ func _roam(delta: float) -> void:
 	var spd: float = def["roam_speed"]
 	if type_id == "shapeshifter" and form == "cat":
 		spd = 80.0
+	if type_id == "plague_doctor":
+		spd *= 0.55 + 0.45 * absf(sin(state_t * 1.8))   # slow, deliberate steps
+		if rng.randf() < delta * 0.12:
+			wait_t = rng.randf_range(1.5, 3.0)            # stops, as if examining the room
+			return
 	if not _move_along(delta, spd):
-		wait_t = rng.randf_range(1.5, 5.0) if type_id != "harbinger" else rng.randf_range(0.5, 1.5)
+		if type_id == "harbinger":
+			wait_t = rng.randf_range(0.5, 1.5)
+		elif type_id == "plague_doctor":
+			wait_t = rng.randf_range(3.0, 7.0)
+		else:
+			wait_t = rng.randf_range(1.5, 5.0)
+
+## The sailor rolls like a deck in a swell; the doctor bows its beak as it walks.
+func _sway(_delta: float) -> void:
+	match type_id:
+		"drowned_sailor":
+			token.rotation = sin(state_t * 1.7) * 0.14
+			token.position.y = absf(sin(state_t * 1.7)) * -2.0
+		"plague_doctor":
+			token.rotation = sin(state_t * 0.9) * 0.05
 
 func _pick_roam_target() -> Vector2:
 	var player: Node2D = run.nearest_hunter(position)
@@ -541,6 +573,7 @@ func _player_visible(player: Node2D) -> bool:
 	return d < reach and map.los(position, player.global_position)
 
 func _hunt(delta: float) -> void:
+	_sway(delta)
 	if state_t >= float(def["hunt_duration"]) * (0.7 if Defs.rules(run.difficulty) == "beginner" else 1.0) or run.hunters_in_house().is_empty():
 		end_hunt()
 		return
@@ -570,7 +603,7 @@ func _hunt(delta: float) -> void:
 			chase_speed = move_toward(chase_speed, base, 60.0 * delta)
 	else:
 		chase_speed = move_toward(chase_speed, base * 0.85, 40.0 * delta)
-	var spd := chase_speed
+	var spd := chase_speed * hunt_gait()
 	if slowed_t > 0.0:
 		spd *= 0.5
 	if weakened_t > 0.0:

@@ -55,6 +55,9 @@ ITEMS = {
     "child_shoe": (lambda cv, st: R5.child_shoe(cv, st), True, None),
     "ashes": (lambda cv, st: R5.ash_pile(cv, st, embers=False), False, None),
     "embers": (lambda cv, st: R5.ash_pile(cv, st, embers=True), False, None),
+    # the Drowned Sailor's trail
+    "puddle": (lambda cv, st: R5.puddle(cv, st), False, None),
+    "wet_footprint": (lambda cv, st: R5.wet_footprint(cv, st), False, None),
 }
 
 
