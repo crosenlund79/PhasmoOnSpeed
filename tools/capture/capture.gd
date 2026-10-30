@@ -250,6 +250,34 @@ func _shot(s: String) -> void:
 		run.hud.refresh()
 		await _wait(60)
 		await _save("deduction")
+	elif s == "hellfire":
+		var run: Run = Game.start_run("ashgrove", 41, "shade", "hellbound")
+		await _wait(5)
+		run.creature.set_process(false)
+		run.player.input_enabled = false
+		run.spawn_hellfire(run.player.global_position + Vector2(70, -10))
+		run.spawn_hellfire(run.player.global_position + Vector2(-80, 20))
+		await get_tree().create_timer(0.9).timeout
+		await _save("hellfire_warning")
+		await get_tree().create_timer(1.3).timeout
+		await _save("hellfire_erupting")
+	elif s == "abyss":
+		var run: Run = Game.start_run("blackwood", 42, "shade", "abyssal")
+		await _wait(5)
+		run.creature.set_process(false)
+		run._portal_t = 9999.0
+		var indoor: Dictionary = run.map.indoor_rooms()[0]
+		run.player.global_position = HouseMap.cell_center(run.map.random_free_cell(indoor["id"], run.rng))
+		run.player.room_id = indoor["id"]
+		run._apply_camera_limits(run.player.global_position)
+		run.camera.reset_smoothing()
+		run.view.portal_warning(run.player.room_id, 2.5)
+		await get_tree().create_timer(1.8).timeout
+		await _save("portal_warning")
+		run.open_abyss(run.player.room_id)
+		run.player.invuln = 999.0
+		await _wait(220)
+		await _save("abyssal_hell")
 	elif s.begins_with("overview_"):
 		var run: Run = Game.start_run(s.substr(9), 5, "shade")
 		await _wait(10)

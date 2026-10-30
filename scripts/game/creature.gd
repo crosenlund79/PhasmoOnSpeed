@@ -180,7 +180,7 @@ func end_hunt() -> void:
 	state = "roam"
 	state_t = 0.0
 	target_alpha = 0.0
-	cooldown_t = def["hunt_cooldown"] * (1.5 if Defs.rules(run.difficulty) == "beginner" else 1.0) * (0.5 if angered_t > 0.0 else 1.0)
+	cooldown_t = def["hunt_cooldown"] * {"beginner": 1.5, "hellbound": 0.55}.get(run.difficulty, 1.0) * (0.5 if angered_t > 0.0 else 1.0)
 	if wrath:
 		wrath = false
 		wrath_target = null
@@ -541,7 +541,7 @@ func _player_visible(player: Node2D) -> bool:
 	return d < reach and map.los(position, player.global_position)
 
 func _hunt(delta: float) -> void:
-	if state_t >= float(def["hunt_duration"]) * (0.7 if Defs.rules(run.difficulty) == "beginner" else 1.0) or run.living_hunters().is_empty():
+	if state_t >= float(def["hunt_duration"]) * (0.7 if Defs.rules(run.difficulty) == "beginner" else 1.0) or run.hunters_in_house().is_empty():
 		end_hunt()
 		return
 	# Chase the hunter it can see (sticking with its current quarry while visible).

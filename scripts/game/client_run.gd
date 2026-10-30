@@ -57,6 +57,10 @@ func _ready() -> void:
 		view.build_nightmare()
 	if blood_moon:
 		view.set_blood_moon(true)
+	if difficulty in ["hellbound", "abyssal"]:
+		view.set_hostile(difficulty)
+		if difficulty == "abyssal":
+			view.ensure_abyss()
 	world.add_child(view)
 	world_text = CanvasLayer.new()
 	world_text.layer = 1
@@ -119,7 +123,7 @@ func _ready() -> void:
 	Sfx.start_loop("ambience", "ambience_house", -6.0, 1.5)
 
 func _apply_camera_limits(pos: Vector2) -> void:
-	var b := map.floor_bounds(map.floor_at(pos))
+	var b := AbyssArena.rect().grow(420.0) if AbyssArena.contains(pos) else map.floor_bounds(map.floor_at(pos))
 	# Room to scroll past the edges so the corner HUD panels never hide the house.
 	camera.limit_left = int(b.position.x) - 60 - int(180.0 / CAMERA_ZOOM)
 	camera.limit_top = int(b.position.y) - 60 - int(100.0 / CAMERA_ZOOM)
@@ -333,9 +337,10 @@ func apply_private(kind: String, d: Dictionary) -> void:
 				camera.reset_smoothing())
 		"correct":
 			var was := map.floor_at(player.global_position)
+			var was_abyss := AbyssArena.contains(player.global_position)
 			player.global_position = Vector2(d["x"], d["y"])
 			_apply_camera_limits(player.global_position)
-			if map.floor_at(player.global_position) != was:
+			if map.floor_at(player.global_position) != was or was_abyss != AbyssArena.contains(player.global_position):
 				# Taken the stairs (the host moves us; walking onto steps does nothing).
 				camera.reset_smoothing()
 				view.set_basement_view(map.floor_at(player.global_position) < 0)

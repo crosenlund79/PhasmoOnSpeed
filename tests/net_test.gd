@@ -66,6 +66,8 @@ func _host() -> void:
 	Net.set_option("setup", {"mode": "custom", "house": "ashgrove", "entity": "random", "difficulty": "normal", "blood_moon": "off"})
 	if scenario == "setup":
 		Net.set_option("setup", {"mode": "custom", "house": "random", "entity": "random", "difficulty": "random", "blood_moon": "on"})
+	if scenario == "abyss":
+		Net.set_option("setup", {"mode": "custom", "house": "ashgrove", "entity": "random", "difficulty": "abyssal", "blood_moon": "off"})
 	Net.set_ready(true)
 	if scenario == "pause":
 		Net.set_option("difficulty", "nightmare")
@@ -75,6 +77,28 @@ func _host() -> void:
 	await _wait(0.5)
 	var run: Run = Net.host_run
 	check(run != null and run.hunters.size() == clients + 1, "host run has every hunter")
+	if scenario == "abyss":
+		run.creature.set_process(false)
+		run._portal_t = 9999.0
+		# The host steps into another room; the clients stay in the spawn room and are taken.
+		var room: String = run.map.room_at(run.hunters.filter(func(h): return h.remote)[0].global_position)
+		var other: Dictionary = run.map.indoor_rooms().filter(func(r): return r["id"] != room)[0]
+		run.player.global_position = HouseMap.cell_center(run.map.random_free_cell(other["id"], run.rng))
+		run.player.room_id = other["id"]
+		run.open_abyss(room)
+		await _wait(2.0)
+		for h in run.hunters:
+			if h.remote:
+				check(h.has_meta("abyss") and AbyssArena.contains(h.global_position), "%s is in the Abyss on the host" % h.display_name)
+		check(not run.player.has_meta("abyss") and not AbyssArena.contains(run.player.global_position), "the host, elsewhere, stayed in the house")
+		await _wait(2.0)
+		run.abyss_until = run.elapsed + 0.1
+		await _wait(2.0)
+		for h in run.hunters:
+			check(not h.has_meta("abyss") and not AbyssArena.contains(h.global_position), "%s returned" % h.display_name)
+		await _wait(2.0)
+		_done()
+		return
 	if scenario == "setup":
 		check(run.blood_moon and run.view.blood_moon, "forced Blood Moon on the host")
 		check(run.difficulty in Defs.RANDOM_DIFFICULTIES, "random difficulty never Beginner (%s)" % run.difficulty)
@@ -228,6 +252,13 @@ func _client() -> void:
 		return
 	var cr: ClientRun = Net.client_run
 	await _wait(0.5)
+	if scenario == "abyss":
+		var pulled := await _until(func(): return AbyssArena.contains(cr.player.global_position), 15.0)
+		check(pulled and cr.view.abyss != null and cr.view.abyss.running, "this client was pulled into the Abyss and sees it")
+		var back := await _until(func(): return not AbyssArena.contains(cr.player.global_position), 20.0)
+		check(back and not cr.view.abyss.running, "returned to the house")
+		_done()
+		return
 	if scenario == "setup":
 		check(cr.blood_moon and cr.view.blood_moon, "Blood Moon reached this client")
 		_say("SETUP house=%s difficulty=%s moon=%s" % [cr.house_id, cr.difficulty, cr.blood_moon])

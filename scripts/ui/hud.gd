@@ -1006,6 +1006,8 @@ func _process(delta: float) -> void:
 	stamina_fill.size = Vector2(sw * p.stamina, _px(4))
 	stamina_fill.color = Color(0.62, 0.72, 0.78) if p.stamina > 0.25 else Color(0.8, 0.4, 0.3)
 	var line: String = "◆ " + run.map.room_name(p.room_id)
+	if AbyssArena.contains(p.global_position) and run.view.abyss and run.view.abyss.running:
+		line = "◆ THE ABYSS — %d s" % int(ceil(AbyssArena.DURATION - run.view.abyss.t))
 	if str(run.get("difficulty")) != "normal":
 		line += "  ·  " + Defs.difficulty_name(str(run.get("difficulty")))
 	if run.multiplayer_match:

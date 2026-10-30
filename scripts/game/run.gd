@@ -106,6 +106,10 @@ func _ready() -> void:
 		view.build_nightmare()
 	if blood_moon:
 		view.set_blood_moon(true)
+	if difficulty in ["hellbound", "abyssal"]:
+		view.set_hostile(difficulty)
+		if difficulty == "abyssal":
+			view.ensure_abyss()
 	world.add_child(view)
 	world_text = CanvasLayer.new()
 	world_text.layer = 1
@@ -202,7 +206,7 @@ func _on_local_floor(level: int) -> void:
 	Sfx.set_loop_pitch("ambience", 0.78 if level < 0 else 1.0)
 
 func _apply_camera_limits(pos: Vector2) -> void:
-	var b := map.floor_bounds(map.floor_at(pos))
+	var b := AbyssArena.rect().grow(420.0) if AbyssArena.contains(pos) else map.floor_bounds(map.floor_at(pos))
 	# Room to scroll past the edges so the corner HUD panels never hide the house.
 	camera.limit_left = int(b.position.x) - 60 - int(180.0 / CAMERA_ZOOM)
 	camera.limit_top = int(b.position.y) - 60 - int(100.0 / CAMERA_ZOOM)
@@ -286,7 +290,7 @@ func _spawn_occupants() -> void:
 		var o := Occupant.new()
 		var r: Dictionary = rooms[rng.randi_range(0, rooms.size() - 1)]
 		o.setup(self, "npc_%d" % (i + 1), cast[i], HouseMap.cell_center(map.random_free_cell(r["id"], rng)))
-		o.fear = 2.0 if Defs.rules(difficulty) == "nightmare" else 1.0
+		o.fear = (2.6 if difficulty == "hellbound" else 2.0) if Defs.rules(difficulty) == "nightmare" else 1.0
 		view.actor_layer.add_child(o)
 		occupants.append(o)
 		recorder.register_actor(o.actor_id, "npc", o.token_path, 36.0)
@@ -298,11 +302,15 @@ func _spawn_occupants() -> void:
 func living_hunters() -> Array:
 	return hunters.filter(func(h): return not h.dead)
 
+## Living hunters who are actually in the house (not away in the Abyss).
+func hunters_in_house() -> Array:
+	return hunters.filter(func(h): return not h.dead and not h.has_meta("abyss"))
+
 func nearest_hunter(pos: Vector2) -> Player:
 	var best: Player = null
 	var bd := INF
 	for h: Player in hunters:
-		if h.dead:
+		if h.dead or h.has_meta("abyss"):
 			continue
 		var d := pos.distance_to(h.global_position)
 		if d < bd:
@@ -351,6 +359,7 @@ func _process(delta: float) -> void:
 	_update_threat(delta)
 	_update_defences(delta)
 	_environment_tick(delta)
+	_hostile_tick(delta)
 	_keepsake_tick(delta)
 	_hazard_tick(delta)
 	if Defs.rules(difficulty) == "nightmare":
@@ -398,7 +407,7 @@ func _actor_states() -> Dictionary:
 
 func _update_threat(delta: float) -> void:
 	# Beginner: dread builds more slowly and the first hunt comes much later.
-	threat = minf(100.0, threat + THREAT_PER_SECOND * delta * (0.6 if Defs.rules(difficulty) == "beginner" else 1.0))
+	threat = minf(100.0, threat + THREAT_PER_SECOND * delta * {"beginner": 0.6, "hellbound": 1.6}.get(difficulty, 1.0))
 	if not escalated and threat >= ESCALATE_AT and creature and creature.type_id in ["werewolf", "vampire"] and creature.state != "banished":
 		_escalate()
 	if creature == null or creature.state != "roam" or creature.cooldown_t > 0.0:
@@ -408,7 +417,9 @@ func _update_threat(delta: float) -> void:
 		if forced_hunt_t <= 0.0:
 			trigger_hunt(forced_hunt_reckless)
 		return
-	if not is_harbinger() and elapsed < GRACE_PERIOD * (2.0 if Defs.rules(difficulty) == "beginner" else 1.0):
+	if creature.has_meta("abyss"):
+		return   # away in the Abyss
+	if not is_harbinger() and elapsed < GRACE_PERIOD * {"beginner": 2.0, "hellbound": 0.6}.get(difficulty, 1.0):
 		return
 	hunt_roll_t -= delta
 	if hunt_roll_t > 0.0:
@@ -608,8 +619,190 @@ func _environment_tick(delta: float) -> void:
 	if creature and creature.state != "banished":
 		_haunt_t -= 0.12 * (2.5 if creature.is_hunting() else 1.0)
 		if _haunt_t <= 0.0:
-			_haunt_t = rng.randf_range(12.0, 24.0)
+			_haunt_t = rng.randf_range(4.0, 9.0) if difficulty == "hellbound" else rng.randf_range(12.0, 24.0)
 			haunt_near(creature.position)
+			if difficulty == "hellbound":
+				shake_furniture_near(creature.position)   # the house itself lashes out
+
+# --- Hellbound & Abyssal ------------------------------------------------------------------
+# Hellbound: the house turns openly hostile — faster dread, constant slams and
+# snuffed flames, quicker hunts, and Hellfire: a patch of floor glows red, then
+# erupts in flame a moment later. Abyssal: reality tears — portals swallow a whole
+# room and drag everyone in it to Abyssal Hell (AbyssArena) for a minute.
+
+const HELLFIRE_WARN := 1.6
+const HELLFIRE_BURN := 3.5
+const HELLFIRE_RADIUS := 34.0
+const PORTAL_WARN := 2.5
+var _hellfire_t := 25.0
+var _portal_t := 50.0
+var abyss_room := ""
+var abyss_until := -1.0
+var _abyss_npcs: Array = []
+
+func _hostile_tick(delta: float) -> void:
+	if difficulty == "hellbound":
+		_hellfire_t -= delta
+		if _hellfire_t <= 0.0:
+			_hellfire_t = rng.randf_range(8.0, 14.0)
+			var targets := hunters_in_house()
+			if not targets.is_empty():
+				var h: Player = targets[rng.randi_range(0, targets.size() - 1)]
+				spawn_hellfire(h.global_position + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(0.0, 90.0))
+	elif difficulty == "abyssal":
+		if abyss_until > 0.0:
+			_abyss_tick()
+		else:
+			_portal_t -= delta
+			if _portal_t <= 0.0:
+				_portal_t = rng.randf_range(80.0, 120.0)
+				_portal_warning()
+
+## A red warning glow, then flames that burn anyone standing in them.
+func spawn_hellfire(at: Vector2) -> void:
+	var cell := map.nearest_walkable(HouseMap.to_cell(at))
+	var pos := HouseMap.cell_center(cell)
+	view.hellfire_warning(pos, HELLFIRE_RADIUS, HELLFIRE_WARN)
+	sound_at("flame_snuff", pos, -2.0, 0.5)
+	record_event("hellfire", {"phase": "warn", "x": pos.x, "y": pos.y})
+	var tw := create_tween()
+	tw.tween_interval(HELLFIRE_WARN)
+	tw.tween_callback(func():
+		if state != "playing":
+			return
+		view.burst_flames(pos, HELLFIRE_BURN, 1.9)
+		sound_at("ignite", pos, 2.0, 0.8)
+		hazards.append({"pos": pos, "until": elapsed + HELLFIRE_BURN, "radius": HELLFIRE_RADIUS, "node": null, "light": null, "kind": "hellfire"})
+		record_event("hellfire", {"phase": "erupt", "x": pos.x, "y": pos.y}))
+
+## Hellbound: starting a rite is noticed — fire near you and a surge of dread.
+func on_rite_begun(p: Player) -> void:
+	if difficulty != "hellbound":
+		return
+	add_threat(6.0, "hellbound_rite")
+	spawn_hellfire(p.global_position + Vector2.from_angle(rng.randf() * TAU) * 80.0)
+	tell(p, "The house knows what you are doing.", "icons/ui_skull.png", true)
+
+func _portal_warning() -> void:
+	var occupied: Array = []
+	for h: Player in hunters_in_house():
+		if h.room_id != "" and not occupied.has(h.room_id) and not map.room(h.room_id).get("outdoor", true):
+			occupied.append(h.room_id)
+	var rooms := map.indoor_rooms()
+	var room: String = occupied[rng.randi_range(0, occupied.size() - 1)] if not occupied.is_empty() and rng.randf() < 0.75 else rooms[rng.randi_range(0, rooms.size() - 1)]["id"]
+	view.portal_warning(room, PORTAL_WARN)
+	sound_all("blight_ping", -4.0, 0.45)
+	sound_at("nm_drag", map.room_center(room), 2.0, 0.5)
+	record_event("portal", {"phase": "warn", "room": room})
+	for h: Player in hunters_in_house():
+		if h.room_id == room:
+			announce_to(h, "THE AIR TEARS OPEN", "Get out of this room!", Color(0.8, 0.45, 1.0), PORTAL_WARN)
+	var tw := create_tween()
+	tw.tween_interval(PORTAL_WARN)
+	tw.tween_callback(func():
+		if state == "playing":
+			open_abyss(room))
+
+## Everyone in `room` — hunters, occupants and the entity — is pulled into Abyssal Hell.
+func open_abyss(room: String) -> void:
+	var arena := view.ensure_abyss()
+	abyss_room = room
+	abyss_until = elapsed + AbyssArena.DURATION
+	var seed_v := rng.randi()
+	arena.open(seed_v)
+	record_event("abyss", {"phase": "open", "seed": seed_v, "room": room})
+	WorldFx.ring(view.overlay_layer, map.room_center(room), Color(0.7, 0.3, 1.0), 220.0, 1.4)
+	sound_at("harbinger_arrival", map.room_center(room), 0.0, 1.3)
+	var k := 0
+	for h: Player in hunters_in_house():
+		if map.room_at(h.global_position, h.room_id) != room:
+			continue
+		h.set_meta("abyss", true)
+		h.set_meta("abyss_trips", int(h.get_meta("abyss_trips", 0)) + 1)
+		_move_hunter(h, AbyssArena.spawn_point(k))
+		h.invuln = maxf(h.invuln, 1.5)
+		k += 1
+		record_event("abyss_pull", {"actor": h.actor_id})
+		announce_to(h, "DRAGGED INTO THE ABYSS", "Survive one minute.", Color(0.8, 0.45, 1.0), 2.4)
+		for o: Player in hunters_in_house():
+			tell(o, "%s vanished into a portal." % h.display_name, "icons/ui_skull.png", true)
+	_abyss_npcs.clear()
+	for o in occupants:
+		if o.state != "gone" and o.room_id == room:
+			o.visible = false
+			o.modulate.a = 0.0
+			o.set_process(false)
+			o.tag.set_visible(false)
+			_abyss_npcs.append(o)
+	if creature and creature.state != "banished" and creature.room_id == room:
+		if creature.is_hunting():
+			creature.end_hunt()
+		creature.set_meta("abyss", true)
+		creature.visible = false
+		creature.modulate.a = 0.0
+		creature.set_process(false)
+
+func _move_hunter(h: Player, to: Vector2) -> void:
+	h.global_position = to
+	h.velocity = Vector2.ZERO
+	if h.is_local:
+		_apply_camera_limits(to)
+		camera.reset_smoothing()
+		view.set_basement_view(map.floor_at(to) < 0 and not AbyssArena.contains(to))
+	elif h.remote:
+		Net.host_private(h.peer_id, "correct", {"x": to.x, "y": to.y})
+
+func _abyss_tick() -> void:
+	var arena := view.abyss
+	for h: Player in hunters:
+		if not h.has_meta("abyss") or h.dead or h.invuln > 0.0:
+			continue
+		var what := arena.hazard_at(h.global_position)
+		if what != "":
+			sound_at("player_hurt", h.global_position, -6.0)
+			tell(h, "The %s tear at you!" % what, "icons/ui_skull.png")
+			_wound(h, null, "abyss")
+	if elapsed >= abyss_until:
+		close_abyss()
+
+## The portal spits its survivors back into the room they were taken from.
+func close_abyss() -> void:
+	if abyss_until < 0.0:
+		return
+	abyss_until = -1.0
+	var room := abyss_room
+	var used := {}
+	for h: Player in hunters:
+		if not h.has_meta("abyss"):
+			continue
+		h.remove_meta("abyss")
+		var cell := map.random_free_cell(room, rng, used)
+		used[cell] = true
+		_move_hunter(h, HouseMap.cell_center(cell))
+		h.room_id = room
+		if not h.dead:
+			h.invuln = maxf(h.invuln, 2.0)
+			h.set_meta("abyss_escapes", int(h.get_meta("abyss_escapes", 0)) + 1)
+			announce_to(h, "SPAT BACK OUT", "The portal returns you to %s." % map.room_name(room), Color(0.8, 0.45, 1.0), 1.8)
+		record_event("abyss_return", {"actor": h.actor_id, "alive": not h.dead})
+	for o in _abyss_npcs:
+		if is_instance_valid(o):
+			o.position = HouseMap.cell_center(map.random_free_cell(room, rng, used))
+			o.visible = true
+			o.modulate.a = 1.0
+			o.set_process(true)
+			o.say("Where— where was I?")
+	_abyss_npcs.clear()
+	if creature and creature.has_meta("abyss"):
+		creature.remove_meta("abyss")
+		creature.position = HouseMap.cell_center(map.random_free_cell(room, rng, used))
+		creature.visible = true
+		creature.set_process(true)
+		creature.cooldown_t = maxf(creature.cooldown_t, 8.0)
+	view.abyss.close()
+	WorldFx.ring(view.overlay_layer, map.room_center(room), Color(0.7, 0.3, 1.0), 220.0, 1.0)
+	sound_at("harbinger_arrival", map.room_center(room), -4.0, 1.5)
+	record_event("abyss", {"phase": "close", "room": room})
 
 ## The entity snuffs a flame or swings a door near pos.
 func haunt_near(pos: Vector2) -> void:
@@ -1085,8 +1278,11 @@ func _hazard_tick(delta: float) -> void:
 				# Burned: a wound, with a grace period so one step never counts twice.
 				h.set_meta("ember_cd", 4.0)
 				sound_at("ignite", h.global_position, -8.0, 1.4)
-				tell(h, "The embers sear you!", "items/embers.png")
-				_wound(h, null, "embers")
+				var hell: bool = hz.get("kind", "") == "hellfire"
+				tell(h, "Hellfire! You are burned." if hell else "The embers sear you!", "items/embers.png")
+				if hell:
+					h.set_meta("hellfire_burns", int(h.get_meta("hellfire_burns", 0)) + 1)
+				_wound(h, null, "hellfire" if hell else "embers")
 
 # --- Shoving (competitive) -------------------------------------------------------------
 
@@ -1614,6 +1810,8 @@ func build_summary(p: Player = null) -> Dictionary:
 		"house": house_id, "house_name": map.name, "seed": run_seed, "difficulty": difficulty,
 		"original_creature": original_creature, "creature": final_creature,
 		"voodoo_uses": int(p.get_meta("voodoo_uses", 0)), "npcs_burned": npcs_burned,
+		"abyss_trips": int(p.get_meta("abyss_trips", 0)), "abyss_escapes": int(p.get_meta("abyss_escapes", 0)),
+		"hellfire_burns": int(p.get_meta("hellfire_burns", 0)),
 		"vanquished": won, "time": snappedf(elapsed, 0.01),
 		"evidence": all_entries, "evidence_ids": entries.map(func(e): return e["id"]),
 		"true_evidence": true_ev, "incorrect_attempts": p.wrong_attempts, "reckless_attempts": p.reckless_attempts,
@@ -1729,6 +1927,14 @@ func apply_remote_input(peer: int, pos: Vector2, aim: float, flags: int, mask: i
 	var h := hunter_by_peer(peer)
 	if h == null or h.dead or _paused:
 		return   # (press counters are cumulative, so nothing is lost)
+	if h.has_meta("abyss"):
+		if AbyssArena.contains(pos) and pos.distance_to(h.global_position) < 120.0:
+			h.global_position = pos
+		h.aim_angle = aim
+		h.flashlight_on = flags & 1 == 1
+		h.sprinting = flags & 2 == 2
+		h.input.apply_remote(mask, counters)
+		return
 	if float(h.get_meta("dragged_until", -1.0)) > elapsed:
 		h.global_position = pos   # being dragged by the host's own sequence
 		h.aim_angle = aim

@@ -260,16 +260,16 @@ static func evidence_name(id: String) -> String:
 	return EVIDENCE.get(id, {}).get("name", id)
 
 # --- Difficulty & match setup --------------------------------------------------
-## Selectable difficulties, in menu order. Each names the rule set it plays by:
-## Hellbound and Abyssal use Nightmare's rules for now (their own records and
-## names), so later iterations can give them distinct behaviour here.
+## Selectable difficulties, in menu order. Each names the base rule set it plays by;
+## Hellbound and Abyssal build on Nightmare's and add their own events (Run:
+## hellfire and hostility; portals and Abyssal Hell).
 const DIFFICULTIES := ["beginner", "normal", "nightmare", "hellbound", "abyssal"]
 const DIFFICULTY_INFO := {
 	"beginner": {"name": "Beginner", "rules": "beginner", "desc": "A guided first investigation: tips as you go, and gentler hunts."},
 	"normal": {"name": "Normal", "rules": "normal", "desc": "The suspect panel shows each entity's evidence and what it takes to vanquish it."},
 	"nightmare": {"name": "Nightmare", "rules": "nightmare", "desc": "Only a name and description on the suspect panel. Terrified occupants, vermin, blood and noises in the walls."},
-	"hellbound": {"name": "Hellbound", "rules": "nightmare", "desc": "Nightmare's rules — for now. Its records are kept apart."},
-	"abyssal": {"name": "Abyssal", "rules": "nightmare", "desc": "Nightmare's rules — for now. Its records are kept apart."},
+	"hellbound": {"name": "Hellbound", "rules": "nightmare", "desc": "Nightmare, and the house itself turns hostile: dread surges, doors slam, flames die, hunts come back fast — and the floor erupts in hellfire."},
+	"abyssal": {"name": "Abyssal", "rules": "nightmare", "desc": "Nightmare, and reality tears: purple portals swallow whole rooms and drag everyone inside to a minute of traps in Abyssal Hell."},
 }
 ## "Random" difficulty never picks Beginner.
 const RANDOM_DIFFICULTIES := ["normal", "nightmare", "hellbound", "abyssal"]

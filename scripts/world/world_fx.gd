@@ -177,6 +177,19 @@ func apply(type: String, d: Dictionary) -> bool:
 				"twitch":
 					if decals.has(d["id"]) and is_instance_valid(decals[d["id"]]):
 						twitch(decals[d["id"]])
+		"hellfire":
+			if d["phase"] == "warn":
+				view.hellfire_warning(Vector2(d["x"], d["y"]), 34.0, 1.6)
+			else:
+				view.burst_flames(Vector2(d["x"], d["y"]), 3.5, 1.9)
+		"portal":
+			view.portal_warning(str(d["room"]), 2.5)
+		"abyss":
+			if d["phase"] == "open":
+				view.ensure_abyss().open(int(d["seed"]))
+				ring(view.overlay_layer, view.map.room_center(str(d["room"])), Color(0.7, 0.3, 1.0), 220.0, 1.4)
+			elif view.abyss:
+				view.abyss.close()
 		"escalate":
 			view.set_mood(str(d["kind"]))
 		"shimmer":

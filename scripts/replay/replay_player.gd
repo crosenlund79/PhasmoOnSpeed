@@ -43,6 +43,8 @@ func _ready() -> void:
 		view.build_nightmare()
 	if replay.get("blood_moon", false):
 		view.set_blood_moon(true)
+	if replay.get("difficulty", "") in ["hellbound", "abyssal"]:
+		view.set_hostile(replay["difficulty"])
 	add_child(view)
 	text_layer = CanvasLayer.new()
 	text_layer.layer = 1
@@ -103,6 +105,8 @@ func _restart() -> void:
 	for aid in _lights:
 		_lights[aid]["on"] = true
 	fx.clear()
+	if view.abyss:
+		view.abyss.close()
 	for i in view.mirrors.size():
 		view.show_mirror_overlay(i, null, 0.0)
 	view.set_darkness(HouseView.DARKNESS, 0.01)
@@ -229,7 +233,14 @@ func _moment_for(type: String, d: Dictionary) -> Array:
 		"attack":
 			if int(d.get("wounds", 1)) >= 2:
 				return []    # the death moment follows
-			return ["icons/ui_heart_wounded.png", "%s wounded" % _who(d)]
+			var how: String = {"hellfire": " by hellfire", "abyss": " in the Abyss"}.get(str(d.get("source", "")), "")
+			return ["icons/ui_heart_wounded.png", "%s wounded%s" % [_who(d), how]]
+		"portal":
+			return ["tokens/blightness.png", "A portal tore open"]
+		"abyss_pull":
+			return ["icons/ui_skull.png", "%s dragged into the Abyss" % _who(d)]
+		"abyss_return":
+			return ["icons/ui_skull.png", "%s returned from the Abyss" % _who(d)] if d.get("alive", true) else []
 		"death":
 			return ["icons/ui_skull.png", "%s perished" % _who(d)]
 		"hunt_start":

@@ -13,7 +13,7 @@ signal connection_lost(reason: String)
 
 const DEFAULT_PORT := 24680
 const MAX_PLAYERS := 4
-const PROTOCOL := "spectral-run-mp-4"
+const PROTOCOL := "spectral-run-mp-5"
 ## Shared menu pause: at most this long (real seconds) when the host limits it,
 ## then no new pause for PAUSE_COOLDOWN so the match can never stall for long.
 const PAUSE_LIMIT := 10.0
@@ -24,7 +24,7 @@ const REPLAY_CHUNK := 48000
 const PUBLIC_EVENTS := ["decal", "decal_remove", "decal_swap", "flicker", "darkness", "sfx", "screen_shake", "shake",
 	"mirror", "say", "npc", "npc_flee", "npc_gone", "hunt_start", "hunt_end", "harbinger", "bound", "sigil",
 	"sigil_spawn", "death", "attack", "vanquish", "shove", "left", "floor", "orb", "orb_clear", "creature_meta",
-	"door", "light", "shimmer", "escalate", "counter", "npc_burn", "embers", "furnace", "creature_fx"]
+	"door", "light", "shimmer", "escalate", "counter", "hellfire", "portal", "abyss", "npc_burn", "embers", "furnace", "creature_fx"]
 
 var peer: ENetMultiplayerPeer
 var lobby := {}               # peer_id -> {name, ready}

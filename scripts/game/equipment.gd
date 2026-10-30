@@ -158,6 +158,8 @@ func _update_holds(delta: float) -> void:
 		hold_needed = needed
 		if action == "rite" and not run.can_begin_rite(player):
 			hold_action = "blocked"
+		elif action == "rite":
+			run.on_rite_begun(player)
 		elif action == "interact" and needed <= 0.0:
 			run.do_interact(player, interact)
 			hold_action = "done"

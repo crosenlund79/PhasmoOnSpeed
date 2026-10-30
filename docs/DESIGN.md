@@ -133,6 +133,29 @@ the replay and statistics.
   cast over the house and a red moon beside the hearts. It coexists with the
   werewolf's full moon (which stays red) and the vampire's mist. Stored in replays.
 
+## Hellbound and Abyssal
+
+Both keep Nightmare's base (text-only suspect panel, critters, blood, terrified
+occupants) and add their own identity. Recorded evidence stays truthful.
+
+* **Hellbound — the house is hostile.** Dread rises 1.6× faster, the grace period is
+  shorter, hunts return in ~half the time, the entity slams doors / snuffs flames /
+  rattles furniture every 4–9 s, occupants panic harder (fear 2.6), and starting a
+  rite is answered with fire and a surge of dread. **Hellfire** every 8–14 s near a
+  hunter: a red glowing circle for 1.6 s, then flames for 3.5 s that wound anyone in
+  them (4 s grace, two-wound rule).
+* **Abyssal — reality tears.** A violet cast and drifting purple ripples. Every
+  80–120 s (first after ~50 s) a **portal** picks a room (usually one a hunter is in):
+  a pulsing violet veil and a spinning tear for 2.5 s, then everyone in that room —
+  hunters, occupants and the entity — is pulled to **Abyssal Hell** (`AbyssArena`)
+  for 60 s. It has spike tiles (0.9 s warning), sweeping hellfire lanes (1 s warning)
+  and three grasping shadow hands; each hit is a wound. Survivors return to the room
+  they were taken from; the entity and occupants return too. Hunters elsewhere play on.
+  The trap timeline is a function of the portal's seed and time, so host, clients
+  and replays draw the same traps; only the host deals damage.
+* Replays record hellfire, portals, pulls, returns and wounds by source; results
+  count hellfire burns and abyss trips / escapes (scoring unchanged).
+
 ## Playtesting refinements
 
 * **Blightness** moves in rushes: it picks the furthest point of its path it can

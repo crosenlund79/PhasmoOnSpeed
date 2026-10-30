@@ -578,7 +578,118 @@ func _effective_darkness() -> Color:
 		"mist": c *= Color(1.3, 0.62, 0.64)     # blood mist: everything reddens
 	if blood_moon:
 		c *= Color(1.12, 0.88, 0.88)            # a faint, ominous red cast
+	match hostile:
+		"hellbound": c *= Color(1.18, 0.86, 0.8)   # infernal: hot and reddened
+		"abyssal": c *= Color(0.95, 0.82, 1.2)     # torn reality: a sick violet
 	return c
+
+# --- Hellbound / Abyssal ---------------------------------------------------------------
+var hostile := ""          # "", "hellbound" (infernal) or "abyssal" (torn reality)
+var abyss: AbyssArena
+var _abyss_flicker_t := 8.0
+
+func set_hostile(kind: String) -> void:
+	hostile = kind
+	modulate_node.color = _effective_darkness()
+
+func ensure_abyss() -> AbyssArena:
+	if abyss == null:
+		abyss = AbyssArena.new()
+		abyss.build(_with_collision)
+		add_child(abyss)
+	return abyss
+
+## Hellbound: a patch of floor glows a deepening red before flames erupt there.
+func hellfire_warning(pos: Vector2, radius: float, dur: float) -> void:
+	var m := HellMark.new()
+	m.position = pos
+	m.radius = radius
+	m.dur = dur
+	m.z_index = 3
+	overlay_layer.add_child(m)
+
+class HellMark extends Node2D:
+	var radius := 34.0
+	var dur := 1.6
+	var _t := 0.0
+	func _ready() -> void:
+		var mt := CanvasItemMaterial.new()
+		mt.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+		material = mt
+	func _process(delta: float) -> void:
+		_t += delta
+		if _t >= dur:
+			queue_free()
+		queue_redraw()
+	func _draw() -> void:
+		var k := clampf(_t / dur, 0.0, 1.0)
+		var pulse := 0.5 + 0.5 * sin(_t * (8.0 + 16.0 * k))
+		draw_circle(Vector2.ZERO, radius, Color(0.9, 0.12, 0.05, 0.12 + 0.3 * k * pulse))
+		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 40, Color(1.0, 0.35, 0.1, 0.5 + 0.5 * pulse), 2.5, true)
+		for i in 6:
+			var a := i * TAU / 6.0 + _t
+			draw_line(Vector2.from_angle(a) * radius * 0.35, Vector2.from_angle(a) * radius * (0.6 + 0.3 * k), Color(1.0, 0.4, 0.1, 0.6 * pulse), 2.0)
+
+## Abyssal: a room shimmers violently purple — a portal is about to open.
+func portal_warning(room_id: String, dur: float) -> void:
+	var r := map.room(room_id)
+	if r.is_empty():
+		return
+	for rect in r["rects"]:
+		var s := Sprite2D.new()
+		s.texture = Art.tex("lights/soft.png")
+		s.centered = false
+		var rr := Rect2(Vector2(rect[0], rect[1]) * C, Vector2(rect[2], rect[3]) * C)
+		s.position = rr.position
+		s.scale = rr.size / s.texture.get_size()
+		s.material = WorldFx.distort_material(0.02, Color(0.85, 0.55, 1.25), 0.0, false)
+		s.z_index = 4
+		overlay_layer.add_child(s)
+		var tw := create_tween()
+		tw.tween_method(func(v): s.material.set_shader_parameter("t", v), 0.0, dur * 9.0, dur)
+		tw.tween_callback(s.queue_free)
+		var veil := PortalVeil.new()
+		veil.area = rr
+		veil.dur = dur
+		veil.z_index = 5
+		overlay_layer.add_child(veil)
+		var glow := PointLight2D.new()
+		glow.texture = Art.tex("lights/soft.png")
+		glow.color = Color(0.7, 0.25, 1.0)
+		glow.energy = 0.0
+		glow.texture_scale = maxf(rr.size.x, rr.size.y) / 300.0
+		glow.position = rr.get_center()
+		add_child(glow)
+		var gt := create_tween()
+		gt.tween_property(glow, "energy", 2.2, dur)
+		gt.tween_property(glow, "energy", 0.0, 0.4)
+		gt.tween_callback(glow.queue_free)
+
+## The unmistakable part of a portal warning: a pulsing violet veil over the room
+## and a tear spinning open in its middle.
+class PortalVeil extends Node2D:
+	var area := Rect2()
+	var dur := 2.5
+	var _t := 0.0
+	func _ready() -> void:
+		var mt := CanvasItemMaterial.new()
+		mt.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+		material = mt
+	func _process(delta: float) -> void:
+		_t += delta
+		if _t >= dur:
+			queue_free()
+		queue_redraw()
+	func _draw() -> void:
+		var k := clampf(_t / dur, 0.0, 1.0)
+		var pulse := 0.5 + 0.5 * sin(_t * (6.0 + 14.0 * k))
+		draw_rect(area, Color(0.55, 0.15, 0.85, 0.12 + 0.22 * k * pulse))
+		draw_rect(area.grow(-2.0), Color(0.85, 0.5, 1.0, 0.5 + 0.4 * pulse), false, 3.0)
+		var c := area.get_center()
+		var r := 12.0 + 60.0 * k
+		for i in 3:
+			draw_arc(c, r * (1.0 - i * 0.25), _t * (3.0 + i) , _t * (3.0 + i) + PI * 1.4, 32, Color(0.9, 0.6, 1.0, 0.8 - i * 0.2), 3.0, true)
+		draw_circle(c, r * 0.35, Color(0.05, 0.0, 0.08, 0.9))
 
 ## Blood Moon: the moonlight turns a sinister red and pulses faintly; the whole
 ## house takes a slight red cast. Purely atmospheric, and independent of the
@@ -631,6 +742,14 @@ func set_mood(m: String) -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	if hostile == "abyssal":
+		# Reality keeps rippling: purple warps drift through random rooms (atmosphere only).
+		_abyss_flicker_t -= delta
+		if _abyss_flicker_t <= 0.0:
+			_abyss_flicker_t = randf_range(5.0, 11.0)
+			var rooms := map.indoor_rooms()
+			if not rooms.is_empty():
+				_purple_ripple(rooms[randi() % rooms.size()]["id"])
 	for k in _mist.size():
 		var s: Sprite2D = _mist[k]
 		var r := s.region_rect
@@ -680,6 +799,24 @@ func shimmer_room(room_id: String) -> void:
 		tw.tween_property(s, "modulate:a", 1.0, 0.5)
 		tw.tween_method(func(v): s.material.set_shader_parameter("t", v), 0.0, 6.0, 1.4)
 		tw.tween_property(s, "modulate:a", 0.0, 0.6)
+		tw.tween_callback(s.queue_free)
+
+func _purple_ripple(room_id: String) -> void:
+	for rect in map.room(room_id)["rects"]:
+		var s := Sprite2D.new()
+		s.texture = Art.tex("lights/soft.png")
+		s.centered = false
+		var rr := Rect2(Vector2(rect[0], rect[1]) * C, Vector2(rect[2], rect[3]) * C)
+		s.position = rr.position
+		s.scale = rr.size / s.texture.get_size()
+		s.material = WorldFx.distort_material(0.006, Color(0.92, 0.8, 1.15), 0.0, false)
+		s.modulate.a = 0.0
+		s.z_index = 4
+		overlay_layer.add_child(s)
+		var tw := create_tween()
+		tw.tween_property(s, "modulate:a", 1.0, 0.6)
+		tw.tween_method(func(v): s.material.set_shader_parameter("t", v), 0.0, 8.0, 1.6)
+		tw.tween_property(s, "modulate:a", 0.0, 0.8)
 		tw.tween_callback(s.queue_free)
 
 ## A short-lived column of fire (a burning occupant, the furnace's roar).

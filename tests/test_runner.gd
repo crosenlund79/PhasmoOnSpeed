@@ -26,6 +26,7 @@ func _ready() -> void:
 		"test_counterattacks", "test_escalations", "test_prompt_and_needle", "test_audio_overrides",
 		"test_audio_export", "test_game_setup",
 		"test_blightness_rushes", "test_safe_names", "test_temperatures", "test_ghost_marker_and_ruled_out",
+		"test_hellbound", "test_abyssal",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -1050,3 +1051,80 @@ func test_ghost_marker_and_ruled_out() -> void:
 	await get_tree().process_frame
 	var plain := await _start("ashgrove", "shade", 34)
 	check(plain.world_text.get_children().filter(func(n): return n is WorldFx.GhostMarker).is_empty(), "no marker by default")
+
+# --- Hellbound & Abyssal ------------------------------------------------------------------
+
+func test_hellbound() -> void:
+	var nm: Run = Game.start_run("ashgrove", 41, "shade", "nightmare")
+	await get_tree().process_frame
+	nm.creature.set_process(false)
+	await _frames(120)
+	var nm_threat := nm.threat
+	_cleanup_scene()
+	await get_tree().process_frame
+	var run: Run = Game.start_run("ashgrove", 41, "shade", "hellbound")
+	await get_tree().process_frame
+	run.creature.set_process(false)
+	await _frames(120)
+	check(run.threat > nm_threat * 1.4, "dread rises faster than Nightmare (%.2f vs %.2f)" % [run.threat, nm_threat])
+	check(run.view.hostile == "hellbound" and run.critters != null, "infernal atmosphere on Nightmare's base")
+	run.creature.begin_hunt(run.creature.position, false)
+	run.creature.end_hunt()
+	check(run.creature.cooldown_t < float(Defs.CREATURES["shade"]["hunt_cooldown"]) * 0.6, "hunts come back quickly")
+	# Hellfire: a warning first, then flames that wound once per grace period.
+	run.spawn_hellfire(run.player.global_position)
+	check(run.recorder.data["events"].any(func(e): return e[1] == "hellfire" and e[2]["phase"] == "warn"), "hellfire warns first")
+	check(run.player.wounds == 0, "no damage during the warning")
+	await _frames(110)
+	check(run.hazards.any(func(h): return h.get("kind", "") == "hellfire"), "then the floor erupts")
+	run.player.global_position = run.hazards[0]["pos"]
+	await _frames(5)
+	check(run.player.wounds == 1, "standing in hellfire burns")
+	await _frames(40)
+	check(run.player.wounds == 1, "but not twice in a moment")
+
+func test_abyssal() -> void:
+	var run: Run = Game.start_run("blackwood", 42, "shade", "abyssal")
+	await get_tree().process_frame
+	run.creature.set_process(false)
+	check(run.view.hostile == "abyssal" and run.view.abyss != null, "torn-reality atmosphere")
+	var room: String = run.player.room_id
+	var o: Occupant = run.occupants[0]
+	o.position = run.player.global_position + Vector2(10, 0)
+	o.room_id = room
+	run.creature.position = run.player.global_position + Vector2(-10, 0)
+	run.creature.room_id = room
+	run.creature.set_process(true)
+	# The warning comes first and the portal opens ~2.5 s later.
+	run._portal_t = 0.0
+	await _frames(5)
+	check(run.recorder.data["events"].any(func(e): return e[1] == "portal"), "portal warning")
+	var warned_room: String = run.recorder.data["events"].filter(func(e): return e[1] == "portal")[0][2]["room"]
+	await _frames(170)
+	check(run.abyss_until > 0.0, "the portal opened")
+	if warned_room != room:
+		run.close_abyss()
+		run.open_abyss(room)   # the warning picked another room: open one here to test the pull
+	check(run.player.has_meta("abyss") and AbyssArena.contains(run.player.global_position), "the hunter in the room is in the Abyss")
+	check(not o.visible and run.creature.has_meta("abyss"), "occupant and entity in the room were taken too")
+	check(is_equal_approx(run.abyss_until - run.elapsed, AbyssArena.DURATION) or run.abyss_until - run.elapsed > 55.0, "about a minute")
+	# Traps hurt (with warnings and grace); being in the Abyss pauses ordinary hunts.
+	var arena := run.view.abyss
+	var hit := false
+	for i in 400:
+		await get_tree().process_frame
+		if arena.hazard_at(arena.hand_positions(arena.t)[0]) != "":
+			hit = true
+			break
+	check(hit, "the hands are dangerous")
+	run.player.invuln = 0.0
+	run.player.global_position = arena.hand_positions(arena.t)[0]
+	await _frames(2)
+	check(run.player.wounds == 1, "a trap wounds (two-hit rules)")
+	# Return.
+	run.abyss_until = run.elapsed + 0.1
+	await _frames(15)
+	check(not run.player.has_meta("abyss") and run.map.room_at(run.player.global_position) == room, "survivor returned to the room")
+	check(o.visible and not run.creature.has_meta("abyss") and run.creature.visible, "occupant and entity returned")
+	check(run.recorder.data["events"].any(func(e): return e[1] == "abyss_return"), "return recorded for the replay")
+	check(run.build_summary()["abyss_escapes"] == 1, "escape counted in the results")
