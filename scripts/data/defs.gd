@@ -338,6 +338,23 @@ const SHORT_NAMES := {"drowned_sailor": "Sailor", "plague_doctor": "Doctor", "sh
 static func short_name(id: String) -> String:
 	return SHORT_NAMES.get(id, creature_name(id).trim_prefix("The "))
 
+## Whether entity `id` fits a journal: every evidence type found belongs to it and
+## none it leaves has been ruled out. Uses only the player's own notes — never
+## the hidden identity of the entity.
+static func fits(id: String, journal) -> bool:
+	var ev: Array = CREATURES.get(id, {}).get("evidence", [])
+	for e in journal.active_entries():
+		if not e["id"] in ev:
+			return false
+	for r in journal.ruled_out:
+		if r in ev:
+			return false
+	return true
+
+## The suspects a journal still allows, in roster order.
+static func candidates(journal) -> Array:
+	return ORDINARY_CREATURES.filter(func(id): return fits(id, journal))
+
 static func is_ghost(id: String) -> bool:
 	return CREATURES.get(id, {}).get("kind", "") == "ghost"
 

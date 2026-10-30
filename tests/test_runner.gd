@@ -26,7 +26,7 @@ func _ready() -> void:
 		"test_counterattacks", "test_escalations", "test_prompt_and_needle", "test_audio_overrides",
 		"test_audio_export", "test_game_setup",
 		"test_blightness_rushes", "test_safe_names", "test_temperatures", "test_ghost_marker_and_ruled_out",
-		"test_hellbound", "test_abyssal", "test_sailor_and_doctor", "test_consolidation",
+		"test_hellbound", "test_abyssal", "test_sailor_and_doctor", "test_consolidation", "test_home_rooms", "test_suspect_filter_and_splatter",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -1264,3 +1264,103 @@ func test_consolidation() -> void:
 	await get_tree().create_timer(0.8).timeout
 	check(Sfx._loops["probe"].playing, "restarted loop survives the old fade")
 	Sfx.stop_loop("probe", 0.01)
+
+# --- 0.11.0 ------------------------------------------------------------------------------
+
+func test_home_rooms() -> void:
+	var run := await _start("blackwood", "shade", 61)
+	var c := run.creature
+	run.threat = 0.0
+	var home := c.lair_room
+	var allowed := {home: true}
+	for n in run.map.neighbour_rooms(home):
+		allowed[n] = true
+		for m in run.map.neighbour_rooms(n):
+			allowed[m] = true
+	var at_home := 0
+	var strays := 0
+	for i in 2400:
+		run.threat = 0.0   # no hunts: ordinary wandering only
+		await get_tree().process_frame
+		if i % 10 == 0:
+			if c.room_id == home:
+				at_home += 1
+			elif not allowed.has(c.room_id):
+				strays += 1
+	check(at_home > 120, "it mostly stays home (%d / 240 samples)" % at_home)
+	check(strays == 0, "excursions stay within one or two rooms of home (%d strays)" % strays)
+	# Relocation: a new indoor home, the cold follows, it walks there, at most twice.
+	var cold_before: float = run.phenomena.temps[home]
+	run.relocate_home()
+	var new_home := c.lair_room
+	check(new_home != home and not run.map.room(new_home).get("outdoor", true), "a new indoor home")
+	check(run.phenomena.temps[new_home] == cold_before and run.phenomena.temps[home] > 10.0, "the cold moved with it")
+	var arrived := false
+	for i in 1800:
+		run.threat = 0.0
+		await get_tree().process_frame
+		if c.room_id == new_home:
+			arrived = true
+			break
+	check(arrived, "it walks to its new home")
+	run.relocate_home()
+	run.relocate_home()
+	check(run.relocations == 3 or run.relocations == 2, "relocate_home itself is unconditional (the tick enforces the cap)")
+	run.relocations = Run.MAX_RELOCATIONS
+	var lair_now := c.lair_room
+	run._relocate_t = 0.01
+	run._relocation_tick(0.1)
+	check(c.lair_room == lair_now, "no more than two relocations")
+	# Dread at 80%.
+	check(is_equal_approx(Run.THREAT_PER_SECOND, 0.176), "passive dread is 80% of 0.22")
+	# Pursuit goes anywhere: a hunter in the basement is followed down the stairs.
+	var down := run.map.indoor_rooms().filter(func(r): return int(r["level"]) < 0)
+	if not down.is_empty():
+		run.player.global_position = HouseMap.cell_center(run.map.random_free_cell(down[0]["id"], run.rng))
+		run.player.room_id = down[0]["id"]
+		run.player.invuln = 999.0
+		c.cooldown_t = 0.0
+		c.begin_hunt(c.position, false)
+		c.state = "hunt"
+		var reached := false
+		for i in 1500:
+			await get_tree().process_frame
+			c.state_t = 0.0   # keep the hunt going
+			if run.map.floor_at(c.position) == run.map.floor_at(run.player.global_position):
+				reached = true
+				break
+		check(reached, "a hunt follows the hunter to another floor")
+
+func test_suspect_filter_and_splatter() -> void:
+	var run := await _start("ashgrove", "shade", 62)
+	var p := run.player
+	# Confirmed evidence: Tab never reaches an entity it rules out.
+	run.discover(p, "freezing", p.room_id)
+	var seen := {}
+	for i in 30:
+		run.cycle_suspect(p, 1)
+		seen[p.suspect] = true
+	for id in seen:
+		if id != "":
+			check("freezing" in Defs.CREATURES[id]["evidence"], "Tab reached %s, which leaves no freezing" % id)
+	check(seen.size() > 2, "several candidates remain")
+	# A selected suspect contradicted by new evidence gives way to the next that fits.
+	p.suspect = "crawler"   # freezing, uv, orbs
+	run.discover(p, "emf5", p.room_id)   # crawler has no emf5
+	check(p.suspect != "crawler" and (p.suspect == "" or Defs.fits(p.suspect, p.journal)), "the impossible suspect was replaced (%s)" % p.suspect)
+	# Rule-outs narrow too, are reversible, and an empty list is shown, not hidden.
+	for ev in ["orbs", "spirit_box", "writing"]:
+		run.set_ruled_out(p, ev, true)
+	check(Defs.candidates(p.journal).is_empty() and p.suspect == "", "nothing fits: no suspect")
+	run.set_ruled_out(p, "orbs", false)
+	check(Defs.candidates(p.journal) == ["shade"], "restoring a rule-out brings the candidate back")
+	run.cycle_suspect(p, 1)
+	check(p.suspect == "shade", "the single candidate can be chosen")
+	# Death: a room-sized splatter, synced through the replay; wounds alone don't.
+	run.player.invuln = 0.0
+	run._wound(p, null, "test")
+	check(not run.recorder.data["events"].any(func(e): return e[1] == "splatter"), "no splatter for a wound")
+	run.player.invuln = 0.0
+	run._wound(p, null, "test")
+	var ev: Array = run.recorder.data["events"].filter(func(e): return e[1] == "splatter")
+	check(ev.size() == 1 and ev[0][2]["room"] == run.map.room_at(p.global_position, p.room_id), "one splatter, in the room of death")

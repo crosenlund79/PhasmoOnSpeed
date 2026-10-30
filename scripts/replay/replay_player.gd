@@ -247,6 +247,8 @@ func _moment_for(type: String, d: Dictionary) -> Array:
 				return []    # the death moment follows
 			var how: String = {"hellfire": " by hellfire", "abyss": " in the Abyss", "miasma": " in the miasma"}.get(str(d.get("source", "")), "")
 			return ["icons/ui_heart_wounded.png", "%s wounded%s" % [_who(d), how]]
+		"relocate":
+			return ["icons/ui_skull.png", "The haunting shifted to the %s" % view.map.room_name(str(d.get("room", "")))]
 		"portal":
 			return ["icons/ui_skull.png", "A portal tore open"]
 		"abyss_pull":

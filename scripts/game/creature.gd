@@ -48,6 +48,11 @@ var tag: SpeechTag          # shapeshifter human disguise: same name tag as an o
 var _talk_t := 8.0
 var angered_t := 0.0        # voodoo doll: enraged flesh-and-blood creature
 var wrath := false          # Lost One: its keepsake was touched
+# Home room: the entity lives in lair_room, makes short excursions into one or
+# two neighbouring rooms, comes back and settles before wandering again. Hunts
+# and pursuit ignore all of this and go anywhere in the house.
+var _excursion: Array = []  # rooms still to visit on the current excursion
+var _settle_t := 0.0        # time left resting at home before the next excursion
 var wrath_target: Player = null
 # Blightness: rush in a straight line, stop, shake/recover ~0.5 s, pick a new line.
 const BLIGHT_RUSH_SPEED := {"roam": 430.0, "hunt": 640.0}
@@ -113,6 +118,7 @@ func setup(p_run: Run, p_type: String, p_lair: String, start: Vector2) -> void:
 		_set_form(["human", "cat", "ghost"][rng.randi_range(0, 2)], false)
 	modulate.a = 0.0
 	wait_t = rng.randf_range(1.0, 3.0)
+	_settle_t = rng.randf_range(8.0, 18.0)   # it starts at home
 
 func _glow_color() -> Color:
 	match type_id:
@@ -511,6 +517,8 @@ func hunt_gait() -> float:
 
 func _roam(delta: float) -> void:
 	_sway(delta)
+	if room_id == lair_room:
+		_settle_t = maxf(0.0, _settle_t - delta)
 	if wait_t > 0.0:
 		wait_t -= delta
 		if wait_t <= 0.0:
@@ -551,11 +559,40 @@ func _pick_roam_target() -> Vector2:
 		var mirrors := map.furniture_with("mirror")
 		var m: Dictionary = mirrors[rng.randi_range(0, mirrors.size() - 1)]
 		return HouseMap.cell_center(map.nearest_walkable(HouseMap.to_cell(m["rect"].get_center())))
-	var rid := lair_room
-	if rng.randf() > float(def["lair_bias"]):
+	if type_id == "harbinger":
 		var rooms := map.indoor_rooms()
-		rid = rooms[rng.randi_range(0, rooms.size() - 1)]["id"]
-	return HouseMap.cell_center(map.random_free_cell(rid, rng))
+		return HouseMap.cell_center(map.random_free_cell(rooms[rng.randi_range(0, rooms.size() - 1)]["id"], rng))
+	return HouseMap.cell_center(map.random_free_cell(_next_home_room(), rng))
+
+## Where an ordinary wander goes next: an excursion room, back home, or a new
+## spot within the home room. Stronger homebodies (lair_bias) settle longer.
+func _next_home_room() -> String:
+	if not _excursion.is_empty():
+		return _excursion.pop_front()
+	if room_id != lair_room:
+		_settle_t = rng.randf_range(14.0, 26.0) * (0.6 + float(def["lair_bias"]))
+		return lair_room
+	if _settle_t > 0.0:
+		return lair_room
+	var near: Array = map.neighbour_rooms(lair_room).filter(func(r): return not map.room(r).get("outdoor", false))
+	if near.is_empty():
+		near = map.neighbour_rooms(lair_room)
+	if near.is_empty():
+		return lair_room
+	var first: String = near[rng.randi_range(0, near.size() - 1)]
+	_excursion = [first]
+	if rng.randf() < 0.4:
+		var further: Array = map.neighbour_rooms(first).filter(func(r): return r != lair_room and not map.room(r).get("outdoor", false))
+		if not further.is_empty():
+			_excursion.append(further[rng.randi_range(0, further.size() - 1)])
+	return _excursion.pop_front()
+
+## A new home room (Run decides when). It walks there and settles in.
+func relocate_home(new_lair: String) -> void:
+	lair_room = new_lair
+	_excursion = [new_lair]
+	_settle_t = 0.0
+	wait_t = minf(wait_t, 0.5)
 
 func _warn(delta: float) -> void:
 	alpha = move_toward(alpha, 0.55, delta)

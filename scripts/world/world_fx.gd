@@ -180,6 +180,10 @@ func apply(type: String, d: Dictionary) -> bool:
 				"twitch":
 					if decals.has(d["id"]) and is_instance_valid(decals[d["id"]]):
 						twitch(decals[d["id"]])
+		"splatter":
+			var s := view.blood_splatter(str(d["room"]), Vector2(d["x"], d["y"]), int(d["seed"]))
+			if s:
+				decals["splatter_%d" % int(d["seed"])] = s   # cleared with the other decals
 		"hellfire":
 			if d["phase"] == "warn":
 				view.hellfire_warning(Vector2(d["x"], d["y"]), 34.0, 1.6)

@@ -155,6 +155,21 @@ func _drop_oldest(ev: String) -> void:
 			clues.remove_at(i)
 			return
 
+## The haunting moved: the cold and the orbs go with it. Evidence already found
+## stays true (the same entity, the same evidence types), only its centre shifts.
+func move_lair(old_room: String, new_room: String) -> void:
+	if temps.has(old_room) and temps.has(new_room):
+		var cold: float = temps[old_room]
+		temps[old_room] = rng.randf_range(12.5, 15.0)
+		temps[new_room] = cold
+	if Defs.is_ghost(source) and "orbs" in evidence:
+		for o in orbs:
+			o.queue_free()
+		orbs.clear()
+		run.record_event("orb_clear", {})
+		for i in 5:
+			_add_orb(new_room)
+
 func _add_orb(room_id: String) -> void:
 	var s := Sprite2D.new()
 	s.texture = Art.tex("items/orb.png")

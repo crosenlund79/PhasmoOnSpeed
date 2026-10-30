@@ -371,6 +371,34 @@ func reachable_from_spawn() -> Dictionary:
 				stack.append(n)
 	return seen
 
+## Rooms directly connected to room_id (through a doorway or an open edge), same floor.
+func neighbour_rooms(room_id: String) -> Array:
+	var r := room(room_id)
+	if r.is_empty():
+		return []
+	var me: int = r["index"]
+	var out := {}
+	var cs := {}
+	for c in r["cells"]:
+		cs[c] = true
+	const DIRS := [Vector2i(0, -1), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(1, 0)]
+	for d in doors:
+		var sides := {}
+		for o in DIRS:
+			var v := at(d + o)
+			if v >= 0:
+				sides[v] = true
+		if sides.has(me):
+			for v in sides:
+				if v != me:
+					out[rooms[v]["id"]] = true
+	for c in r["cells"]:
+		for o in DIRS:
+			var v := at(c + o)
+			if v >= 0 and v != me and not cs.has(c + o):
+				out[rooms[v]["id"]] = true
+	return out.keys()
+
 ## Number of distinct doorways/open edges out of a room (escape routes).
 func exits(room_id: String) -> int:
 	var r := room(room_id)

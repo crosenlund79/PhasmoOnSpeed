@@ -352,6 +352,10 @@ func apply_private(kind: String, d: Dictionary) -> void:
 			player.token.modulate = Color(0.6, 0.1, 0.1)
 			hud.begin_spectating()
 
+## Rule-outs are this player's own notes; the host keeps a copy to filter Tab.
+func on_ruled_out_changed(id: String) -> void:
+	Net.client_rule_out(id, player.journal.state(id) == "ruled_out")
+
 func apply_hud(d: Dictionary) -> void:
 	var eq: EquipmentMirror = player.equipment
 	eq.apply(d)

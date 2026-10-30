@@ -585,6 +585,11 @@ func _rebuild_suspect() -> void:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	suspect_box.add_child(row)
 	if sus == "":
+		if Defs.candidates(p.journal).is_empty():
+			# The player's own notes contradict every entity: say so, and how to fix it.
+			row.add_child(_outlined("No entity fits", _px(22), Color(0.9, 0.35, 0.25), Art.font_heading))
+			row.add_child(_outlined("Right-click a ruled-out evidence type to restore it", _px(13), Color(0.8, 0.75, 0.66), Art.font_italic, 3))
+			return
 		row.add_child(_outlined("None", _px(22), BONE, Art.font_heading))
 		row.add_child(_outlined("Tab / Shift+Tab to choose", _px(13), Color(0.8, 0.75, 0.66), Art.font_italic, 3))
 		return
@@ -640,9 +645,10 @@ func _suspect_choices(sus: String) -> HBoxContainer:
 			cell[2].add_theme_color_override("font_color", Art.GOLD)
 		else:
 			cell[2].modulate = Color(1, 1, 1, 0.5)
-		# Contradicted by an evidence type you ruled out: crossed through, still selectable.
+		# Contradicted by your notes (found or ruled-out evidence): crossed through;
+		# Tab skips it until the notes change.
 		var j: Journal = run.player.journal
-		if Defs.CREATURES[id]["evidence"].any(func(ev): return j.state(ev) == "ruled_out"):
+		if not Defs.fits(id, j):
 			cell[1].set_ruled(true)
 			if on:
 				cell[1].ring = Art.GOLD
@@ -979,6 +985,7 @@ func _notify_evidence(entry: Dictionary) -> void:
 func toggle_ruled_out(id: String) -> void:
 	if run.player.journal.toggle_ruled_out(id):
 		Sfx.play("pencil_scribble", -16.0, 1.4)
+		run.on_ruled_out_changed(id)
 		refresh()
 
 func refresh() -> void:

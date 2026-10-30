@@ -193,6 +193,20 @@ func _shot(s: String) -> void:
 			run.spawn_miasma(spot + Vector2(30, 40))
 		await _wait(100)
 		await _save(s)
+	elif s == "death":
+		var run: Run = Game.start_run("ashgrove", 7, "shade")
+		await _wait(5)
+		run.creature.set_process(false)
+		var room := run.map.room("living")
+		run.player.global_position = run.map.room_center("living")
+		run.player.room_id = "living"
+		run._apply_camera_limits(run.player.global_position)
+		run.camera.reset_smoothing()
+		run.player.wounds = 1
+		run._wound(run.player, null, "capture")
+		run._end_t = 999.0   # hold the scene for the shot
+		await _wait(40)
+		await _save("death_splatter")
 	elif s.begins_with("ency:"):
 		Game.goto_encyclopedia()
 		await _wait(10)

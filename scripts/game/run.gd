@@ -9,7 +9,7 @@ extends Node2D
 ## the host's snapshots and events (see scripts/autoload/net.gd).
 
 const GRACE_PERIOD := 40.0         # no ordinary hunts before this (seconds)
-const THREAT_PER_SECOND := 0.22
+const THREAT_PER_SECOND := 0.176   # 0.11.0: 80% of the former 0.22; difficulty multipliers on top
 const MEANINGFUL_INVESTIGATION := 4
 const HARBINGER_AFTER_RECKLESS := 2
 const HARBINGER_AFTER_WRONG := 3
@@ -374,6 +374,7 @@ func _process(delta: float) -> void:
 	if Defs.rules(difficulty) == "nightmare":
 		_nightmare_noises(delta)
 	_phantom_steps(delta)
+	_relocation_tick(delta)
 	_record(delta)
 	if multiplayer_match:
 		_net_tick(delta)
@@ -417,6 +418,39 @@ func _clock_toll(near: Vector2) -> void:
 	if best.has("index"):
 		view.shake_furniture(best["index"])
 		record_event("shake", {"index": best["index"]})
+
+# --- Home-room relocation ------------------------------------------------------------------
+# At most two per investigation, never early, rarely twice: most 3–5 minute
+# runs see none or one. The new room is never revealed.
+const MAX_RELOCATIONS := 2
+var relocations := 0
+var _relocate_t := 0.0
+
+func _relocation_tick(delta: float) -> void:
+	if _relocate_t == 0.0:
+		_relocate_t = rng.randf_range(100.0, 160.0)
+	var c := creature
+	if c == null or c.state != "roam" or is_harbinger() or in_abyss(c) or c.type_id == "lost_one" or relocations >= MAX_RELOCATIONS:
+		return   # (the Lost One stays bound to its keepsake's room)
+	_relocate_t -= delta
+	if _relocate_t > 0.0:
+		return
+	_relocate_t = rng.randf_range(90.0, 140.0)
+	if rng.randf() < (0.5 if relocations == 0 else 0.3):
+		relocate_home()
+
+func relocate_home() -> void:
+	var c := creature
+	var options: Array = map.indoor_rooms().filter(func(r): return r["id"] != c.lair_room and map.free_cells(r["id"]).size() >= 10)
+	if options.is_empty():
+		return
+	var old := c.lair_room
+	var new_room: String = options[rng.randi_range(0, options.size() - 1)]["id"]
+	relocations += 1
+	c.relocate_home(new_room)
+	phenomena.move_lair(old, new_room)
+	record_event("relocate", {"room": new_room})   # replay only: never sent to rivals' clients
+	tell_all("The haunting has shifted…", "icons/ui_skull.png")
 
 var _phantom_t := 40.0
 
@@ -592,6 +626,7 @@ func discover(p: Player, evidence_id: String, room_id: String) -> void:
 		recorder.event(elapsed, "evidence", {"actor": p.actor_id, "id": evidence_id, "room": room_id, "room_name": map.room_name(room_id), "first": first})
 		if not p.is_local and multiplayer_match:
 			Net.host_private(p.peer_id, "evidence", {"id": evidence_id, "time": elapsed, "room": room_id, "room_name": map.room_name(room_id)})
+		refit_suspect(p)
 
 func placed_books() -> Array:
 	var out: Array = []
@@ -1608,17 +1643,59 @@ func strike(p: Player, item: String) -> void:
 		return
 	attempt_vanquish(p, identity, item)
 
-## Choosing a suspect is never an attempt. Every entity is selectable.
+## Choosing a suspect is never an attempt. Tab only cycles through the entities
+## the hunter's own notes still allow (found evidence and their rule-outs).
 func cycle_suspect(p: Player, dir: int = 1) -> void:
 	if is_harbinger():
 		return
-	var options := [""] + Defs.ORDINARY_CREATURES
-	p.suspect = options[(options.find(p.suspect) + dir + options.size()) % options.size()]
+	var options := [""] + Defs.candidates(p.journal)
+	var i := options.find(p.suspect)
+	if i < 0:
+		i = 0
+	p.suspect = options[(i + dir + options.size()) % options.size()]
 	sound_to(p, "ui_click", -8.0)
 	record_event("suspect", {"actor": p.actor_id, "id": p.suspect})
 	if p.is_local:
 		hud.refresh()
 		hud.show_suspect_picker()
+
+## The hunter's notes changed. A suspect they now contradict gives way to the next
+## entity that still fits (or to none, if nothing does).
+func refit_suspect(p: Player) -> void:
+	if p.suspect == "" or is_harbinger() or Defs.fits(p.suspect, p.journal):
+		return
+	var was := p.suspect
+	var order := Defs.ORDINARY_CREATURES
+	var start := order.find(was)
+	p.suspect = ""
+	for k in range(1, order.size() + 1):
+		var id: String = order[(start + k) % order.size()]
+		if Defs.fits(id, p.journal):
+			p.suspect = id
+			break
+	record_event("suspect", {"actor": p.actor_id, "id": p.suspect})
+	tell(p, "Your notes rule out %s. %s" % [Defs.creature_name(was), ("Now suspecting %s." % Defs.creature_name(p.suspect)) if p.suspect != "" else "No entity fits what you have noted."], "icons/ui_quill.png", true)
+	if p.is_local:
+		hud.refresh()
+
+## A hunter marked / unmarked evidence as ruled out (the local HUD, or a client's
+## message): keep the host's copy of their notes in step and refit the suspect.
+func set_ruled_out(p: Player, id: String, on: bool) -> void:
+	if p == null or p.journal.has(id) or not Defs.EVIDENCE.has(id):
+		return
+	if on:
+		p.journal.ruled_out[id] = true
+	else:
+		p.journal.ruled_out.erase(id)
+	refit_suspect(p)
+
+func on_ruled_out_changed(id: String) -> void:
+	refit_suspect(player)
+
+func apply_remote_rule_out(peer: int, id: String, on: bool) -> void:
+	var h := hunter_by_peer(peer)
+	if h and not h.is_local:
+		set_ruled_out(h, id, on)
 
 # --- Rites ---------------------------------------------------------------------------
 
@@ -1989,6 +2066,11 @@ func _hunter_dies(p: Player, c: Creature = null) -> void:
 	p.token.modulate = Color(0.6, 0.1, 0.1)
 	sound_to(p, "player_death", 2.0)
 	record_event("death", {"actor": p.actor_id})
+	var death_room := map.room_at(p.global_position, p.room_id)
+	if death_room != "" and not AbyssArena.contains(p.global_position):
+		var sd := rng.randi()
+		view.blood_splatter(death_room, p.global_position, sd)
+		record_event("splatter", {"room": death_room, "x": p.global_position.x, "y": p.global_position.y, "seed": sd})
 	_maybe_quip_shove_victim(p)
 	if c:
 		c.end_hunt()

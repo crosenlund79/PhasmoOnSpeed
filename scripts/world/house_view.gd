@@ -559,6 +559,78 @@ func flicker(duration: float, strength: float = 1.0) -> void:
 	_flicker_time = maxf(_flicker_time, duration)
 	_flicker_strength = maxf(_flicker_strength, strength)
 
+## A hunter's death: an enormous, irregular supernatural splatter over most of the
+## room, clipped to the room's own floor so it never crosses a wall. It stays for
+## the rest of the investigation. Deterministic from `seed`, so host, clients and
+## replays paint the same stain.
+func blood_splatter(room_id: String, at: Vector2, seed_v: int) -> Node2D:
+	var r := map.room(room_id)
+	if r.is_empty():
+		return null
+	var mask := BloodMask.new()
+	for rect in r["rects"]:
+		mask.rects.append(Rect2(Vector2(rect[0], rect[1]) * C, Vector2(rect[2], rect[3]) * C))
+	mask.clip_children = CanvasItem.CLIP_CHILDREN_ONLY
+	decal_layer.add_child(mask)
+	var b := BloodSplat.new()
+	b.at = at
+	b.area = mask.rects
+	b.seed_v = seed_v
+	mask.add_child(b)
+	return mask
+
+class BloodMask extends Node2D:
+	var rects: Array = []
+	func _draw() -> void:
+		for rc in rects:
+			draw_rect(rc, Color.WHITE)
+
+class BloodSplat extends Node2D:
+	var at := Vector2.ZERO
+	var area: Array = []
+	var seed_v := 1
+	var _grow := 0.0
+	func _ready() -> void:
+		var tw := create_tween()
+		tw.tween_property(self, "_grow", 1.0, 0.45).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	func _process(_d: float) -> void:
+		if _grow < 1.0:
+			queue_redraw()
+	func _draw() -> void:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = seed_v
+		var dark := Color(0.32, 0.01, 0.02, 0.9)
+		var wet := Color(0.55, 0.03, 0.04, 0.85)
+		var reach := 0.0
+		for rc in area:
+			for corner in [rc.position, rc.end, Vector2(rc.position.x, rc.end.y), Vector2(rc.end.x, rc.position.y)]:
+				reach = maxf(reach, at.distance_to(corner))
+		reach *= _grow
+		# The heart of it: a ragged pool where they fell.
+		for i in 18:
+			var o := Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(0.0, 34.0)
+			draw_circle(at + o * _grow, rng.randf_range(14.0, 30.0) * _grow, dark)
+		# Streaks flung out in every direction, thinning with distance.
+		for i in 42:
+			var a := rng.randf() * TAU
+			var len := rng.randf_range(0.35, 1.0) * reach
+			var w := rng.randf_range(5.0, 13.0)
+			var steps := 7
+			for k in steps:
+				var t := float(k + 1) / steps
+				var p := at + Vector2.from_angle(a + sin(t * 3.0 + i) * 0.08) * len * t
+				draw_circle(p, w * (1.0 - t * 0.7), wet if k % 2 == 0 else dark)
+		# Spatter over most of the floor: blots large and small.
+		for i in 220:
+			var rc: Rect2 = area[rng.randi_range(0, area.size() - 1)]
+			var p := Vector2(rng.randf_range(rc.position.x, rc.end.x), rng.randf_range(rc.position.y, rc.end.y))
+			if p.distance_to(at) > reach:
+				continue
+			var rad := rng.randf_range(2.0, 11.0) * (1.4 if rng.randf() < 0.15 else 1.0)
+			draw_circle(p, rad, wet if rng.randf() < 0.5 else dark)
+			if rng.randf() < 0.3:
+				draw_circle(p + Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1)) * rad * 1.6, rad * 0.45, dark)
+
 ## Only the lights near pos stutter (something cold passing by).
 func flicker_near(pos: Vector2, radius: float, duration: float) -> void:
 	_local_flickers.append({"pos": pos, "radius": radius, "until": _t + duration})
