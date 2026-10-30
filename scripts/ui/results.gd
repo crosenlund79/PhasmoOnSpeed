@@ -232,7 +232,7 @@ func _taunt() -> String:
 		if summary["harbinger"]:
 			lines = ["You were warned. Repeatedly. By the house itself.", "The Harbinger thanks you for your enthusiasm."]
 		elif orig in ["vampire", "werewolf", "shapeshifter"] and summary["evidence_ids"].is_empty():
-			lines = ["Spirit Box? EMF? It was never a ghost. It found that very funny.",
+			lines = ["Whisper Box? Witch's Needle? It was never a ghost. It found that very funny.",
 				"You brought ghost-hunting gear to something with teeth."]
 		else:
 			lines = ["Your journal will make a fine ghost story. Narrated by you, from the other side.",

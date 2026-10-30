@@ -3,7 +3,7 @@ extends RefCounted
 ## Input map, registered at startup so the project file stays minimal.
 
 const HELP := [
-	["WASD / Arrows", "Move"], ["Shift", "Sprint"], ["Mouse", "Aim / facing"], ["F", "Flashlight"],
+	["WASD / Arrows", "Move"], ["Shift", "Sprint"], ["Mouse", "Aim / facing"], ["F", "Lantern"],
 	["1 – 9", "Equipment"], ["Q / Mouse wheel", "Cycle items"], ["Left click", "Use item"],
 	["E (hold)", "Interact / pick up / retrieve / melt / light"],
 	["Tab / Shift+Tab", "Choose suspected entity"], ["V (hold)", "Perform banishing rite"],

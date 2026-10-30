@@ -209,8 +209,29 @@ func _play(house: String, cr: String, sd: int) -> void:
 					t += 0.5
 				var book: Node2D = (run.placed_books()[0] if not run.placed_books().is_empty() else null)
 				if book:
-					await _walk_to(book.position + Vector2(30, 0), 8.0)
+					# Stand beside the book, on its side of any wall.
+					var spot: Vector2 = book.position
+					for off: Vector2 in [Vector2(30, 0), Vector2(-30, 0), Vector2(0, 30), Vector2(0, -30)]:
+						if run.map.room_at(book.position + off) == run.map.room_at(book.position) and run.map.walkable(HouseMap.to_cell(book.position + off)):
+							spot = book.position + off
+							break
+					await _walk_to(spot, 8.0)
 				run.player.suspect = "poltergeist"
+				await _wait(1.5)
+				run.perform_rite(run.player)
+		"blightness", "crawler", "lost_one":
+			# Read the room, lay what its rite needs, name it, perform the rite.
+			if await _walk_to(_lair_point()):
+				_equip("emf")
+				await _wait(3.0)
+				_equip("thermometer")
+				await _wait(2.0)
+				for need in Defs.CREATURES[cr]["rite_needs"]:
+					if need != "holy_water":
+						_equip(need)
+						_use()
+						await _wait(0.6)
+				run.player.suspect = cr
 				await _wait(1.5)
 				run.perform_rite(run.player)
 		"vampire":

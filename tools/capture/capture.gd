@@ -101,6 +101,78 @@ func _shot(s: String) -> void:
 		run.elapsed = 212.4
 		await _wait(40)
 		await _save(s)
+	elif s.begins_with("env_"):
+		# Doors, wide stairs, living flames and the interact highlight, brightly lit for review.
+		var run: Run = Game.start_run(s.substr(4), 5, "shade")
+		await _wait(5)
+		run.creature.set_process(false)
+		var st: Dictionary = run.map.stairs[0]
+		print("wide stairs: ", run.map.stairs.map(func(e): return [e.has("a_wide"), e.has("b_wide")]))
+		run.player.global_position = HouseMap.cell_center(st["a_land"]) + Vector2(0, 0)
+		run._apply_camera_limits(run.player.global_position)
+		run.camera.reset_smoothing()
+		run.player.flashlight_on = true
+		run.player.input_enabled = false
+		run.view.set_darkness(Color(0.55, 0.55, 0.6), 0.01)
+		await _wait(40)
+		print("near: ", run.player.equipment.near_items, " target ", run.player.equipment.interact_pos, " hl ", run.hud.highlighter.near)
+		await _save(s)
+	elif s == "needle":
+		# Witch's Needle near a strong presence, beside a pickup (highlight) and a closed door.
+		var run: Run = Game.start_run("ashgrove", 5, "shade")
+		await _wait(5)
+		run.creature.set_process(false)
+		var pk: Dictionary = run.pickups[0]
+		run.player.global_position = pk["pos"] + Vector2(22, 0)
+		run._apply_camera_limits(run.player.global_position)
+		run.camera.reset_smoothing()
+		run.player.input_enabled = false
+		run.player.flashlight_on = true
+		run.player.equipment.select(Defs.BASE_LOADOUT.find("emf"))
+		run.phenomena.hotspots.append({"pos": run.player.global_position + Vector2(40, 0), "level": 4, "ttl": 99.0, "room": run.player.room_id})
+		await _wait(45)
+		await _save("needle")
+	elif s == "voodoo":
+		var run: Run = Game.start_run("blackwood", 8, "poltergeist")
+		await _wait(5)
+		run.creature.set_process(false)
+		var o: Occupant = run.occupants[0]
+		o.set_process(false)
+		run.player.global_position = o.position + Vector2(-70, 10)
+		run._apply_camera_limits(run.player.global_position)
+		run.camera.reset_smoothing()
+		run.player.input_enabled = false
+		run.player.aim_override = 0.0
+		run.player.add_resource("voodoo_doll")
+		run.player.equipment.rebuild_slots()
+		run.player.equipment.select(run.player.equipment.slots.find("voodoo_doll"))
+		run.occupants = [o]
+		run.use_voodoo(run.player)
+		await _wait(22)
+		await _save("voodoo_burning")
+		await _wait(110)
+		await _save("voodoo_embers")
+	elif s == "furnace":
+		var run: Run = Game.start_run("blackwood", 9, "lost_one")
+		await _wait(5)
+		var k: Dictionary = run.keepsakes.filter(func(x): return x["forbidden"])[0]
+		run.player.global_position = k["pos"] + Vector2(24, 0)
+		run._apply_camera_limits(run.player.global_position)
+		run.camera.reset_smoothing()
+		await _wait(10)
+		await _save("lost_one_keepsake")
+		run._examine_keepsake(run.player, k)
+		await _wait(50)
+		await _save("lost_one_wrath")
+		run.on_creature_contact(run.creature, run.player)
+		await _wait(150)
+		await _save("furnace")
+	elif s.begins_with("ency:"):
+		Game.goto_encyclopedia()
+		await _wait(10)
+		get_tree().current_scene.show_entry(s.substr(5))
+		await _wait(10)
+		await _save("encyclopedia_" + s.substr(5))
 	elif s.begins_with("overview_"):
 		var run: Run = Game.start_run(s.substr(9), 5, "shade")
 		await _wait(10)

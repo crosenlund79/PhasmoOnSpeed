@@ -3,7 +3,7 @@ extends Node
 ## One per hunter (on the host / in solo). Fast equipment handling driven by the
 ## hunter's PlayerInput: number keys / wheel select, left click uses, E interacts
 ## (hold for melting / lighting), V performs rites, Space shoves. Produces:
-##   reading — the short value shown under the investigator ("EMF 4.7")
+##   reading — the short value shown at the top ("NEEDLE 4 · STRIKING")
 ##   hint    — the longer instruction line shown above the hotbar
 
 signal changed()
@@ -36,6 +36,9 @@ var _investigated := {}       # "room|tool" pairs already counted as investigati
 var _tool_room_t := 0.0
 var _last_tool_room := ""
 var _emf_smooth := 1.0
+var interact_pos := Vector2.INF   # what [E] would act on (highlighted)
+var near_items: Array = []        # pickups close by (faintly highlighted)
+var needle := 0.0                 # Witch's Needle agitation 0–5 (0 = not held)
 
 func setup(p_run: Run, p_player: Player) -> void:
 	run = p_run
@@ -86,6 +89,7 @@ func process_input(delta: float) -> void:
 	if not player.input_enabled or player.dead:
 		hold_action = ""
 		prompt = ""
+		interact_pos = Vector2.INF
 		return
 	for i in 9:
 		if inp.just_pressed("slot_%d" % (i + 1)):
@@ -124,6 +128,7 @@ func process_input(delta: float) -> void:
 func _update_holds(delta: float) -> void:
 	var inp := player.input
 	var interact: Dictionary = run.find_interactable(player, player.global_position)
+	interact_pos = interact.get("pos", player.global_position) if not interact.is_empty() else Vector2.INF
 	prompt = ""
 	if not interact.is_empty():
 		prompt = "[E] " + interact["label"]
@@ -183,6 +188,8 @@ func update_tools(delta: float) -> void:
 		ph.set_orbs_visible(cur == "orb_camera")
 	_set_reading("", IDLE, false)
 	hint = ""
+	needle = 0.0
+	near_items = run.nearby_pickups(player.global_position) if not player.dead else []
 	_track_investigation(cur, delta)
 	_spirit_result_t -= delta
 	match cur:
@@ -191,13 +198,17 @@ func update_tools(delta: float) -> void:
 			var lv: int = r[0]
 			var target := ph.emf_value(player.global_position)
 			_emf_smooth = lerpf(_emf_smooth, target, clampf(delta * 8.0, 0.0, 1.0))
+			# Witch's Needle: same thresholds as the old EMF reading (Level 5 = evidence).
 			var shown := 5.0 if lv == 5 else minf(_emf_smooth, 4.9)
-			_set_reading("EMF %.1f" % shown, HOT if shown >= 4.0 else (NORMAL if shown >= 2.0 else IDLE), shown >= 2.0)
-			hint = "EMF reader — spikes near activity"
+			needle = shown
+			var words := ["STILL", "STILL", "TWITCHING", "TAPPING", "STRIKING", "RATTLING!"]
+			_set_reading("NEEDLE %d · %s" % [int(shown), words[int(shown)]], HOT if shown >= 4.0 else (NORMAL if shown >= 2.0 else IDLE), shown >= 2.0)
+			hint = "Witch's Needle — it stirs near a presence"
+			# Glass taps, faster and harder with the agitation; a soft rattle at Level 5.
 			_beep_t -= delta
-			if lv >= 2 and _beep_t <= 0.0:
-				_beep_t = 0.9 / lv
-				run.sound_to(player, "emf_spike" if lv == 5 else "emf_beep", -10.0 + lv, 0.8 + lv * 0.12)
+			if shown >= 1.8 and _beep_t <= 0.0:
+				_beep_t = 0.07 if lv == 5 else clampf(1.1 / pow(shown - 0.8, 1.6), 0.12, 0.9)
+				run.sound_to(player, "needle_tap", -16.0 + shown * 2.0 - (4.0 if lv == 5 else 0.0), randf_range(0.85, 1.25))
 			if lv == 5:
 				run.discover(player, "emf5", r[1])
 		"thermometer":
@@ -211,22 +222,22 @@ func update_tools(delta: float) -> void:
 			else:
 				_thermo_cold_t = 0.0
 		"uv":
-			_set_reading("UV", Color(0.78, 0.6, 1.0, 0.7), false)
-			hint = "UV light — sweep walls and doorways"
+			_set_reading("WRAITHLIGHT", Color(0.78, 0.6, 1.0, 0.7), false)
+			hint = "Wraithlight Lantern — sweep walls and doorways"
 		"spirit_box":
 			if _spirit_t >= 0.0:
-				_set_reading("SPIRIT BOX: LISTENING…", NORMAL, true)
+				_set_reading("WHISPER BOX: LISTENING…", NORMAL, true)
 			elif _spirit_result_t > 0.0:
-				_set_reading(_spirit_result, HOT if _spirit_result.ends_with("RESPONSE") else NORMAL, true)
+				_set_reading(_spirit_result, HOT if _spirit_result.ends_with("WHISPERS") else NORMAL, true)
 			else:
-				_set_reading("SPIRIT BOX", IDLE, false)
-			hint = "Spirit Box — click to ask a question"
+				_set_reading("WHISPER BOX", IDLE, false)
+			hint = "Whisper Box — click to open the lid and ask"
 		"ghost_book":
 			hint = "Ghost Writing Book — click to lay it down" if not player.book_placed else "Book placed — [E] near it to retrieve"
 			_set_reading("BOOK PLACED" if player.book_placed else "", IDLE, false)
 		"orb_camera":
-			_set_reading("● REC", Color(1.0, 0.4, 0.35, 0.8), false)
-			hint = "Orb Camera — viewfinder active"
+			_set_reading("◉ SCRYING", Color(0.7, 0.85, 0.95, 0.8), false)
+			hint = "Scrying Mirror — orbs show in the black glass"
 		"salt":
 			hint = "Salt (%d) — click to pour a line" % player.charges["salt"]
 		"crucifix":
@@ -241,6 +252,8 @@ func update_tools(delta: float) -> void:
 			hint = "Silverware %d/%d — melt at a stove or hearth" % [int(player.resources.get("silverware", 0)), Defs.SILVERWARE_NEEDED]
 		"hand_mirror":
 			hint = "Hand Mirror — hold click to look into it"
+		"voodoo_doll":
+			hint = "Voodoo Doll — click to stab it (something will answer)"
 	if _spirit_t >= 0.0:
 		_spirit_t += delta
 		if _spirit_t >= 1.6:
@@ -302,8 +315,11 @@ func use_current() -> void:
 			run.tell(player, "Melt %d pieces at a stove or hearth to cast a silver stake." % Defs.SILVERWARE_NEEDED, "icons/eq_silverware.png")
 			_cooldown = 1.0
 		"orb_camera":
-			run.sound_to(player, "camera_shutter", -4.0)
+			run.sound_to(player, "mirror_reveal", -14.0, 1.3)
 			_cooldown = 0.6
+		"voodoo_doll":
+			_cooldown = 1.0
+			run.use_voodoo(player)
 		"emf", "thermometer", "uv":
 			pass
 	changed.emit()
@@ -328,11 +344,11 @@ func _spirit_answer() -> void:
 	if answered:
 		run.sound_at("spirit_box_voice", player.global_position, 0.0)
 		var lines := ["\"…behind…\"", "\"…leave…\"", "\"…here…\"", "\"…mine…\"", "\"…cold…\""]
-		_spirit_result = "SPIRIT BOX: RESPONSE"
-		run.tell(player, "Spirit Box: " + lines[run.rng.randi_range(0, lines.size() - 1)], "icons/eq_spirit_box.png")
+		_spirit_result = "WHISPER BOX: IT WHISPERS"
+		run.tell(player, "Whisper Box: " + lines[run.rng.randi_range(0, lines.size() - 1)], "icons/eq_spirit_box.png")
 		run.discover(player, "spirit_box", player.room_id)
 	else:
-		_spirit_result = "SPIRIT BOX: STATIC"
+		_spirit_result = "WHISPER BOX: SILENCE"
 
 func _mirror_check() -> void:
 	var c: Creature = run.creature

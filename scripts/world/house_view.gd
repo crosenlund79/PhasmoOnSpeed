@@ -49,6 +49,8 @@ var actor_layer: Node2D
 var overlay_layer: Node2D
 var lights: Array = []         # [{light: PointLight2D, base: float, flicker: float, kind}]
 var mirrors: Array = []        # [{furniture, sprite, overlay: Sprite2D}]
+var doors: Array = []          # [{cell, open, leaf: DoorLeaf, shape, occluder}]
+var _with_collision := false
 var _flicker_time := 0.0
 var _flicker_strength := 0.0
 var _t := 0.0
@@ -75,6 +77,8 @@ func build(m: HouseMap, with_collision: bool, with_occluders: bool = true) -> vo
 	_build_stairs()
 	_build_furniture()
 	_build_lights()
+	_with_collision = with_collision
+	_build_doors(with_occluders)
 	if with_collision:
 		_build_collision()
 	if with_occluders:
@@ -269,16 +273,22 @@ func _neglect_decal(path: String, pos: Vector2, rot: float, size: float, alpha: 
 func _build_stairs() -> void:
 	for st in map.stairs:
 		var top := "furniture/hatch.png" if st.get("style", "stairs") == "hatch" else "furniture/stairs_down.png"
-		for pair in [[st["a"], st["a_land"], top], [st["b"], st["b_land"], "furniture/stairs_up.png"]]:
+		for pair in [[st["a"], st["a_land"], top, st.get("a_wide")], [st["b"], st["b_land"], "furniture/stairs_up.png", st.get("b_wide")]]:
 			var cell: Vector2i = pair[0]
 			var land: Vector2i = pair[1]
 			var s := Sprite2D.new()
 			s.texture = Art.tex(pair[2])
 			s.position = HouseMap.cell_center(cell)
-			# Steps lead away from the landing.
+			# Steps lead away from the landing; a wide flight spans two cells.
 			s.rotation = Vector2(cell - land).angle() - PI * 0.5
-			var k := C / maxf(1.0, s.texture.get_size().x)
-			s.scale = Vector2(k, k)
+			var ts := s.texture.get_size()
+			var width := C
+			if pair[3] != null:
+				var wide: Vector2i = pair[3]
+				s.position = (HouseMap.cell_center(cell) + HouseMap.cell_center(wide)) * 0.5
+				width = C * 2.0
+			s.scale = Vector2(width / maxf(1.0, ts.x), C * 1.25 / maxf(1.0, ts.y))
+			s.position += Vector2(cell - land) * C * 0.12   # the flight drops past the cell edge
 			under_layer.add_child(s)
 
 func _build_furniture() -> void:
@@ -312,6 +322,113 @@ func _build_furniture() -> void:
 			furniture_layer.add_child(ov)
 			mirrors.append({"furniture": f, "sprite": s, "overlay": ov})
 
+## Doors: most start closed (deterministic per house, so every peer and every
+## replay agrees). A closed door blocks hunters, light and sight; ghosts pass.
+func _build_doors(with_occluders: bool) -> void:
+	for i in map.doors.size():
+		var c: Vector2i = map.doors[i]
+		var across := map.is_wall(c + Vector2i(-1, 0)) or map.is_wall(c + Vector2i(1, 0))   # leaf spans x
+		var leaf := DoorLeaf.new()
+		leaf.across = across
+		leaf.position = Vector2(c) * C + (Vector2(2, C * 0.5) if across else Vector2(C * 0.5, 2))
+		leaf.z_index = -3
+		add_child(leaf)
+		var d := {"cell": c, "open": false, "leaf": leaf, "shape": null, "occluder": null}
+		if _with_collision:
+			var body := StaticBody2D.new()
+			body.collision_layer = 1
+			body.collision_mask = 0
+			var cs := CollisionShape2D.new()
+			var sh := RectangleShape2D.new()
+			sh.size = Vector2(C, 8) if across else Vector2(8, C)
+			cs.shape = sh
+			cs.position = HouseMap.cell_center(c)
+			body.add_child(cs)
+			add_child(body)
+			d["shape"] = cs
+		if with_occluders:
+			var occ := LightOccluder2D.new()
+			var poly := OccluderPolygon2D.new()
+			var r := Rect2(HouseMap.cell_center(c) - (Vector2(C, 4) if across else Vector2(4, C)) * 0.5, Vector2(C, 4) if across else Vector2(4, C))
+			poly.polygon = PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)])
+			occ.occluder = poly
+			add_child(occ)
+			d["occluder"] = occ
+		doors.append(d)
+		set_door(i, hash(map.id + ":door:%d" % i) % 10 < 3, false)
+
+func set_door(i: int, open: bool, animate: bool = true) -> void:
+	if i < 0 or i >= doors.size():
+		return
+	var d: Dictionary = doors[i]
+	d["open"] = open
+	if open:
+		map.closed_doors.erase(d["cell"])
+	else:
+		map.closed_doors[d["cell"]] = true
+	if d["shape"]:
+		d["shape"].set_deferred("disabled", open)
+	if d["occluder"]:
+		d["occluder"].visible = not open
+	var leaf: DoorLeaf = d["leaf"]
+	var target := -PI * 0.5 if open else 0.0
+	if animate:
+		create_tween().tween_property(leaf, "rotation", target, 0.25).set_trans(Tween.TRANS_QUAD)
+	else:
+		leaf.rotation = target
+
+func door_index_at(pos: Vector2, radius: float) -> int:
+	var best := -1
+	var bd := radius
+	for i in doors.size():
+		var dd := pos.distance_to(HouseMap.cell_center(doors[i]["cell"]))
+		if dd < bd:
+			bd = dd
+			best = i
+	return best
+
+## A wooden door leaf hinged at one frame post; rotation 0 = closed across the gap.
+class DoorLeaf extends Node2D:
+	var across := true
+	func _draw() -> void:
+		var C2 := Defs.CELL - 4.0
+		var r := Rect2(Vector2(0, -3), Vector2(C2, 6)) if across else Rect2(Vector2(-3, 0), Vector2(6, C2))
+		draw_rect(r.grow(1.5), Art.INK)
+		draw_rect(r, Color(0.36, 0.24, 0.14))
+		var mid := r.position + r.size * (Vector2(0.78, 0.5) if across else Vector2(0.5, 0.78))
+		draw_circle(mid, 1.6, Color(0.75, 0.6, 0.3))   # brass knob
+
+## A living flame: layered tongues that sway and gutter, never a static glow.
+class Flame extends Node2D:
+	var size := 7.0
+	var _t := randf() * 10.0
+	var lit := true
+	func _ready() -> void:
+		var m := CanvasItemMaterial.new()
+		m.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+		material = m
+	func _process(delta: float) -> void:
+		_t += delta
+		if lit:
+			queue_redraw()
+	func _draw() -> void:
+		if not lit:
+			return
+		var sway := sin(_t * 5.3) * 0.25 + sin(_t * 11.7) * 0.12
+		var h := size * (1.6 + 0.25 * sin(_t * 8.1) + 0.12 * sin(_t * 19.0))
+		for layer in [[1.0, Color(0.95, 0.35, 0.08, 0.75)], [0.68, Color(1.0, 0.72, 0.2, 0.9)], [0.36, Color(1.0, 0.95, 0.75, 1.0)]]:
+			var k: float = layer[0]
+			var w := size * 0.55 * k
+			var tip := Vector2(sway * size * k, -h * k)
+			var pts := PackedVector2Array()
+			for a in 9:
+				var ang := PI * a / 8.0
+				pts.append(Vector2(cos(ang) * w, sin(ang) * w * 0.8))
+			pts.append(Vector2(-w * 0.8, -h * k * 0.35) + tip * 0.3)
+			pts.append(tip)
+			pts.append(Vector2(w * 0.8, -h * k * 0.35) + tip * 0.3)
+			draw_colored_polygon(pts, layer[1])
+
 func _light(pos: Vector2, color: Color, energy: float, scale: float, tex_path: String, flicker: float, kind: String, shadows: bool) -> PointLight2D:
 	var l := PointLight2D.new()
 	l.texture = Art.tex(tex_path)
@@ -324,8 +441,29 @@ func _light(pos: Vector2, color: Color, energy: float, scale: float, tex_path: S
 	l.shadow_filter_smooth = 2.0
 	l.shadow_color = Color(0, 0, 0, 0.75)
 	add_child(l)
-	lights.append({"light": l, "base": energy, "flicker": flicker, "kind": kind, "phase": randf() * 10.0})
+	var entry := {"light": l, "base": energy, "flicker": flicker, "kind": kind, "phase": randf() * 10.0, "on": true, "flame": null, "scale": scale, "pos": pos}
+	if kind in ["candle", "lamp", "hearth"]:
+		var fl := Flame.new()
+		fl.position = pos
+		fl.size = {"candle": 4.0, "lamp": 5.0, "hearth": 8.0}[kind]
+		fl.z_index = 2
+		furniture_layer.add_child(fl)
+		entry["flame"] = fl
+	lights.append(entry)
 	return l
+
+## Lights that supernatural activity can snuff out (and hunters relight).
+func can_extinguish(i: int) -> bool:
+	return i >= 0 and i < lights.size() and lights[i]["kind"] in ["room", "candle", "lamp", "hearth"]
+
+func set_light(i: int, on: bool) -> void:
+	if not can_extinguish(i):
+		return
+	var l: Dictionary = lights[i]
+	l["on"] = on
+	if l["flame"]:
+		l["flame"].lit = on
+		l["flame"].queue_redraw()
 
 func _build_lights() -> void:
 	for r in map.rooms:
@@ -445,13 +583,65 @@ func _process(delta: float) -> void:
 	for l in lights:
 		var light: PointLight2D = l["light"]
 		var e: float = l["base"]
+		if not l["on"]:
+			light.energy = move_toward(light.energy, 0.0, delta * 3.0)
+			continue
 		if l["flicker"] > 0.0:
 			e *= 1.0 + sin(_t * 9.0 + l["phase"]) * l["flicker"] * 0.5 + sin(_t * 23.0 + l["phase"] * 3.0) * l["flicker"] * 0.3
+			if l["flame"]:
+				# Fire breathes: the glow swells and shifts a little with the flame.
+				light.texture_scale = l["scale"] * (1.0 + sin(_t * 6.3 + l["phase"]) * 0.04)
+				light.position = l["pos"] + Vector2(sin(_t * 5.3 + l["phase"]), cos(_t * 4.1 + l["phase"])) * 1.5
 		if _flicker_strength > 0.0 and l["kind"] != "moon":
 			var n := sin(_t * 37.0 + l["phase"] * 7.0) + sin(_t * 61.0 + l["phase"])
 			if n > 0.6 * (1.0 - _flicker_strength * 0.5):
 				e *= 0.08
 		light.energy = e
+
+## Evidence beginning to appear: the air of the room warps faintly for a moment.
+func shimmer_room(room_id: String) -> void:
+	var r := map.room(room_id)
+	if r.is_empty():
+		return
+	for rect in r["rects"]:
+		var s := Sprite2D.new()
+		s.texture = Art.tex("lights/soft.png")
+		s.centered = false
+		var rr := Rect2(Vector2(rect[0], rect[1]) * C, Vector2(rect[2], rect[3]) * C)
+		s.position = rr.position
+		s.scale = rr.size / s.texture.get_size()
+		s.material = WorldFx.distort_material(0.004, Color(0.92, 0.96, 1.0), 0.06, false)
+		s.modulate.a = 0.0
+		s.z_index = 4
+		overlay_layer.add_child(s)
+		var tw := create_tween()
+		tw.tween_property(s, "modulate:a", 1.0, 0.5)
+		tw.tween_method(func(v): s.material.set_shader_parameter("t", v), 0.0, 6.0, 1.4)
+		tw.tween_property(s, "modulate:a", 0.0, 0.6)
+		tw.tween_callback(s.queue_free)
+
+## A short-lived column of fire (a burning occupant, the furnace's roar).
+func burst_flames(pos: Vector2, dur: float, size: float = 1.0) -> void:
+	var holder := Node2D.new()
+	holder.position = pos
+	holder.z_index = 3
+	overlay_layer.add_child(holder)
+	for i in 5:
+		var f := Flame.new()
+		f.size = (9.0 + randf() * 5.0) * size
+		f.position = Vector2(randf_range(-10, 10), randf_range(-6, 8)) * size
+		holder.add_child(f)
+	var l := PointLight2D.new()
+	l.texture = Art.tex("lights/candle.png")
+	l.color = Color(1.0, 0.5, 0.15)
+	l.energy = 1.6
+	l.texture_scale = 1.1 * size
+	holder.add_child(l)
+	var tw := create_tween()
+	tw.tween_interval(dur)
+	tw.tween_property(holder, "modulate:a", 0.0, 0.5)
+	tw.parallel().tween_property(l, "energy", 0.0, 0.5)
+	tw.tween_callback(holder.queue_free)
 
 ## Brief rattle of a furniture sprite (poltergeist activity; replay and clients too).
 func shake_furniture(index: int) -> void:
@@ -582,14 +772,9 @@ class WallDrawer extends Node2D:
 			draw_rect(Rect2(p + Vector2(C - 3, -2), Vector2(6, C + 4)), wood)
 			draw_rect(Rect2(p + Vector2(-3, -2), Vector2(6, C + 4)), ink, false, 1.5)
 			draw_rect(Rect2(p + Vector2(C - 3, -2), Vector2(6, C + 4)), ink, false, 1.5)
-			# Open door leaf swung against the wall.
-			draw_line(p + Vector2(C - 1, 2), p + Vector2(C + 1, C - 2).rotated(0.0) + Vector2(-C * 0.9, -C * 0.55), ink, 5.0)
-			draw_line(p + Vector2(C - 1, 2), p + Vector2(C + 1, C - 2) + Vector2(-C * 0.9, -C * 0.55), Color(0.42, 0.29, 0.17), 3.0)
 		else:
 			draw_rect(Rect2(p + Vector2(C * 0.5 - 4, 0), Vector2(8, C)), Color(0.24, 0.16, 0.1, 0.9))
 			draw_rect(Rect2(p + Vector2(-2, -3), Vector2(C + 4, 6)), wood)
 			draw_rect(Rect2(p + Vector2(-2, C - 3), Vector2(C + 4, 6)), wood)
 			draw_rect(Rect2(p + Vector2(-2, -3), Vector2(C + 4, 6)), ink, false, 1.5)
 			draw_rect(Rect2(p + Vector2(-2, C - 3), Vector2(C + 4, 6)), ink, false, 1.5)
-			draw_line(p + Vector2(2, 1), p + Vector2(C * 0.45, C * 0.85), ink, 5.0)
-			draw_line(p + Vector2(2, 1), p + Vector2(C * 0.45, C * 0.85), Color(0.42, 0.29, 0.17), 3.0)

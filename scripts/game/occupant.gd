@@ -58,6 +58,19 @@ func bite() -> void:
 	token.set_token(token_path)
 	run.sound_at("npc_gasp", position, -4.0)
 
+## The voodoo doll's answer: supernatural flames, a scream, then only ashes.
+func combust() -> void:
+	if state == "gone":
+		return
+	state = "gone"
+	path = PackedVector2Array()
+	token.sprite.modulate = Color(1.0, 0.55, 0.3)
+	var tw := create_tween()
+	tw.tween_property(token.sprite, "modulate", Color(0.15, 0.08, 0.06), 1.0)
+	tw.tween_property(self, "modulate:a", 0.0, 0.4)
+	tw.tween_callback(func(): tag.set_visible(false))
+	run.on_occupant_gone(self)
+
 func flee() -> void:
 	if state == "flee" or state == "gone":
 		return

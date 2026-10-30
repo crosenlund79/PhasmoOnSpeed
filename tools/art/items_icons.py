@@ -6,6 +6,7 @@ import math
 import numpy as np
 
 import objects as O
+import rev5 as R5
 from core import Canvas, INK, blur, col, dilate, gradient, save, catmull
 
 ITEM_ST = O.Style(ow=2.0, thin=1.0, shade=0.45, hatch=0.45, light=0.3, depth=2.5)
@@ -47,6 +48,13 @@ ITEMS = {
     "shed_skin": (lambda cv, st: O.shed_skin(cv, st), True, None),
     "uv_handprint": (lambda cv, st: O.handprint(cv, st, glow=True), False, None),
     "orb": (lambda cv, st: O.orb(cv, st, 32, 32, 17), False, None),
+    # revision 5
+    "voodoo_doll": (lambda cv, st: R5.voodoo_doll(cv, st), True, None),
+    "music_box": (lambda cv, st: R5.music_box(cv, st), True, None),
+    "locket": (lambda cv, st: R5.locket(cv, st), True, None),
+    "child_shoe": (lambda cv, st: R5.child_shoe(cv, st), True, None),
+    "ashes": (lambda cv, st: R5.ash_pile(cv, st, embers=False), False, None),
+    "embers": (lambda cv, st: R5.ash_pile(cv, st, embers=True), False, None),
 }
 
 
@@ -99,9 +107,9 @@ def ev_claw(cv, st):
 
 
 ICONS = {
-    "ev_emf5": lambda cv, st: O.emf(cv, st, 5),
+    "ev_emf5": lambda cv, st: R5.witch_needle(cv, st, frenzy=True),
     "ev_freezing": lambda cv, st: O.snowflake(cv, st),
-    "ev_spirit_box": lambda cv, st: O.radio(cv, st, True),
+    "ev_spirit_box": lambda cv, st: R5.whisper_box(cv, st, open_=True),
     "ev_uv": lambda cv, st: O.handprint(cv, st, True),
     "ev_writing": lambda cv, st: O.book(cv, st, open_=True, written=True),
     "ev_orbs": lambda cv, st: O.orbs3(cv, st),
@@ -114,13 +122,13 @@ ICONS = {
     "ev_wrong_reflection": lambda cv, st: O.hand_mirror(cv, st, wrong=True),
     "ev_shed_skin": lambda cv, st: O.shed_skin(cv, st),
     "ev_mimic_voice": lambda cv, st: O.mouth_voice(cv, st),
-    "eq_flashlight": lambda cv, st: O.flashlight(cv, st),
-    "eq_emf": lambda cv, st: O.emf(cv, st, 2),
+    "eq_flashlight": lambda cv, st: R5.lantern(cv, st),
+    "eq_emf": lambda cv, st: R5.witch_needle(cv, st),
     "eq_thermometer": lambda cv, st: O.thermometer(cv, st),
-    "eq_uv": lambda cv, st: O.flashlight(cv, st, uv=True),
-    "eq_spirit_box": lambda cv, st: O.radio(cv, st, False),
+    "eq_uv": lambda cv, st: R5.lantern(cv, st, violet=True),
+    "eq_spirit_box": lambda cv, st: R5.whisper_box(cv, st),
     "eq_ghost_book": lambda cv, st: O.book(cv, st),
-    "eq_orb_camera": lambda cv, st: O.camera(cv, st),
+    "eq_orb_camera": lambda cv, st: R5.scrying_mirror(cv, st),
     "eq_salt": lambda cv, st: O.salt_box(cv, st),
     "eq_crucifix": lambda cv, st: O.crucifix(cv, st, placed=False),
     "eq_holy_water": lambda cv, st: O.holy_water(cv, st),
@@ -130,6 +138,7 @@ ICONS = {
     "eq_silver_stake": lambda cv, st: O.stake(cv, st, metal=True),
     "eq_hand_mirror": lambda cv, st: O.hand_mirror(cv, st),
     "eq_iron_nails": lambda cv, st: O.iron_nails(cv, st),
+    "eq_voodoo_doll": lambda cv, st: R5.voodoo_doll(cv, st),
     "ui_heart": lambda cv, st: O.heart(cv, st),
     "ui_heart_wounded": lambda cv, st: O.heart(cv, st, wounded=True),
     "ui_skull": lambda cv, st: O.skull(cv, st),

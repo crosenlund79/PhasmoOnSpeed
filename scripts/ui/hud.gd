@@ -18,10 +18,10 @@ const BONE := Color(0.93, 0.88, 0.76)
 const PANEL_BG := Color(0.06, 0.05, 0.05, 0.74)
 const DISC_BG := Color(0.1, 0.08, 0.07, 0.9)
 const RING_OFF := Color(0.42, 0.36, 0.28, 0.55)
-const EQ_SHORT := {"emf": "EMF", "thermometer": "Thermo", "uv": "UV Light", "spirit_box": "Spirit Box",
-	"ghost_book": "Book", "orb_camera": "Orb Cam", "salt": "Salt", "crucifix": "Crucifix",
+const EQ_SHORT := {"emf": "Needle", "thermometer": "Thermo", "uv": "Wraithlight", "spirit_box": "Whisper Box",
+	"ghost_book": "Book", "orb_camera": "Scrying", "salt": "Salt", "crucifix": "Crucifix",
 	"holy_water": "Holy Water", "garlic": "Garlic", "wooden_stake": "Stake", "silverware": "Silverware",
-	"silver_stake": "Silver Stake", "hand_mirror": "Mirror", "iron_nails": "Iron Nails"}
+	"silver_stake": "Silver Stake", "hand_mirror": "Mirror", "iron_nails": "Iron Nails", "voodoo_doll": "Doll"}
 ## What each entity needs to be vanquished (items shown as icons, method as text).
 const REQUIREMENTS := {
 	"shade": {"items": ["salt"], "method": "Salt its room · Rite of Stillness there (hold V)"},
@@ -29,6 +29,9 @@ const REQUIREMENTS := {
 	"vampire": {"items": ["garlic", "wooden_stake"], "method": "Carry garlic · strike with the wooden stake"},
 	"werewolf": {"items": ["silverware", "silver_stake"], "method": "Melt silverware · strike with the silver stake"},
 	"shapeshifter": {"items": ["hand_mirror", "iron_nails"], "method": "Unmask it in the mirror · strike with iron nails"},
+	"blightness": {"items": ["crucifix"], "method": "Crucifix in its room · Rite of Severance there (hold V)"},
+	"crawler": {"items": ["holy_water"], "method": "Holy water in hand · Rite of Drowning in its room (hold V)"},
+	"lost_one": {"items": ["ghost_book", "salt"], "method": "Book and salt in its room · Rite of Rest (hold V) · never touch its keepsake"},
 }
 
 ## A circular icon slot. Styled by state; drawn, so it scales cleanly.
@@ -64,6 +67,83 @@ class Disc extends Control:
 		draw_circle(c, r - 1.0, fill)
 		draw_arc(c, r - ring_w * 0.5 - 0.5, 0.0, TAU, 48, ring, ring_w, true)
 
+## Gold rings around what can be picked up or used nearby: a bright pulsing ring
+## on what [E] would act on, faint rings on other pickups close by.
+class Highlighter extends Node2D:
+	var target := Vector2.INF
+	var near: Array = []
+	var _t := 0.0
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var gold := Art.GOLD
+		for v: Vector2 in near:
+			if v.distance_to(target) > 4.0:
+				draw_arc(v, 15.0, 0.0, TAU, 32, Color(0, 0, 0, 0.35), 3.0, true)
+				draw_arc(v, 15.0, 0.0, TAU, 32, Color(gold.r, gold.g, gold.b, 0.55 + 0.15 * sin(_t * 3.0)), 1.8, true)
+		if target != Vector2.INF:
+			var r := 19.0 + 2.5 * sin(_t * 6.0)
+			draw_arc(target, r + 3.0, 0.0, TAU, 40, Color(0, 0, 0, 0.5), 3.5, true)
+			draw_arc(target, r, 0.0, TAU, 40, Color(1.0, 0.85, 0.45, 0.9), 2.0, true)
+			for i in 4:
+				var a := _t * 1.6 + i * PI * 0.5
+				draw_circle(target + Vector2.from_angle(a) * r, 1.8, Color(1.0, 0.95, 0.7, 0.9))
+
+## The Witch's Needle in its corked, sigil-sealed glass tube. Almost motionless
+## when nothing is near; twitches, taps and finally rattles against the glass as
+## the presence (level 1–5) grows.
+class NeedleGauge extends Control:
+	var level := 0.0
+	var _phase := 0.0
+	var _flash := 0.0
+	var _shake := Vector2.ZERO
+	func _process(delta: float) -> void:
+		var lv := clampf(level, 0.0, 5.0)
+		_phase += delta * (0.6 + pow(maxf(lv - 1.0, 0.0), 1.7) * 2.6) * TAU
+		_flash = maxf(0.0, _flash - delta * 6.0)
+		_shake = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * (1.2 if lv >= 4.9 else 0.0)
+		queue_redraw()
+	func _draw() -> void:
+		var w := size.x
+		var h := size.y
+		var o := _shake
+		var cy := h * 0.5
+		var tube := Rect2(Vector2(h * 0.3, h * 0.18) + o, Vector2(w - h * 1.6, h * 0.64))
+		var inner := tube.size.y * 0.5 - 2.0
+		# Needle: pivots near the cork, its tip swings inside the glass.
+		var lv := clampf(level, 0.0, 5.0)
+		var amp := 0.4 + maxf(lv - 1.0, 0.0) / 4.0 * inner * 1.9
+		var swing := sin(_phase) * amp + (sin(_phase * 2.7) * amp * 0.3 if lv > 3.0 else 0.0)
+		if lv >= 4.9:
+			swing += randf_range(-inner, inner)
+		if absf(swing) >= inner:
+			swing = signf(swing) * inner
+			_flash = 1.0    # struck the glass
+		var pivot := Vector2(tube.end.x - 6.0, cy) + o
+		var tip := Vector2(tube.position.x + 8.0, cy + swing) + o
+		draw_rect(tube, Color(0.86, 0.84, 0.74, 0.32))   # pale old glass behind the needle
+		draw_line(pivot, tip, Color(0.05, 0.04, 0.05), 3.4, true)
+		draw_line(pivot, tip, Color(0.55, 0.55, 0.6, 0.9), 1.0, true)
+		draw_circle(pivot, 2.4, Color(0.25, 0.22, 0.2))
+		if _flash > 0.0:
+			draw_circle(tip + Vector2(0, signf(swing) * 2.0), 3.0 * _flash + 1.0, Color(1.0, 0.95, 0.8, _flash * 0.9))
+		# Glass: outline, rounded end and a highlight.
+		draw_rect(tube, Color(0.9, 0.86, 0.76, 0.75), false, 1.5)
+		draw_arc(Vector2(tube.position.x, cy) + o, tube.size.y * 0.5, PI * 0.5, PI * 1.5, 16, Color(0.9, 0.86, 0.76, 0.75), 1.5, true)
+		draw_line(tube.position + Vector2(4, 3), Vector2(tube.end.x - 4, tube.position.y + 3), Color(1, 1, 1, 0.35), 1.0)
+		# Cork stopper with its sealing sigil.
+		var cork := Rect2(Vector2(tube.end.x, h * 0.12) + o, Vector2(h * 0.9, h * 0.76))
+		draw_rect(cork, Color(0.55, 0.38, 0.22))
+		draw_rect(cork, Color(0.1, 0.07, 0.05), false, 1.2)
+		var sc := cork.get_center()
+		var sr := cork.size.y * 0.32
+		draw_circle(sc, sr, Color(0.55, 0.06, 0.05))
+		var pts := PackedVector2Array()
+		for i in 6:
+			pts.append(sc + Vector2.from_angle(-PI * 0.5 + i * TAU * 2.0 / 5.0) * sr * 0.75)
+		draw_polyline(pts, Art.GOLD, 1.0, true)
+
 var run
 var k := 1.0                    # HUD scale setting
 var equip_panel: PanelContainer
@@ -71,6 +151,7 @@ var equip_grid: GridContainer
 var evidence_panel: PanelContainer
 var evidence_grid: GridContainer
 var info_main: Label
+var needle_gauge: NeedleGauge
 var info_sub: Label
 var hold_bar: ProgressBar
 var timer_label: Label
@@ -99,6 +180,7 @@ var guide_icon: TextureRect
 var _guide_t := 0.0
 var suspect_picker: HBoxContainer
 var notify_root: Node2D
+var highlighter: Highlighter
 var _notifications: Array = []
 var _ev_discs := {}            # evidence id -> Disc
 var _hunting := false
@@ -135,6 +217,9 @@ func setup(p_run) -> void:
 	notify_root = Node2D.new()
 	notify_root.z_index = 40
 	run.world_text.add_child(notify_root)
+	highlighter = Highlighter.new()
+	highlighter.z_index = 20
+	run.world_text.add_child(highlighter)
 	_equipment = run.player.equipment
 	_equipment.changed.connect(_on_equipment_changed)
 	_rebuild_equipment()
@@ -319,6 +404,11 @@ func _build_centre(root: Control) -> void:
 	iv.add_theme_constant_override("separation", 0)
 	iv.alignment = BoxContainer.ALIGNMENT_CENTER
 	info.add_child(iv)
+	needle_gauge = NeedleGauge.new()
+	needle_gauge.custom_minimum_size = Vector2(_px(300), _px(30))
+	needle_gauge.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	needle_gauge.visible = false
+	iv.add_child(needle_gauge)
 	info_main = _outlined("", _px(24), BONE, Art.font_numeric, 4)
 	info_main.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	info_main.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -839,6 +929,8 @@ func _process(delta: float) -> void:
 	status_line.text = line
 	var eq = _equipment
 	_update_info(eq, p)
+	highlighter.target = eq.interact_pos if not p.dead and not spectating else Vector2.INF
+	highlighter.near = eq.near_items if not p.dead and not spectating else []
 	if run.is_harbinger() and run.sigils_lit() != _sigils_seen:
 		_sigils_seen = run.sigils_lit()
 		refresh()
@@ -865,6 +957,8 @@ func _process(delta: float) -> void:
 
 ## Top-centre information: the live reading first, then the contextual prompt.
 func _update_info(eq, p) -> void:
+	needle_gauge.visible = not p.dead and eq.current() == "emf"
+	needle_gauge.level = eq.needle
 	if p.dead:
 		info_main.text = "—"
 		info_sub.text = ""

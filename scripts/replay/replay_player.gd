@@ -249,6 +249,14 @@ func _moment_for(type: String, d: Dictionary) -> Array:
 			return ["icons/eq_hand_mirror.png", "Shapeshifter unmasked in the mirror"]
 		"harbinger":
 			return ["tokens/harbinger.png", "The Harbinger appeared"]
+		"voodoo":
+			return ["icons/eq_voodoo_doll.png", "%s stabbed the voodoo doll" % _who(d)]
+		"npc_burn":
+			return ["items/embers.png", "An occupant burst into flames"]
+		"wrath":
+			return ["tokens/lost_one.png", "%s touched the Lost One's keepsake" % _who(d)]
+		"furnace":
+			return ["items/embers.png", "Dragged to the furnace"]
 		"vanquish":
 			return [Defs.CREATURES.get(d.get("creature", ""), {}).get("token", "icons/ui_trophy.png"), "%s vanquished" % Defs.creature_name(d.get("creature", "")).capitalize()]
 	return []

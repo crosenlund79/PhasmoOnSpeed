@@ -20,6 +20,7 @@ var rooms: Array = []             # [{id, name, floor, kind, lit, outdoor, cells
 var room_by_id := {}
 var furniture: Array = []         # [{type, cell: Vector2i, size: Vector2i, rot, rect: Rect2, def}]
 var doors: Array = []             # Vector2i
+var closed_doors := {}            # door cell -> true (kept in sync by HouseView.set_door)
 var astar := AStarGrid2D.new()
 var spawn_cell := Vector2i.ZERO
 var stairs: Array = []            # [{name, a, a_land, b, b_land}] cells; a is on the upper floor
@@ -101,6 +102,20 @@ func _build(d: Dictionary) -> void:
 		_stair_cells[e["b"]] = e["a_land"]
 		_own_landing[e["a"]] = e["a_land"]
 		_own_landing[e["b"]] = e["b_land"]
+	# Staircases are two cells wide where the room allows: the sideways
+	# neighbour of each stair cell becomes part of the same flight.
+	for e in stairs:
+		for side in ["a", "b"]:
+			var c: Vector2i = e[side]
+			var dvec: Vector2i = c - e[side + "_land"]
+			var perp := Vector2i(dvec.y, dvec.x)
+			for cand: Vector2i in [c + perp, c - perp]:
+				if is_floor(cand) and at(cand) != DOOR and not _stair_cells.has(cand) and not blocked.has(cand) \
+						and walkable(cand - dvec) and at(cand - dvec) != DOOR and room_at_cell(cand) == room_at_cell(c):
+					_stair_cells[cand] = _stair_cells[c]
+					_own_landing[cand] = cand - dvec
+					e[side + "_wide"] = cand
+					break
 	astar.region = Rect2i(0, 0, w, h)
 	astar.cell_size = Vector2(C, C)
 	astar.offset = Vector2(C, C) * 0.5
@@ -226,7 +241,7 @@ func room_center(room_id: String) -> Vector2:
 func free_cells(room_id: String, avoid_doors: bool = true) -> Array:
 	var out: Array = []
 	for c in room(room_id).get("cells", []):
-		if not walkable(c):
+		if not walkable(c) or _stair_cells.has(c):
 			continue
 		if avoid_doors:
 			var near_door := false
@@ -315,14 +330,15 @@ func _grid_path(a: Vector2i, b: Vector2i) -> PackedVector2Array:
 		return PackedVector2Array([cell_center(b)])
 	return astar.get_point_path(a, b)
 
-## Line of sight: only walls block (doors are open, furniture is low).
+## Line of sight: walls and closed doors block (furniture is low).
 func los(a: Vector2, b: Vector2) -> bool:
 	var dist := a.distance_to(b)
 	var steps := int(ceil(dist / 8.0))
 	for i in range(1, steps):
 		var p := a.lerp(b, float(i) / steps)
-		var v := at(to_cell(p))
-		if v == WALL or v == VOID:
+		var c := to_cell(p)
+		var v := at(c)
+		if v == WALL or v == VOID or (v == DOOR and closed_doors.has(c)):
 			return false
 	return true
 

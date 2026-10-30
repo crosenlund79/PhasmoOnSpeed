@@ -9,6 +9,9 @@ decisions made during development. **Contains spoilers.**
 |---|---|---|---|---|
 | The Shade | ghost | EMF 5, Freezing, Orbs | shy, stays in its room, silent hunts, slow (195) | **Rite of Stillness**: pour salt in the room you stand in, Tab → Shade, hold V in its room |
 | The Poltergeist | ghost | Spirit Box, UV, Writing | throws things, roams, hunts often (225) | **Rite of Binding**: lay the Ghost Writing Book in the room, Tab → Poltergeist, hold V in its room |
+| The Blightness | ghost | Needle 5, Whisper Box, Writing | a warping blot that lurches instead of gliding; every lurch pings (learn the sound) | **Rite of Severance**: place a crucifix in its room, Tab → Blightness, hold V there |
+| The Crawler | ghost | Freezing, Handprints, Orbs | a dark ripple along the floor; on contact it rises and drags you to it — a wound, never an instant kill | **Rite of Drowning**: carry holy water (one flask is spent), Tab → Crawler, hold V in its room |
+| The Lost One | ghost | Needle 5, Handprints, Orbs | its ordinary hunts cannot hurt. One of the three keepsakes (music box, locket, little shoe) — always the one in its room — twitches and hums a lullaby. Touch it and it hunts at 360 (faster than a sprint) and drags its catch to the basement furnace: a wound, or death if already wounded | **Rite of Rest**: salt and the Ghost Writing Book in its room, Tab → Lost One, hold V there |
 | Vampire | physical (hidden) | Bite Marks, Blood Droplets, Grave Soil | stalks the investigator, ambushes from behind and out of the light | carry **garlic** (weakens and repels it when close) and strike with a **wooden stake** |
 | Werewolf | physical (hidden) | Claw Marks, Shed Fur, Unusual Footprints | relentless pursuit, accelerates while it sees you (240→288) | collect **3 silverware**, hold E at a stove or hearth to cast a **silver stake**, strike |
 | Shapeshifter | physical (hidden) | Wrong Reflection, Shed Skin, Mimicked Voice | changes appearance (human, ghost, vampire, werewolf, rarely a cat); identity never changes | **expose** it with the **hand mirror** (hold click while facing it — works even when it is unseen), then strike with **iron nails** while exposed |
@@ -81,6 +84,39 @@ old entity's evidence types are no longer accepted.
   the start, greyed until discovered, then gold. The rest of the HUD sits on the
   edges too — EQUIPMENT top-left, readings / time / health top-centre, the
   SUSPECTED panel bottom-centre — keeping the centre of the screen clear.
+
+## The house fights back (revision 5)
+
+* **Doors** (`HouseView.set_door`): most start closed (the same on every peer and in
+  replays). A closed door blocks hunters, light and line of sight; walking into one
+  pushes it open, [E] opens or closes it. Occupants and flesh-and-blood creatures
+  open doors they pass; ghosts drift through. The entity swings doors (slamming them
+  shut near hunters, never on someone standing in the doorway).
+* **Flames** are living (`HouseView.Flame`): layered tongues that sway, with a glow
+  that breathes. The entity snuffs flames and room lamps — always when a hunt
+  begins — and a hunter relights them by holding [E].
+* **Highlights**: a pulsing gold ring marks what [E] would act on, faint rings mark
+  pickups close by. **Staircases** are two cells wide wherever the room allows.
+* **Evidence shimmer**: when a phenomenon appears (needle frenzy, handprint, clue,
+  writing, voice) the air of that room warps briefly — at most every 15 s per room,
+  for any entity, so it says *something* is happening, never *what* it is.
+
+## Period kit
+
+The Witch's Needle (EMF reader, same thresholds: Level 5 = evidence), Wraithlight
+Lantern (UV), Whisper Box (Spirit Box), Scrying Mirror (orb camera), Mercury
+Thermometer and an oil lantern instead of a flashlight. Internal ids are unchanged.
+The needle is drawn live in the information box: still at Level 1, twitching,
+tapping, striking and finally rattling against the glass, with soft glass taps.
+
+## Voodoo doll
+
+Found like any other resource. Stabbing it (one use): a flesh-and-blood creature is
+enraged (faster, hunts sooner and more often for 45 s, +25 dread); a ghost makes a
+random occupant scream and burn, leaving embers that wound a hunter who walks into
+them (4 s grace between burns; two wounds kill as always) for 25 s, then ashes.
+With no occupant left, the ghost turns on the stabber instead. Uses are recorded in
+the replay and statistics.
 
 ## Beginner Mode
 

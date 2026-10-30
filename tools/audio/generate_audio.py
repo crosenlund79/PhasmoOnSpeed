@@ -1525,6 +1525,106 @@ def s_nm_drag():
     return fades(remove_dc(fit(y, dur)), 0.05, 0.3)
 
 
+# --- Revision 5: environment, Witch's Needle, new entities -------------------
+
+def s_door_slam():
+    rng = rng_for(401)
+    dur = 1.3
+    y = np.zeros(N(dur))
+    place(y, creak(0.25, [(0, 160), (0.25, 320)], rng, (620, 1250, 2600), 0.25) * 0.5, 0.0)
+    k = thump(0.5, 120, 55, 0.08, rng, 0.7, 700)
+    k += 0.5 * modes(N(0.5), [180, 310, 520, 880], [0.08, 0.05, 0.03, 0.02], [1, 0.6, 0.4, 0.2], rng)
+    place(y, k, 0.22)
+    place(y, bp(rng.standard_normal(N(0.08)), 1500, 6000) * env_ad(N(0.08), 0.0005, 0.01) * 0.4, 0.23)
+    y = reverb(y, 1.2, 0.3, rng)
+    return fades(remove_dc(fit(y, dur)), 0.002, 0.25)
+
+
+def s_flame_snuff():
+    rng = rng_for(402)
+    dur = 0.7
+    n = N(dur)
+    t = tt(n)
+    y = lp(rng.standard_normal(n), 900) * interp_keys([(0, 0), (0.02, 1), (0.25, 0.4), (0.7, 0)], t)
+    y += 0.3 * bp(rng.standard_normal(n), 2000, 6000) * env_ad(n, 0.005, 0.05)
+    return fades(remove_dc(fit(y, dur)), 0.002, 0.15)
+
+
+def s_needle_tap():
+    """A tiny metal-on-glass tink."""
+    rng = rng_for(403)
+    dur = 0.18
+    n = N(dur)
+    y = modes(n, [2870, 4310, 6020, 7950], [0.05, 0.035, 0.022, 0.015], [1, 0.55, 0.35, 0.2], rng)
+    y += 0.3 * hp(rng.standard_normal(n), 5000) * env_ad(n, 0.0002, 0.0015)
+    return fades(remove_dc(fit(y, dur)), 0.0002, 0.04)
+
+
+def s_blight_ping():
+    """A hollow sonar-like pulse with a soured, bending pitch."""
+    rng = rng_for(404)
+    dur = 1.2
+    n = N(dur)
+    t = tt(n)
+    f = 620 * np.exp(-t * 0.6)
+    y = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t / 0.35)
+    y += 0.35 * np.sin(2 * np.pi * np.cumsum(f * 1.47) / SR) * np.exp(-t / 0.2)
+    y *= np.clip(t / 0.004, 0, 1)
+    y = reverb(y, 1.6, 0.45, rng, 3000)
+    return fades(remove_dc(fit(y, dur)), 0.002, 0.3)
+
+
+def s_music_box():
+    rng = rng_for(405)
+    dur = 2.2
+    y = np.zeros(N(dur))
+    for k, m in enumerate([76, 79, 83, 81, 79, 76]):
+        place(y, music_box_note(midi_hz(m) * 0.985, 0.9, rng, 0.8), 0.05 + k * 0.3 * (1 + k * 0.06))
+    y = reverb(y, 1.4, 0.35, rng)
+    return fades(remove_dc(fit(y, dur)), 0.002, 0.4)
+
+
+def s_ignite():
+    """Supernatural combustion: a roaring whoosh that catches and crackles."""
+    rng = rng_for(406)
+    dur = 2.2
+    n = N(dur)
+    t = tt(n)
+    env = interp_keys([(0, 0), (0.12, 1), (0.6, 0.8), (2.2, 0)], t)
+    y = lp(rng.standard_normal(n), 700) * env * 1.2
+    y += 0.4 * bp(rng.standard_normal(n), 900, 4000) * env
+    tc = 0.15
+    while tc < dur - 0.1:
+        place(y, burst(N(0.02), rng, 2000, 9000, 0.0003, 0.004) * rng.uniform(0.2, 0.7), tc)
+        tc += rng.exponential(1 / 30)
+    y = reverb(y, 0.9, 0.2, rng)
+    return fades(remove_dc(fit(y, dur)), 0.01, 0.4)
+
+
+def s_furnace_roar():
+    rng = rng_for(407)
+    dur = 2.8
+    n = N(dur)
+    t = tt(n)
+    env = interp_keys([(0, 0), (0.3, 1), (2.0, 0.9), (2.8, 0)], t)
+    y = lp(rng.standard_normal(n), 260) * env * 1.6
+    y += 0.5 * bp(rng.standard_normal(n), 400, 1800) * env * (1 + 0.5 * np.sin(2 * np.pi * 3.0 * t))
+    place(y, thump(0.6, 70, 35, 0.15, rng, 0.6, 300), 0.05)
+    y = reverb(y, 1.5, 0.35, rng, 2000)
+    return fades(remove_dc(fit(y, dur)), 0.01, 0.4)
+
+
+def s_crawl_drag():
+    rng = rng_for(408)
+    dur = 1.6
+    n = N(dur)
+    t = tt(n)
+    y = creak(dur, [(0, 30), (0.8, 55), (1.6, 25)], rng, (250, 600, 1300), 0.5, [(0, 0), (0.2, 1), (1.3, 0.8), (1.6, 0)]) * 0.6
+    y += 0.5 * lp(rng.standard_normal(n), 400) * interp_keys([(0, 0), (0.2, 1), (1.4, 0.6), (1.6, 0)], t)
+    y = reverb(y, 1.0, 0.3, rng)
+    return fades(remove_dc(fit(y, dur)), 0.02, 0.2)
+
+
 # name -> (generator, kind, expected duration (approx))
 SOUNDS = {
     "pencil_scribble": (s_pencil_scribble, "oneshot"),
@@ -1575,6 +1675,14 @@ SOUNDS = {
     "critter_squish": (s_critter_squish, "oneshot"),
     "nm_knock": (s_nm_knock, "oneshot"),
     "nm_drag": (s_nm_drag, "oneshot"),
+    "door_slam": (s_door_slam, "oneshot"),
+    "flame_snuff": (s_flame_snuff, "oneshot"),
+    "needle_tap": (s_needle_tap, "ui"),
+    "blight_ping": (s_blight_ping, "oneshot"),
+    "music_box": (s_music_box, "oneshot"),
+    "ignite": (s_ignite, "oneshot"),
+    "furnace_roar": (s_furnace_roar, "oneshot"),
+    "crawl_drag": (s_crawl_drag, "oneshot"),
 }
 
 

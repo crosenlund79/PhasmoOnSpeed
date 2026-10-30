@@ -59,10 +59,10 @@ func start_for(c: Creature) -> void:
 	_claw_t = rng.randf_range(12.0, 20.0)
 	_voice_t = rng.randf_range(18.0, 30.0)
 	_skin_t = rng.randf_range(20.0, 30.0)
+	if Defs.is_ghost(source) and "orbs" in evidence:
+		for i in 5:
+			_add_orb(c.lair_room)
 	match source:
-		"shade":
-			for i in 5:
-				_add_orb(c.lair_room)
 		"vampire":
 			for i in 2:
 				_add_clue("coffin_soil", c.lair_room, false)
@@ -134,6 +134,8 @@ func _add_clue(ev: String, room_id: String, wall_side: bool, at: Vector2 = Vecto
 	var size := 26.0 if ev == "footprints" else 30.0
 	var node := _decal(CLUE_SPRITES[ev], pos, rot, size)
 	clues.append({"evidence": ev, "pos": pos, "node": node, "room": room_id})
+	if ev != "footprints" and ev != "blood_drops":
+		run.shimmer(room_id)
 
 func _count(ev: String) -> int:
 	var n := 0
@@ -178,6 +180,7 @@ func _add_uv_print(c: Creature) -> void:
 	var pos := HouseMap.cell_center(near[rng.randi_range(0, near.size() - 1)])
 	var s := _decal("items/uv_handprint.png", pos, rng.randf() * TAU, 30.0, true)
 	uv_prints.append({"pos": pos, "node": s, "room": c.room_id})
+	run.shimmer(c.room_id)
 
 # --- Entity-driven production ------------------------------------------------------
 
@@ -199,7 +202,7 @@ func creature_tick(c: Creature, delta: float) -> void:
 			run.record_event("mirror", {"index": idx, "on": false})
 	var indoors: bool = not map.room(c.room_id).get("outdoor", true)
 	match source:
-		"shade", "poltergeist":
+		"shade", "poltergeist", "blightness", "crawler", "lost_one":
 			_interact_t -= delta
 			if _interact_t <= 0.0:
 				_interact_t = float(c.def["interaction_interval"]) * rng.randf_range(0.6, 1.4)
@@ -257,6 +260,8 @@ func _ghost_interaction(c: Creature) -> void:
 	var pos := c.position + Vector2(rng.randf_range(-20, 20), rng.randf_range(-20, 20))
 	hotspots.append({"pos": pos, "level": level, "ttl": 22.0, "room": c.room_id})
 	run.record_event("emf", {"x": pos.x, "y": pos.y, "level": level})
+	if level == 5:
+		run.shimmer(c.room_id)
 	if "uv" in evidence and rng.randf() < 0.55:
 		_add_uv_print(c)
 	if source == "poltergeist":
@@ -284,12 +289,14 @@ func _tick_book(c: Creature, delta: float) -> void:
 			written_books[book] = true
 			book_written = true
 			run.on_book_written(book)
+			run.shimmer(map.room_at(book.position))
 		return
 
 func _mimic_voice(c: Creature) -> void:
 	# The voice comes from where the creature is, wearing an occupant's voice.
 	var pos := c.position
 	voices.append({"pos": pos, "room": c.room_id, "ttl": 14.0})
+	run.shimmer(c.room_id)
 	run.sound_at("whisper_mimic", pos, 2.0, rng.randf_range(0.9, 1.1), 1100.0)
 	run.record_event("voice", {"x": pos.x, "y": pos.y})
 

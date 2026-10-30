@@ -250,6 +250,14 @@ func _update_puppets(delta: float) -> void:
 			var silhouette: bool = tgt[4] & 1 == 1
 			tk.sprite.modulate = Color(0.12, 0.11, 0.13) if silhouette else Color.WHITE
 			node.get_meta("glow").energy = 0.0 if silhouette else node.modulate.a * 0.9
+			# The same unnatural looks the host draws: a warping blot, a floor shadow.
+			if tk.token_path == "tokens/blightness.png" and tk.sprite.material == null:
+				tk.sprite.material = WorldFx.distort_material(0.016, Color(0.78, 0.92, 0.55), 0.5)
+			if tk.sprite.material:
+				tk.sprite.material.set_shader_parameter("t", elapsed)
+			if tk.token_path == "tokens/crawler.png":
+				tk.sprite.modulate = Color(0.06, 0.04, 0.08)
+				tk.scale = Vector2(1.35 + sin(elapsed * 7.0) * 0.1, 0.5)
 		if node.has_meta("tag"):
 			var tag: SpeechTag = node.get_meta("tag")
 			var show_tag: bool = id.begins_with("npc") or tgt[4] & 2 == 2
@@ -309,6 +317,16 @@ func apply_private(kind: String, d: Dictionary) -> void:
 			hud.wound()
 		"knockback":
 			player.knockback(Vector2(d["x"], d["y"]))
+		"drag":
+			var pts: Array = d["pts"].map(func(e): return [Vector2(e[0], e[1]), float(e[2])])
+			player.play_drag(pts)
+			var tw := create_tween()
+			tw.tween_interval(1.3)
+			tw.tween_callback(func():
+				var last: Vector2 = pts[-1][0]
+				_apply_camera_limits(last)
+				view.set_basement_view(map.floor_at(last) < 0)
+				camera.reset_smoothing())
 		"correct":
 			player.global_position = Vector2(d["x"], d["y"])
 			_apply_camera_limits(player.global_position)

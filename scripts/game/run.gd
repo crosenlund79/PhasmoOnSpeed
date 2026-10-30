@@ -64,6 +64,8 @@ var _snap_acc := 0.0
 var _priv_acc := 0.0
 var _quip_t := 0.0
 var critters: Critters = null
+var _env_t := 0.0
+var _haunt_t := 14.0
 var _dread_noise_t := 12.0
 
 ## roster empty → solo. Otherwise [{peer_id, name}], the host first.
@@ -105,6 +107,7 @@ func _ready() -> void:
 	disguise = Occupants.disguise_for(rng, cast)
 	_choose_creature()
 	_place_resources()
+	_place_keepsakes()
 	_spawn_occupants()
 	if difficulty == "nightmare":
 		critters = Critters.new()
@@ -325,6 +328,9 @@ func _process(delta: float) -> void:
 			camera.reset_smoothing()
 	_update_threat(delta)
 	_update_defences(delta)
+	_environment_tick(delta)
+	_keepsake_tick(delta)
+	_hazard_tick(delta)
 	if difficulty == "nightmare":
 		_nightmare_noises(delta)
 	_record(delta)
@@ -529,6 +535,98 @@ func on_occupant_gone(o: Occupant) -> void:
 	record_event("npc_gone", {"actor": o.actor_id})
 
 ## A bang, rattle or shriek: nearby occupants react according to personality.
+# --- Doors and lights ---------------------------------------------------------------
+
+func set_door(i: int, open: bool, loud: bool = false) -> void:
+	if i < 0 or i >= view.doors.size() or view.doors[i]["open"] == open:
+		return
+	view.set_door(i, open)
+	var pos := HouseMap.cell_center(view.doors[i]["cell"])
+	if loud and not open:
+		sound_at("door_slam", pos, -2.0, rng.randf_range(0.9, 1.1))
+	else:
+		sound_at("door_creak", pos, -12.0 if not loud else -4.0, rng.randf_range(0.9, 1.2), 900.0)
+	record_event("door", {"i": i, "open": open})
+
+func set_light(i: int, on: bool) -> void:
+	if not view.can_extinguish(i) or view.lights[i]["on"] == on:
+		return
+	view.set_light(i, on)
+	sound_at("candle_light" if on else "flame_snuff", view.lights[i]["pos"], -6.0)
+	record_event("light", {"i": i, "on": on})
+
+func _someone_in_doorway(i: int) -> bool:
+	var pos := HouseMap.cell_center(view.doors[i]["cell"])
+	for h: Player in hunters:
+		if not h.dead and h.global_position.distance_to(pos) < 30.0:
+			return true
+	return false
+
+## Hunters push closed doors open by walking into them; occupants and creatures
+## of flesh open the doors they pass through. Ghosts simply drift through.
+func _environment_tick(delta: float) -> void:
+	_env_t -= delta
+	if _env_t > 0.0:
+		return
+	_env_t = 0.12
+	var movers: Array = []
+	for h: Player in hunters:
+		if not h.dead:
+			movers.append(h.global_position)
+	for o in occupants:
+		if o.state != "gone":
+			movers.append(o.position)
+	if creature and creature.state != "banished" and not creature.is_ghost_like() and not (creature.type_id == "shapeshifter" and creature.form == "ghost"):
+		movers.append(creature.position)
+	for pos: Vector2 in movers:
+		var i := view.door_index_at(pos, 23.0)
+		if i >= 0 and not view.doors[i]["open"]:
+			set_door(i, true)
+	# Supernatural meddling with doors and flames, more often while it hunts.
+	if creature and creature.state != "banished":
+		_haunt_t -= 0.12 * (2.5 if creature.is_hunting() else 1.0)
+		if _haunt_t <= 0.0:
+			_haunt_t = rng.randf_range(12.0, 24.0)
+			haunt_near(creature.position)
+
+## The entity snuffs a flame or swings a door near pos.
+func haunt_near(pos: Vector2) -> void:
+	if rng.randf() < 0.55:
+		var doors_near: Array = []
+		for i in view.doors.size():
+			if HouseMap.cell_center(view.doors[i]["cell"]).distance_to(pos) < 260.0 and not _someone_in_doorway(i):
+				doors_near.append(i)
+		if not doors_near.is_empty():
+			var i: int = doors_near[rng.randi_range(0, doors_near.size() - 1)]
+			set_door(i, not view.doors[i]["open"], true)
+			disturbance(HouseMap.cell_center(view.doors[i]["cell"]))
+			return
+	var lit: Array = []
+	for i in view.lights.size():
+		if view.can_extinguish(i) and view.lights[i]["on"] and view.lights[i]["pos"].distance_to(pos) < 300.0:
+			lit.append(i)
+	if not lit.is_empty():
+		set_light(lit[rng.randi_range(0, lit.size() - 1)], false)
+
+var _shimmer_t := {}
+
+## Evidence beginning to appear: the room's air warps briefly (at most every 15 s
+## per room). Purely atmospheric — it fires for any entity's phenomena.
+func shimmer(room_id: String) -> void:
+	if room_id == "" or elapsed < float(_shimmer_t.get(room_id, -99.0)) + 15.0:
+		return
+	_shimmer_t[room_id] = elapsed
+	view.shimmer_room(room_id)
+	record_event("shimmer", {"room": room_id})
+
+func creature_fx(kind: String, pos: Vector2, extra: Dictionary = {}) -> void:
+	var d := {"kind": kind, "x": snappedf(pos.x, 0.1), "y": snappedf(pos.y, 0.1)}
+	d.merge(extra)
+	match kind:
+		"ping": WorldFx.ring(view.overlay_layer, pos, Color(0.75, 0.9, 0.45), 70.0, 0.9)
+		"rage": WorldFx.ring(view.overlay_layer, pos, Color(1.0, 0.25, 0.15), 110.0, 1.2)
+	record_event("creature_fx", d)
+
 func disturbance(pos: Vector2) -> void:
 	for o in occupants:
 		o.react(pos)
@@ -648,8 +746,18 @@ func _on_hunt_started(c: Creature) -> void:
 		"werewolf": sound_at("werewolf_howl", c.position, 2.0)
 		"vampire": sound_at("vampire_hiss", c.position, 0.0)
 		"poltergeist", "shade": sound_at("ghost_wail", c.position, -2.0)
+		"blightness": sound_at("blight_ping", c.position, 4.0, 0.8)
+		"crawler": sound_at("crawl_drag", c.position, 0.0)
+		"lost_one":
+			if c.wrath:
+				sound_at("ghost_wail", c.position, 2.0, 1.4)
+			else:
+				sound_at("music_box", c.position, -4.0, 0.9)
 	Sfx.start_loop("hunt", "hunt_loop", -2.0, 1.0)
 	hud.set_hunting(true)
+	# The flames nearest each hunter gutter out as it begins.
+	for h: Player in living_hunters():
+		haunt_near(h.global_position)
 	tell_all("It is hunting! Break its line of sight.", "icons/ui_skull.png")
 	record_event("hunt_start", {"reckless": c.hunt_reckless})
 	if not occupants_fled:
@@ -685,10 +793,38 @@ func on_creature_contact(c: Creature, p: Player) -> void:
 		sound_at("crucifix_burn", p.global_position)
 		record_event("blessing_repel", {"actor": p.actor_id})
 		return
+	match c.type_id:
+		"lost_one":
+			if c.wrath:
+				_furnace_drag(p, c)
+			else:
+				# Its ordinary hunts cannot hurt anyone: small cold hands, and a fright.
+				p.invuln = 2.0
+				_push(p, (p.global_position - c.position).normalized() * 380.0)
+				add_threat(3.0, "lost_one_touch")
+				tell(p, "Small, cold hands pass right through you. It only wants to frighten.", "tokens/lost_one.png")
+			return
+		"crawler":
+			# It rises out of the floor and drags its victim under: a wound, never an instant death.
+			c.set_meta("rising", true)
+			get_tree().create_timer(1.2).timeout.connect(func():
+				if is_instance_valid(c):
+					c.remove_meta("rising"))
+			_push(p, (c.position - p.global_position).normalized() * 420.0)
+			sound_at("crawl_drag", p.global_position, 0.0)
+			announce_to(p, "DRAGGED UNDER", "Something rose out of the floor.", Color(0.6, 0.5, 0.75), 1.6)
+	c.hunt_hit = true
+	_wound(p, c, "creature")
+	if not p.dead:
+		c.end_hunt()
+
+## A wound from any source (the entity, embers, the furnace). Two wounds kill.
+func _wound(p: Player, c: Creature, source: String) -> void:
+	if p.dead or state != "playing":
+		return
 	p.wounds += 1
 	p.set_meta("hit_this_hunt", true)
-	c.hunt_hit = true
-	record_event("attack", {"actor": p.actor_id, "wounds": p.wounds})
+	record_event("attack", {"actor": p.actor_id, "wounds": p.wounds, "source": source})
 	if p.wounds >= 2:
 		_hunter_dies(p, c)
 		return
@@ -700,7 +836,208 @@ func on_creature_contact(c: Creature, p: Player) -> void:
 		Net.host_private(p.peer_id, "wound", {})
 	tell(p, "You are wounded. Once more and you are finished.", "icons/ui_heart_wounded.png")
 	_maybe_quip_shove_victim(p)
+
+func _push(p: Player, impulse: Vector2) -> void:
+	if p.is_local:
+		p.knockback(impulse)
+	elif multiplayer_match:
+		Net.host_private(p.peer_id, "knockback", {"x": impulse.x, "y": impulse.y})
+
+# --- The Lost One: keepsakes and the furnace ------------------------------------------
+
+const KEEPSAKES := {
+	"music_box": ["the music box", "A little music box. The dancer inside has lost an arm."],
+	"locket": ["the locket", "A tarnished locket. The photograph inside has been scratched out."],
+	"child_shoe": ["the little shoe", "One small buttoned shoe. Its pair is nowhere to be seen."],
+}
+var keepsakes: Array = []
+
+## Three keepsakes in every house. With the Lost One present, one of them — always
+## in its own room — is its treasure: it twitches and hums a lullaby, and touching it
+## is the worst thing you can do.
+func _place_keepsakes() -> void:
+	var rooms: Array = map.indoor_rooms().map(func(r): return r["id"])
+	for i in range(rooms.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var tmp = rooms[i]
+		rooms[i] = rooms[j]
+		rooms[j] = tmp
+	var names := KEEPSAKES.keys()
+	var forbidden := rng.randi_range(0, names.size() - 1) if creature.type_id == "lost_one" else -1
+	for i in names.size():
+		var rid: String = creature.lair_room if i == forbidden else rooms[i % rooms.size()]
+		if i != forbidden and rid == creature.lair_room:
+			rid = rooms[(i + 3) % rooms.size()]
+		var pos := HouseMap.cell_center(map.random_free_cell(rid, rng))
+		var node := _item_sprite("items/%s.png" % names[i], pos, 24.0)
+		var k := {"kind": "keepsake", "item": names[i], "node": node, "pos": pos, "forbidden": i == forbidden,
+			"label": "Examine " + KEEPSAKES[names[i]][0], "hold": 0.0, "twitch_t": rng.randf_range(4.0, 8.0)}
+		keepsakes.append(k)
+		pickups.append(k)
+
+func _keepsake_tick(delta: float) -> void:
+	if creature == null or creature.type_id != "lost_one" or creature.state == "banished":
+		return
+	for k in keepsakes:
+		if not k["forbidden"]:
+			continue
+		k["twitch_t"] -= delta
+		if k["twitch_t"] <= 0.0:
+			k["twitch_t"] = rng.randf_range(6.0, 11.0)
+			WorldFx.twitch(k["node"])
+			creature_fx("twitch", k["pos"], {"id": k["node"].name})
+			for h: Player in living_hunters():
+				if h.global_position.distance_to(k["pos"]) < 260.0:
+					sound_at("music_box", k["pos"], -12.0, rng.randf_range(0.97, 1.03), 500.0)
+					break
+
+func _examine_keepsake(p: Player, k: Dictionary) -> void:
+	record_event("keepsake", {"actor": p.actor_id, "item": k["item"], "forbidden": k["forbidden"] and creature.type_id == "lost_one"})
+	if not (k["forbidden"] and creature.type_id == "lost_one" and creature.state in ["roam", "stunned"]):
+		WorldFx.twitch(k["node"])
+		tell(p, KEEPSAKES[k["item"]][1], "items/%s.png" % k["item"], true)
+		return
+	# You touched what was theirs.
+	var c := creature
+	c.stunned_t = 0.0
+	c.state = "roam"
+	var away := p.global_position + Vector2.from_angle(rng.randf() * TAU) * 220.0
+	c.position = HouseMap.cell_center(map.nearest_walkable(HouseMap.to_cell(away)))
+	c.wrath = true
+	c.wrath_target = p
+	c.cooldown_t = 0.0
+	sound_all("scream_3", -4.0, 1.25)
+	announce_to(p, "YOU TOOK WHAT WAS THEIRS", "The Lost One is coming for you. Run.", Color(0.85, 0.85, 1.0), 2.4)
+	tell_all("A child screams somewhere in the house.", "tokens/lost_one.png")
+	record_event("wrath", {"actor": p.actor_id})
+	c.begin_hunt(c.position, true)
+
+## The Lost One's catch: dragged down to the basement furnace and burned.
+func _furnace_drag(p: Player, c: Creature) -> void:
+	var furnace: Dictionary = {}
+	for f in map.furniture:
+		if f["type"] == "boiler":
+			furnace = f
+	var fpos: Vector2 = (furnace["rect"] as Rect2).get_center() if not furnace.is_empty() else HouseMap.cell_center(map.spawn_cell)
+	var land := HouseMap.cell_center(map.nearest_walkable(HouseMap.to_cell(fpos + Vector2(0, Defs.CELL * 1.6).rotated(int(furnace.get("rot", 0)) * PI * 0.5))))
+	var near := land + (fpos - land).normalized() * 12.0
+	p.invuln = 99.0
 	c.end_hunt()
+	c.stun(4.0)
+	record_event("dragged", {"actor": p.actor_id, "x": fpos.x, "y": fpos.y})
+	sound_at("crawl_drag", p.global_position, 0.0, 0.8)
+	announce_to(p, "DRAGGED BELOW", "Down, down, to the furnace…", Color(1.0, 0.5, 0.2), 2.2)
+	var pts := [[p.global_position + (c.position - p.global_position).limit_length(30.0), 0.35], [p.global_position, 0.9],
+		[land, 0.05], [near, 1.1]]
+	if p.is_local:
+		p.play_drag(pts)
+	elif multiplayer_match:
+		p.set_meta("dragged_until", elapsed + 3.0)
+		Net.host_private(p.peer_id, "drag", {"pts": pts.map(func(e): return [e[0].x, e[0].y, e[1]])})
+	var tw := create_tween()
+	tw.tween_interval(1.3)
+	tw.tween_callback(func():
+		if p.is_local:
+			_apply_camera_limits(land)
+			_on_local_floor(map.floor_at(land))
+			camera.reset_smoothing())
+	tw.tween_interval(1.1)
+	tw.tween_callback(func():
+		sound_at("furnace_roar", fpos, 4.0)
+		view.burst_flames(fpos, 2.2, 2.0)
+		WorldFx.ring(view.overlay_layer, fpos, Color(1.0, 0.5, 0.15), 140.0, 1.4)
+		record_event("furnace", {"x": fpos.x, "y": fpos.y})
+		fx_shake(0.6)
+		p.invuln = 0.0
+		_wound(p, c, "furnace"))
+
+# --- The voodoo doll -------------------------------------------------------------------
+
+var hazards: Array = []        # {pos, until, radius, node, light}
+var npcs_burned := 0
+
+## Stabbing the doll. Ghosts answer with an occupant's fiery death; creatures of
+## flesh are enraged. Either way the house remembers.
+func use_voodoo(p: Player) -> void:
+	if not p.has_resource("voodoo_doll") or state != "playing" or creature == null or creature.state == "banished":
+		return
+	p.take_resource("voodoo_doll", 1)
+	p.set_meta("voodoo_uses", int(p.get_meta("voodoo_uses", 0)) + 1)
+	p.equipment.rebuild_slots()
+	sound_at("stake_strike", p.global_position, -4.0, 1.5)
+	var c := creature
+	var ghostly: bool = c.is_ghost_like() or (c.type_id == "shapeshifter" and c.form == "ghost")
+	if not ghostly:
+		c.angered_t = 45.0
+		add_threat(25.0, "voodoo")
+		sound_at({"vampire": "vampire_hiss", "werewolf": "werewolf_growl"}.get(c.type_id, "reckless_reaction"), c.position, 4.0)
+		creature_fx("rage", c.position)
+		fx_shake(0.4)
+		tell_all("Something in the house howls with rage.", "icons/ui_skull.png")
+		record_event("voodoo", {"actor": p.actor_id, "effect": "rage"})
+		if c.state == "roam":
+			c.cooldown_t = 0.0
+			forced_hunt_t = 4.0
+			forced_hunt_reckless = true
+		return
+	var victims: Array = occupants.filter(func(o): return o.state != "gone")
+	if victims.is_empty():
+		tell(p, "The doll's pins grow hot. Something turns its attention to you.", "icons/eq_voodoo_doll.png")
+		record_event("voodoo", {"actor": p.actor_id, "effect": "turned"})
+		c.cooldown_t = 0.0
+		forced_hunt_t = 3.0
+		forced_hunt_reckless = true
+		return
+	var o: Occupant = victims[rng.randi_range(0, victims.size() - 1)]
+	record_event("voodoo", {"actor": p.actor_id, "effect": "burn", "npc": o.actor_id})
+	_burn_occupant(o)
+
+func _burn_occupant(o: Occupant) -> void:
+	var pos := o.position
+	npcs_burned += 1
+	o.say("AAAAH!")
+	sound_at(["scream_1", "scream_2", "scream_3"][rng.randi_range(0, 2)], pos, 2.0)
+	sound_at("ignite", pos, 2.0)
+	view.burst_flames(pos, 1.6)
+	record_event("npc_burn", {"actor": o.actor_id, "x": pos.x, "y": pos.y})
+	tell_all("%s burst into flames!" % o.person["name"], "icons/ui_skull.png")
+	fx_shake(0.3)
+	o.combust()
+	var tw := create_tween()
+	tw.tween_interval(1.4)
+	tw.tween_callback(func():
+		var node := _item_sprite("items/embers.png", pos, 40.0)
+		var l := PointLight2D.new()
+		l.texture = Art.tex("lights/candle.png")
+		l.color = Color(1.0, 0.45, 0.15)
+		l.energy = 0.9
+		l.texture_scale = 0.5
+		l.position = pos
+		view.add_child(l)
+		hazards.append({"pos": pos, "until": elapsed + 25.0, "radius": 26.0, "node": node, "light": l})
+		for oo in occupants:
+			oo.react(pos))
+
+func _hazard_tick(delta: float) -> void:
+	for hz in hazards.duplicate():
+		if elapsed >= hz["until"]:
+			hazards.erase(hz)
+			if is_instance_valid(hz["node"]):
+				hz["node"].texture = Art.tex("items/ashes.png")
+				record_event("decal_swap", {"id": hz["node"].name, "sprite": "items/ashes.png"})
+			if is_instance_valid(hz["light"]):
+				hz["light"].queue_free()
+			continue
+		if is_instance_valid(hz["light"]):
+			hz["light"].energy = 0.8 + sin(elapsed * 9.0 + hz["pos"].x) * 0.15
+		for h: Player in living_hunters():
+			h.set_meta("ember_cd", maxf(0.0, float(h.get_meta("ember_cd", 0.0)) - delta))
+			if h.global_position.distance_to(hz["pos"]) < hz["radius"] and h.invuln <= 0.0 and float(h.get_meta("ember_cd", 0.0)) <= 0.0:
+				# Burned: a wound, with a grace period so one step never counts twice.
+				h.set_meta("ember_cd", 4.0)
+				sound_at("ignite", h.global_position, -8.0, 1.4)
+				tell(h, "The embers sear you!", "items/embers.png")
+				_wound(h, null, "embers")
 
 # --- Shoving (competitive) -------------------------------------------------------------
 
@@ -827,11 +1164,18 @@ func _room_has(type: String, room_id: String) -> bool:
 			return true
 	return false
 
+## Every ghost's rite needs certain things laid in its room (holy water: carried).
 func _rite_requirement_met(p: Player) -> bool:
-	match p.suspect:
-		"shade": return _room_has("salt", p.room_id)
-		"poltergeist": return _room_has("ghost_book", p.room_id)
-	return false
+	var needs: Array = Defs.CREATURES.get(p.suspect, {}).get("rite_needs", [])
+	if needs.is_empty():
+		return false
+	for n in needs:
+		if n == "holy_water":
+			if int(p.charges.get("holy_water", 0)) <= 0:
+				return false
+		elif not _room_has(n, p.room_id):
+			return false
+	return true
 
 func rite_prompt(p: Player) -> String:
 	if creature == null:
@@ -863,10 +1207,10 @@ func can_begin_rite(p: Player) -> bool:
 		tell(p, "No rite banishes a %s. %s" % [Defs.creature_name(p.suspect), Defs.vanquish_summary(p.suspect)], "icons/ui_quill.png", true)
 		return false
 	if not _rite_requirement_met(p):
-		if p.suspect == "shade":
-			tell(p, "The Rite of Stillness needs salt poured in this room.", "icons/eq_salt.png", true)
-		else:
-			tell(p, "The Rite of Binding needs the Ghost Writing Book laid in this room.", "icons/eq_ghost_book.png", true)
+		var d: Dictionary = Defs.CREATURES[p.suspect]
+		var needs: Array = d["rite_needs"]
+		var words: Array = needs.map(func(n): return "holy water in hand" if n == "holy_water" else Defs.EQUIPMENT[n]["name"].to_lower() + " in this room")
+		tell(p, "The %s needs %s." % [d["rite_name"], " and ".join(words)], Defs.EQUIPMENT[needs[0]]["icon"], true)
 		return false
 	return true
 
@@ -877,6 +1221,9 @@ func perform_rite(p: Player) -> void:
 		record_event("final_rite", {"actor": p.actor_id})
 		_victory(p)
 		return
+	if p.suspect == "crawler":
+		p.charges["holy_water"] = maxi(0, int(p.charges["holy_water"]) - 1)   # the Rite of Drowning spends a flask
+		p.equipment.changed.emit()
 	attempt_vanquish(p, p.suspect, "rite")
 
 ## Resolves a genuine vanquishing attempt (identity guess + method) by hunter p.
@@ -1044,12 +1391,39 @@ func find_interactable(p: Player, pos: Vector2) -> Dictionary:
 			var d: float = pos.distance_to(it["pos"])
 			if d < bd:
 				bd = d
-				best = {"kind": "retrieve", "item": it, "label": "Retrieve " + Defs.EQUIPMENT[it["type"]]["name"], "hold": 0.0}
+				best = {"kind": "retrieve", "item": it, "pos": it["pos"], "label": "Retrieve " + Defs.EQUIPMENT[it["type"]]["name"], "hold": 0.0}
+	if best.is_empty():
+		var li := -1
+		var ld := 64.0
+		for i in view.lights.size():
+			if view.can_extinguish(i) and not view.lights[i]["on"]:
+				var d: float = pos.distance_to(view.lights[i]["pos"])
+				if d < ld:
+					ld = d
+					li = i
+		if li >= 0:
+			return {"kind": "relight", "i": li, "pos": view.lights[li]["pos"], "label": "Hold to relight the flame", "hold": 0.7}
+		var di := view.door_index_at(pos, 42.0)
+		if di >= 0:
+			var dopen: bool = view.doors[di]["open"]
+			if not (dopen and _someone_in_doorway(di) and pos.distance_to(HouseMap.cell_center(view.doors[di]["cell"])) < 30.0):
+				return {"kind": "door", "i": di, "pos": HouseMap.cell_center(view.doors[di]["cell"]), "label": "Close the door" if dopen else "Open the door", "hold": 0.0}
 	if best.is_empty() and int(p.resources.get("silverware", 0)) >= Defs.SILVERWARE_NEEDED:
 		for f in map.furniture_with("melt"):
 			if (f["rect"] as Rect2).grow(28.0).has_point(pos):
-				return {"kind": "melt", "label": "Hold to melt silverware into a silver stake", "hold": 2.0}
+				return {"kind": "melt", "pos": (f["rect"] as Rect2).get_center(), "label": "Hold to melt silverware into a silver stake", "hold": 2.0}
 	return best
+
+## Positions of pickups near pos (faint highlight), nearest first.
+func nearby_pickups(pos: Vector2, radius: float = 140.0) -> Array:
+	var out: Array = []
+	for it in pickups:
+		if it["kind"] == "sigil" and it["sigil"]["lit"]:
+			continue
+		if pos.distance_to(it["pos"]) < radius:
+			out.append(it["pos"])
+	out.sort_custom(func(a, b): return a.distance_to(pos) < b.distance_to(pos))
+	return out.slice(0, 5)
 
 func do_interact(p: Player, it: Dictionary) -> void:
 	if it.is_empty() or p.dead:
@@ -1092,6 +1466,13 @@ func do_interact(p: Player, it: Dictionary) -> void:
 				return
 			_light_sigil(p, it["sigil"])
 			pickups.erase(it)
+		"relight":
+			set_light(it["i"], true)
+			add_investigation(p, 0, "relight")
+		"door":
+			set_door(it["i"], not view.doors[it["i"]]["open"])
+		"keepsake":
+			_examine_keepsake(p, it)
 
 # --- Ending ----------------------------------------------------------------------------
 
@@ -1118,14 +1499,15 @@ func _victory(p: Player) -> void:
 		announce("VANQUISHED", "", Art.GOLD, 2.4)
 	record_event("vanquish", {"creature": creature.type_id, "actor": p.actor_id})
 
-func _hunter_dies(p: Player, c: Creature) -> void:
+func _hunter_dies(p: Player, c: Creature = null) -> void:
 	p.dead = true
 	p.input_enabled = false
 	p.token.modulate = Color(0.6, 0.1, 0.1)
 	sound_to(p, "player_death", 2.0)
 	record_event("death", {"actor": p.actor_id})
 	_maybe_quip_shove_victim(p)
-	c.end_hunt()
+	if c:
+		c.end_hunt()
 	if not multiplayer_match:
 		state = "ending"
 		_outcome = "perished"
@@ -1169,6 +1551,7 @@ func build_summary(p: Player = null) -> Dictionary:
 	var summary := {
 		"house": house_id, "house_name": map.name, "seed": run_seed, "difficulty": difficulty,
 		"original_creature": original_creature, "creature": final_creature,
+		"voodoo_uses": int(p.get_meta("voodoo_uses", 0)), "npcs_burned": npcs_burned,
 		"vanquished": won, "time": snappedf(elapsed, 0.01),
 		"evidence": all_entries, "evidence_ids": entries.map(func(e): return e["id"]),
 		"true_evidence": true_ev, "incorrect_attempts": p.wrong_attempts, "reckless_attempts": p.reckless_attempts,
@@ -1274,7 +1657,9 @@ func hud_state(h: Player) -> Dictionary:
 		"prompt": eq.prompt, "hold": eq.hold_progress(), "slots": eq.slots, "sel": eq.selected,
 		"charges": eq.slots.map(func(id): return eq.charge_text(id)), "wounds": h.wounds, "invuln": h.invuln,
 		"suspect": h.suspect, "dead": h.dead, "room": h.room_id, "shove_cd": h.shove_cd, "uv": h.uv_light.visible,
-		"cam": eq.current() == "orb_camera"}
+		"cam": eq.current() == "orb_camera", "nd": snappedf(eq.needle, 0.01),
+		"ip": [] if eq.interact_pos == Vector2.INF else [snappedf(eq.interact_pos.x, 0.1), snappedf(eq.interact_pos.y, 0.1)],
+		"near": eq.near_items.map(func(v): return [snappedf(v.x, 0.1), snappedf(v.y, 0.1)])}
 
 ## A client's own movement report. Positions are client-predicted; the host
 ## rejects impossible jumps (teleports, speed hacks) and corrects the client.
@@ -1282,6 +1667,10 @@ func apply_remote_input(peer: int, pos: Vector2, aim: float, flags: int, mask: i
 	var h := hunter_by_peer(peer)
 	if h == null or h.dead or _paused:
 		return   # (press counters are cumulative, so nothing is lost)
+	if float(h.get_meta("dragged_until", -1.0)) > elapsed:
+		h.global_position = pos   # being dragged by the host's own sequence
+		h.aim_angle = aim
+		return
 	var last: float = h.get_meta("last_input_t", elapsed)
 	var dt := maxf(elapsed - last, 1.0 / 60.0)
 	h.set_meta("last_input_t", elapsed)

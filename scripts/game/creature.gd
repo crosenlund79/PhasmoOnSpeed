@@ -46,6 +46,12 @@ var slowed_t := 0.0
 var target: Player = null
 var tag: SpeechTag          # shapeshifter human disguise: same name tag as an occupant
 var _talk_t := 8.0
+var angered_t := 0.0        # voodoo doll: enraged flesh-and-blood creature
+var wrath := false          # Lost One: its keepsake was touched
+var wrath_target: Player = null
+var _hop_acc := 0.0         # Blightness lurches
+var _hops := 0
+var _distort: ShaderMaterial
 
 func setup(p_run: Run, p_type: String, p_lair: String, start: Vector2) -> void:
 	run = p_run
@@ -65,6 +71,14 @@ func setup(p_run: Run, p_type: String, p_lair: String, start: Vector2) -> void:
 	glow.color = _glow_color()
 	glow.energy = 0.0
 	add_child(glow)
+	if p_type == "blightness":
+		# Never a clean shape: a warping blot of the world behind it.
+		_distort = WorldFx.distort_material(0.016, Color(0.78, 0.92, 0.55), 0.5)
+		token.sprite.material = _distort
+	elif p_type == "crawler":
+		# A dark ripple in the floorboards rather than a figure.
+		_distort = WorldFx.distort_material(0.022, Color(0.45, 0.4, 0.5), 0.55)
+		token.sprite.material = _distort
 	if p_type == "shapeshifter":
 		tag = SpeechTag.new(run.world_text, run.disguise["name"])
 		_set_form(["human", "cat", "ghost"][rng.randi_range(0, 2)], false)
@@ -77,6 +91,9 @@ func _glow_color() -> Color:
 		"werewolf": return Color(1.0, 0.7, 0.3)
 		"harbinger": return Color(0.7, 0.85, 1.0)
 		"shapeshifter": return Color(0.75, 0.45, 1.0)
+		"blightness": return Color(0.6, 0.85, 0.3)
+		"crawler": return Color(0.35, 0.25, 0.45)
+		"lost_one": return Color(0.85, 0.85, 1.0)
 	return Art.SPECTRAL
 
 func current_token() -> String:
@@ -97,6 +114,10 @@ func is_visible_now() -> bool:
 
 func speed_for_hunt() -> float:
 	var k := 0.85 if run.difficulty == "beginner" else 1.0   # Beginner: slower hunts
+	if wrath:
+		return 360.0 * k   # the Lost One's fury: faster than anyone can run
+	if angered_t > 0.0:
+		k *= 1.2
 	if type_id == "shapeshifter":
 		return Defs.FORM_SPEED["true" if exposed_t > 0.0 else form] * k
 	return def["hunt_speed"] * k
@@ -126,7 +147,10 @@ func end_hunt() -> void:
 	state = "roam"
 	state_t = 0.0
 	target_alpha = 0.0
-	cooldown_t = def["hunt_cooldown"] * (1.5 if run.difficulty == "beginner" else 1.0)
+	cooldown_t = def["hunt_cooldown"] * (1.5 if run.difficulty == "beginner" else 1.0) * (0.5 if angered_t > 0.0 else 1.0)
+	if wrath:
+		wrath = false
+		wrath_target = null
 	path = PackedVector2Array()
 	wait_t = rng.randf_range(2.0, 4.0)
 	hunt_ended.emit(self, hunt_hit)
@@ -189,6 +213,9 @@ func _process(delta: float) -> void:
 	exposed_t = maxf(0.0, exposed_t - delta)
 	weakened_t = maxf(0.0, weakened_t - delta)
 	slowed_t = maxf(0.0, slowed_t - delta)
+	angered_t = maxf(0.0, angered_t - delta)
+	if _distort:
+		_distort.set_shader_parameter("t", state_t + float(hunt_count) * 3.0)
 	if exposed_t <= 0.0 and type_id == "shapeshifter" and token.token_path != current_token():
 		token.set_token(current_token())
 	room_id = map.room_at(position, room_id)
@@ -236,9 +263,21 @@ func _update_visibility(delta: float) -> void:
 		if is_ghost_like():
 			# Ghosts blink in and out while hunting: readable but unsettling.
 			want = 0.9 if fmod(state_t, 0.9) < 0.62 else 0.25
+	if wrath:
+		want = 1.0   # the Lost One shows itself in its fury
 	# A roaming flesh-and-blood creature caught in the beam shows only as a shadow.
 	var silhouette := state == "roam" and want == 0.5 and _glimpsed()
 	token.sprite.modulate = Color(0.12, 0.11, 0.13) if silhouette else Color.WHITE
+	if type_id == "crawler":
+		# A flat dark ripple along the floorboards, never a figure — until it rises.
+		var rising := has_meta("rising")
+		token.sprite.modulate = Color.WHITE if rising else Color(0.25, 0.2, 0.3)
+		var wob := 1.0 + sin(state_t * 7.0) * 0.08
+		token.scale = Vector2(1.25 * wob, 1.25) if rising else Vector2(1.35 * wob, 0.5)
+		if state == "hunt" and not rising:
+			want = 0.6
+	if angered_t > 0.0 and state == "roam" and fmod(angered_t, 6.0) > 4.8:
+		want = maxf(want, 0.8)   # an enraged creature shows itself now and then
 	alpha = move_toward(alpha, want, delta * 2.5)
 	modulate.a = alpha
 	glow.energy = 0.0 if silhouette else alpha * (1.2 if state == "hunt" or state == "bound" else 0.6)
@@ -279,6 +318,18 @@ func _glimpsed() -> bool:
 func _move_along(delta: float, speed: float) -> bool:
 	if path_i >= path.size():
 		return false
+	if type_id == "blightness":
+		# It does not glide: it lurches, and every lurch pings.
+		_hop_acc += delta
+		var interval := 0.3 if is_hunting() else 0.55
+		if _hop_acc < interval:
+			return true
+		delta = _hop_acc
+		_hop_acc = 0.0
+		_hops += 1
+		if is_hunting() or _hops % 2 == 0:
+			run.sound_at("blight_ping", position, -6.0 if is_hunting() else -14.0, rng.randf_range(0.95, 1.05), 900.0)
+			run.creature_fx("ping", position)
 	var target_pt := path[path_i]
 	var to := target_pt - position
 	if to.length() > 90.0:
@@ -360,6 +411,10 @@ func _hunt(delta: float) -> void:
 			target = best
 	var player: Player = target if target and not target.dead else run.nearest_hunter(position)
 	var sees := _player_visible(player)
+	if wrath and wrath_target and not wrath_target.dead:
+		player = wrath_target   # it knows exactly who took it
+		target = wrath_target
+		sees = true
 	var base := speed_for_hunt()
 	if sees:
 		last_seen = player.global_position
@@ -387,7 +442,7 @@ func _hunt(delta: float) -> void:
 		elif path_i >= path.size():
 			var rooms := map.indoor_rooms()
 			_set_path_to(HouseMap.cell_center(map.random_free_cell(rooms[rng.randi_range(0, rooms.size() - 1)]["id"], rng)))
-	if sees and position.distance_to(player.global_position) < 70.0:
+	if sees and position.distance_to(player.global_position) < 70.0 and type_id != "blightness":
 		# Close the final gap directly (paths are cell-centred).
 		var to: Vector2 = player.global_position - position
 		position += to.normalized() * minf(spd * delta, to.length())

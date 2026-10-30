@@ -54,15 +54,16 @@ FLOORS = ["wood_dark", "wood_light", "parquet", "carpet_red", "carpet_blue", "ca
 TOKENS = ["investigator", "occupant_a", "occupant_b", "occupant_c", "occupant_bitten", "occupant_d", "occupant_e",
           "occupant_f", "occupant_a_bitten", "occupant_b_bitten", "occupant_c_bitten", "occupant_d_bitten",
           "occupant_e_bitten", "occupant_f_bitten", "shade", "poltergeist",
-          "vampire", "werewolf", "shapeshifter", "cat", "harbinger"]
+          "vampire", "werewolf", "shapeshifter", "cat", "harbinger", "blightness", "crawler", "lost_one"]
 ITEMS = ["garlic", "wooden_stake", "silverware", "silver_stake", "hand_mirror", "iron_nails", "ghost_book",
          "ghost_book_written", "salt_pile", "crucifix_placed", "sigil_candle_unlit", "sigil_candle_lit",
-         "blood_drops", "coffin_soil", "claw_marks", "fur_tuft", "paw_print", "shed_skin", "uv_handprint", "orb"]
+         "blood_drops", "coffin_soil", "claw_marks", "fur_tuft", "paw_print", "shed_skin", "uv_handprint", "orb",
+         "voodoo_doll", "music_box", "locket", "child_shoe", "ashes", "embers"]
 ICONS = ["ev_emf5", "ev_freezing", "ev_spirit_box", "ev_uv", "ev_writing", "ev_orbs", "ev_bite_marks",
          "ev_blood_drops", "ev_coffin_soil", "ev_claw_marks", "ev_fur", "ev_footprints", "ev_wrong_reflection",
          "ev_shed_skin", "ev_mimic_voice", "eq_flashlight", "eq_emf", "eq_thermometer", "eq_uv", "eq_spirit_box",
          "eq_ghost_book", "eq_orb_camera", "eq_salt", "eq_crucifix", "eq_holy_water", "eq_garlic",
-         "eq_wooden_stake", "eq_silverware", "eq_silver_stake", "eq_hand_mirror", "eq_iron_nails", "ui_heart",
+         "eq_wooden_stake", "eq_silverware", "eq_silver_stake", "eq_hand_mirror", "eq_iron_nails", "eq_voodoo_doll", "ui_heart",
          "ui_heart_wounded", "ui_skull", "ui_clock", "ui_quill", "ui_house", "ui_trophy"]
 UI = {"parchment": (512, 512), "panel_frame": (96, 96), "panel_dark": (96, 96), "button": (96, 48),
       "button_hover": (96, 48), "button_pressed": (96, 48), "title_logo": (1200, 300),
@@ -157,7 +158,9 @@ def main(argv):
             furniture.build_all()
         elif g == "tokens":
             import tokens
+            import rev5
             tokens.build_all()
+            rev5.build_tokens()
         elif g in ("items", "icons"):
             import items_icons
             items_icons.build_items() if g == "items" else None

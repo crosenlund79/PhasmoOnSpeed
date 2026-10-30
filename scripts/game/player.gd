@@ -75,6 +75,7 @@ var aim_override := NAN   # tests / bots: fixed aim instead of the mouse
 
 var light_pivot: Node2D
 var flashlight: PointLight2D
+var _lantern_t := randf() * 10.0
 var uv_light: PointLight2D
 var ambient: PointLight2D
 
@@ -91,7 +92,8 @@ func _init() -> void:
 	add_child(token)
 	light_pivot = Node2D.new()
 	add_child(light_pivot)
-	flashlight = _cone_light(Color(1.0, 0.92, 0.75), 1.25, 0.62)
+	# A shuttered oil lantern: warm, slightly unsteady light (still called "flashlight" in code).
+	flashlight = _cone_light(Color(1.0, 0.8, 0.52), 1.25, 0.62)
 	uv_light = _cone_light(Color(0.55, 0.3, 1.0), 1.0, 0.42)
 	uv_light.visible = false
 	uv_light.range_item_cull_mask = 1 | 2   # layer 2 = UV handprints (light-only material)
@@ -144,6 +146,16 @@ func _process(_delta: float) -> void:
 		name_label.text = display_name + ("  †" if dead else "")
 
 ## Applies a shove impulse (local hunters only; remote ones get it via the network).
+## Dragged by something: input is taken away while the body is pulled along
+## [[position, seconds], ...]; jumps between floors are instant segments.
+func play_drag(pts: Array) -> void:
+	input_enabled = false
+	knock_vel = Vector2.ZERO
+	var tw := create_tween()
+	for e in pts:
+		tw.tween_property(self, "global_position", e[0], e[1])
+	tw.tween_callback(func(): input_enabled = not dead)
+
 func knockback(impulse: Vector2) -> void:
 	knock_vel = impulse
 	stunned = 0.35
@@ -175,6 +187,8 @@ func _physics_process(delta: float) -> void:
 	stunned = maxf(0.0, stunned - delta)
 	light_pivot.rotation = aim_angle
 	flashlight.visible = flashlight_on and not dead
+	_lantern_t += delta
+	flashlight.energy = 1.25 * (1.0 + sin(_lantern_t * 7.3) * 0.035 + sin(_lantern_t * 17.9) * 0.025)
 	if dead or remote:
 		velocity = Vector2.ZERO
 		token.face(aim_angle, delta, 18.0)

@@ -22,6 +22,7 @@ func _ready() -> void:
 		"test_all_entities_selectable", "test_occupant_identities", "test_mp_scoring",
 		"test_hud_layout", "test_nightmare",
 		"test_suspect_display", "test_beginner", "test_replay_moments", "test_ui_scaling",
+		"test_environment", "test_witch_needle", "test_voodoo_doll", "test_new_ghosts",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -218,8 +219,8 @@ func test_every_creature_every_house() -> void:
 			check(run.occupants.size() == int(Game.house(house).get("npcs", 2)), "%s: occupants" % house)
 			var reach := run.map.reachable_from_spawn()
 			for p in run.pickups:
-				check(reach.has(HouseMap.to_cell(p["pos"])), "%s/%s: %s unreachable" % [house, cr, p["res"]])
-			var silver := run.pickups.filter(func(p): return p["res"] == "silverware").size()
+				check(reach.has(HouseMap.to_cell(p["pos"])), "%s/%s: %s unreachable" % [house, cr, p.get("res", p.get("item", "?"))])
+			var silver := run.pickups.filter(func(p): return p.get("res", "") == "silverware").size()
 			check(silver == Defs.SILVERWARE_NEEDED, "%s: silverware count" % house)
 			# Creature path to the player must exist.
 			check(not run.map.path(run.creature.position, run.player.position).is_empty(), "%s/%s: creature cannot reach player" % [house, cr])
@@ -460,7 +461,7 @@ func test_encyclopedia_matches_game() -> void:
 func test_all_entities_selectable() -> void:
 	var run := await _start("ashgrove", "vampire", 3)
 	var seen := {}
-	for i in 6:
+	for i in Defs.ORDINARY_CREATURES.size() + 1:
 		run.cycle_suspect(run.player, 1)
 		seen[run.player.suspect] = true
 	for id in Defs.ORDINARY_CREATURES:
@@ -637,3 +638,127 @@ func test_ui_scaling() -> void:
 	_cleanup_scene()
 	Game.goto_menu()
 	await get_tree().process_frame
+
+# --- Revision 5 -----------------------------------------------------------------------
+
+func test_environment() -> void:
+	var run := await _start("ashgrove", "shade", 5)
+	run.creature.set_process(false)
+	var m := run.map
+	check(m.stairs.all(func(e): return e.has("a_wide") or e.has("b_wide")), "staircases are two cells wide")
+	var wide: Vector2i = m.stairs[0].get("a_wide", m.stairs[0]["a"])
+	check(m.is_stair(wide), "the extra stair cell takes you between floors")
+	# Doors: closed blocks sight, walking into it opens it, [E] closes it again.
+	var i := 0
+	var dc: Vector2i = run.view.doors[i]["cell"]
+	var dpos := HouseMap.cell_center(dc)
+	run.set_door(i, false)
+	var a := dpos + (Vector2(0, -40) if m.is_wall(dc + Vector2i(1, 0)) else Vector2(-40, 0))
+	var b := dpos - (a - dpos)
+	check(not m.los(a, b), "a closed door blocks line of sight")
+	run.player.global_position = dpos + (a - dpos) * 0.45
+	await _frames(12)
+	check(run.view.doors[i]["open"], "walking into a closed door opens it")
+	check(m.los(a, b), "an open door does not block sight")
+	run.player.global_position = a
+	await _frames(2)
+	var it := run.find_interactable(run.player, run.player.global_position)
+	check(it.get("kind", "") == "door", "a door can be operated with E")
+	# Lights: the entity snuffs them, a hunter relights them.
+	var li := -1
+	for k in run.view.lights.size():
+		if run.view.can_extinguish(k):
+			li = k
+			break
+	run.set_light(li, false)
+	check(not run.view.lights[li]["on"], "a flame can be put out")
+	run.player.global_position = run.view.lights[li]["pos"] + Vector2(20, 0)
+	var rl := run.find_interactable(run.player, run.player.global_position)
+	check(rl.get("kind", "") == "relight", "an extinguished flame offers to be relit")
+	run.do_interact(run.player, rl)
+	check(run.view.lights[li]["on"], "relit")
+	# Highlight: standing beside a pickup marks it.
+	var pk: Dictionary = run.pickups[0]
+	run.player.global_position = pk["pos"] + Vector2(18, 0)
+	await _frames(3)
+	check(run.player.equipment.interact_pos.distance_to(pk["pos"]) < 1.0, "the pickup in reach is highlighted")
+	check(not run.player.equipment.near_items.is_empty(), "nearby pickups are listed for faint highlights")
+
+func test_witch_needle() -> void:
+	var run := await _start("ashgrove", "shade", 6)
+	run.creature.set_process(false)
+	var eq: EquipmentController = run.player.equipment
+	eq.select(Defs.BASE_LOADOUT.find("emf"))
+	await _frames(10)
+	check(eq.needle < 2.0, "the needle lies still with nothing near (%.1f)" % eq.needle)
+	var pos := run.player.global_position + Vector2(10, 0)
+	run.phenomena.hotspots.append({"pos": pos, "level": 5, "ttl": 20.0, "room": run.player.room_id})
+	await _frames(20)
+	check(eq.needle >= 4.9, "the needle rattles at full presence (%.1f)" % eq.needle)
+	check(run.player.journal.has("emf5"), "needle frenzy is recorded as the old EMF 5 evidence")
+	check(Defs.EVIDENCE["emf5"]["name"].contains("Needle"), "evidence presented as the Witch's Needle")
+	check(run.hud.needle_gauge.visible, "the needle is animated in the HUD")
+
+func test_voodoo_doll() -> void:
+	var run := await _start("blackwood", "poltergeist", 8)
+	run.creature.set_process(false)
+	var alive_before: int = run.occupants.filter(func(o): return o.state != "gone").size()
+	run.player.add_resource("voodoo_doll")
+	run.player.equipment.rebuild_slots()
+	run.use_voodoo(run.player)
+	check(run.occupants.filter(func(o): return o.state != "gone").size() == alive_before - 1, "a ghost burns an occupant")
+	check(not run.player.has_resource("voodoo_doll"), "the doll is spent")
+	await _frames(100)
+	check(run.hazards.size() == 1, "embers left behind")
+	run.player.global_position = run.hazards[0]["pos"]
+	await _frames(4)
+	check(run.player.wounds == 1, "embers wound the hunter")
+	await _frames(30)
+	check(run.player.wounds == 1, "no second wound inside the cooldown")
+	check(run.recorder.data["events"].any(func(e): return e[1] == "npc_burn"), "the burning is in the replay")
+	# Against flesh and blood it enrages instead.
+	_cleanup_scene()
+	await get_tree().process_frame
+	var run2 := await _start("ashgrove", "werewolf", 8)
+	run2.player.add_resource("voodoo_doll")
+	run2.use_voodoo(run2.player)
+	check(run2.creature.angered_t > 0.0 and run2.creature.speed_for_hunt() > float(Defs.CREATURES["werewolf"]["hunt_speed"]), "a werewolf is enraged")
+	check(run2.occupants.all(func(o): return o.state != "gone"), "no occupant burns")
+
+func test_new_ghosts() -> void:
+	# The Crawler's grab wounds (never an instant kill from full health).
+	var run := await _start("ashgrove", "crawler", 9)
+	run.creature.begin_hunt(run.creature.position, false)
+	run.on_creature_contact(run.creature, run.player)
+	check(run.player.wounds == 1 and not run.player.dead, "the Crawler's drag is a wound")
+	_cleanup_scene()
+	await get_tree().process_frame
+	# The Lost One: harmless hunts, a learnable keepsake, a furnace drag that wounds.
+	var lo := await _start("blackwood", "lost_one", 9)
+	var c := lo.creature
+	var k: Array = lo.keepsakes.filter(func(x): return x["forbidden"])
+	check(k.size() == 1 and lo.map.room_at(k[0]["pos"]) == c.lair_room, "one keepsake, in its room, is forbidden")
+	c.begin_hunt(c.position, false)
+	lo.on_creature_contact(c, lo.player)
+	check(lo.player.wounds == 0, "its ordinary hunts cannot hurt")
+	c.end_hunt()
+	c.cooldown_t = 0.0
+	lo.player.invuln = 0.0
+	lo._examine_keepsake(lo.player, k[0])
+	check(c.wrath and c.is_hunting() and c.speed_for_hunt() > Player.SPRINT_SPEED, "touching it starts a hunt faster than a sprint")
+	lo.on_creature_contact(c, lo.player)
+	await _frames(200)
+	var furnace: Dictionary = lo.map.furniture.filter(func(f): return f["type"] == "boiler")[0]
+	check(lo.player.global_position.distance_to((furnace["rect"] as Rect2).get_center()) < 120.0, "dragged to the basement furnace")
+	check(lo.player.wounds == 1 and not lo.player.dead, "the furnace wounds — it does not kill from full health")
+	check(lo.recorder.data["events"].any(func(e): return e[1] == "furnace"), "the furnace is in the replay")
+	# Every new ghost: valid identification and an achievable rite.
+	for id in ["blightness", "crawler", "lost_one"]:
+		check(Defs.CREATURES[id]["evidence"].size() == 3, "%s has three evidence types" % id)
+		check(Defs.ORDINARY_CREATURES.has(id) and lo.hud.REQUIREMENTS.has(id), "%s can be suspected" % id)
+	var uniq := {}
+	for id in Defs.ORDINARY_CREATURES.filter(Defs.is_ghost):
+		var e: Array = Defs.CREATURES[id]["evidence"].duplicate()
+		e.sort()
+		uniq[str(e)] = true
+	check(uniq.size() == Defs.ORDINARY_CREATURES.filter(Defs.is_ghost).size(), "every ghost has a distinct evidence set")

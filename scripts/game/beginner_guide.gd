@@ -48,7 +48,7 @@ func _process(delta: float) -> void:
 	if p.dead:
 		return
 	if _t > 1.5:
-		_once("start", "Your first investigation", "Something haunts this house. Find its evidence, work out what it is, then vanquish it. Your EQUIPMENT is top-left: press 1–9 or scroll to switch, and click to use it. F toggles your flashlight.", "icons/ui_house.png")
+		_once("start", "Your first investigation", "Something haunts this house. Find its evidence, work out what it is, then vanquish it. Your EQUIPMENT is top-left: press 1–9 or scroll to switch, and click to use it. F opens and shutters your lantern.", "icons/ui_house.png")
 	# Each tool explained the first time it is held.
 	var tool: String = eq.current()
 	if tool != _last_tool and _t > 3.0:
@@ -59,7 +59,7 @@ func _process(delta: float) -> void:
 	if eq.prompt != "" and _t > 3.0:
 		_once("interact", "Interacting", "Things you can use or pick up show a prompt at the top of the screen — press E. Hold V to perform a rite when you are ready.", "icons/ui_quill.png")
 	if _t > 40.0 and p.journal.active_entries().is_empty():
-		_once("hunting_tips", "Where to look", "Ghosts give EMF Level 5, freezing rooms, Spirit Box answers, UV handprints, ghost writing and orbs. Flesh-and-blood creatures leave marks instead: bite marks, blood, fur, claws, footprints… Sweep the house with your flashlight on.", "icons/eq_emf.png")
+		_once("hunting_tips", "Where to look", "Ghosts send the Witch's Needle into a frenzy, freeze rooms, answer the Whisper Box, leave handprints under the Wraithlight Lantern, ghost writing and orbs. Flesh-and-blood creatures leave marks instead: bite marks, blood, fur, claws, footprints… Sweep the house with your lantern lit.", "icons/eq_emf.png")
 	if run.is_harbinger():
 		_once("harbinger", "The Harbinger", "Recklessness has called something worse. Earlier evidence no longer counts. Light the three sigil candles (E), then hold V beside it for the Final Rite. Don't let it catch you.", "tokens/harbinger.png", true)
 		return

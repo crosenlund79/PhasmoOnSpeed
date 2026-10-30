@@ -207,3 +207,19 @@ UI: `ui_heart`, `ui_heart_wounded`, `ui_skull`, `ui_clock`, `ui_quill`,
 | `pocket_watch.png`, `magnifier.png`, `inkwell.png` | 96×96 | desk props from above |
 | `plaque.png`, `plaque_hover.png`, `plaque_pressed.png` | 320×64 | 9-slice (24 px margins) brass-framed parchment plaque buttons with nail heads in the corners |
 | `plaque_dev.png` | 320×64 | 9-slice, cold steel/blue variant for developer-only buttons |
+
+## Revision 5 additions
+
+Period kit icons replace the modern ones in place (same file names, so ids stay
+stable): `eq_emf.png` is now the **Witch's Needle** (corked glass tube, dark needle,
+sigil seal), `ev_emf5.png` the needle in frenzy, `eq_uv.png` the violet
+**Wraithlight Lantern**, `eq_flashlight.png` the oil lantern, `eq_spirit_box.png` /
+`ev_spirit_box.png` the **Whisper Box** (wooden, brass hinges and lock; closed / open
+and whispering) and `eq_orb_camera.png` the **Scrying Mirror**.
+
+| file | size | notes |
+|---|---|---|
+| `icons/eq_voodoo_doll.png` | 48×48 | pin-stuck burlap doll |
+| `items/voodoo_doll.png`, `items/music_box.png`, `items/locket.png`, `items/child_shoe.png` | 64×64 | floor items: the doll and the three keepsakes |
+| `items/ashes.png`, `items/embers.png` | 64×64 | what a burned occupant leaves (embers glow; they are a hazard) |
+| `tokens/blightness.png`, `tokens/crawler.png`, `tokens/lost_one.png` | 128×128 | the three new ghosts (the game draws the first two through a warp shader) |

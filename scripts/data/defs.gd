@@ -7,10 +7,10 @@ const CELL := 32.0
 # --- Evidence -----------------------------------------------------------------
 # hidden == true: never listed in the journal until discovered in the current run.
 const EVIDENCE := {
-	"emf5": {"name": "EMF Level 5", "short": "EMF 5", "icon": "icons/ev_emf5.png", "hidden": false},
+	"emf5": {"name": "Witch's Needle Frenzy", "short": "Needle 5", "icon": "icons/ev_emf5.png", "hidden": false},
 	"freezing": {"name": "Freezing Temperatures", "short": "Freezing", "icon": "icons/ev_freezing.png", "hidden": false},
-	"spirit_box": {"name": "Spirit Box Response", "short": "Spirit Box", "icon": "icons/ev_spirit_box.png", "hidden": false},
-	"uv": {"name": "Ultraviolet Handprints", "short": "UV", "icon": "icons/ev_uv.png", "hidden": false},
+	"spirit_box": {"name": "Whisper Box Response", "short": "Whisper", "icon": "icons/ev_spirit_box.png", "hidden": false},
+	"uv": {"name": "Wraithlight Handprints", "short": "Handprints", "icon": "icons/ev_uv.png", "hidden": false},
 	"writing": {"name": "Ghost Writing", "short": "Writing", "icon": "icons/ev_writing.png", "hidden": false},
 	"orbs": {"name": "Ghost Orbs", "short": "Orbs", "icon": "icons/ev_orbs.png", "hidden": false},
 	"bite_marks": {"name": "Bite Marks", "short": "Bite Marks", "icon": "icons/ev_bite_marks.png", "hidden": true},
@@ -36,9 +36,9 @@ const CREATURES := {
 		"evidence": ["emf5", "freezing", "orbs"],
 		"hunt_threshold": 60.0, "hunt_cooldown": 30.0, "hunt_duration": 16.0,
 		"hunt_speed": 195.0, "roam_speed": 70.0, "interaction_interval": 13.0, "lair_bias": 0.8,
-		"difficulty": 1.0, "rite": "salt", "rite_name": "Rite of Stillness",
+		"difficulty": 1.0, "rite": "salt", "rite_needs": ["salt"], "rite_name": "Rite of Stillness",
 		"blurb": "A shy, sorrowful presence. Clings to its room and hunts rarely.",
-		"behaviour": "Spends most of its time in its own room, stirring the air and the EMF reader there. Its room turns bitterly cold.",
+		"behaviour": "Spends most of its time in its own room, stirring the air and the Witch's Needle there. Its room turns bitterly cold.",
 		"hunting": "Hunts the least often of any entity and moves slowest of all. It blinks in and out of sight while it hunts.",
 		"strengths": ["Its evidence gathers in one room — but so does its attention."],
 		"weaknesses": ["Placed crucifixes stop its hunts from starting.", "Holy water stuns it and ends a hunt.", "Salt slows it while it hunts."],
@@ -49,13 +49,52 @@ const CREATURES := {
 		"evidence": ["spirit_box", "uv", "writing"],
 		"hunt_threshold": 50.0, "hunt_cooldown": 25.0, "hunt_duration": 15.0,
 		"hunt_speed": 225.0, "roam_speed": 95.0, "interaction_interval": 6.5, "lair_bias": 0.55,
-		"difficulty": 1.05, "rite": "book", "rite_name": "Rite of Binding",
+		"difficulty": 1.05, "rite": "book", "rite_needs": ["ghost_book"], "rite_name": "Rite of Binding",
 		"blurb": "A spiteful, noisy spirit. Throws things, roams widely, and hunts often.",
-		"behaviour": "Rattles furniture, bangs and creaks doors, leaves handprints on walls and answers the Spirit Box. It wanders far from its room.",
+		"behaviour": "Rattles furniture, bangs and creaks doors, leaves handprints on walls and answers the Whisper Box. It wanders far from its room.",
 		"hunting": "Hunts often and quickly, though still slower than a walking investigator.",
 		"strengths": ["Roams the whole house, so it can be anywhere.", "Frequent hunts."],
 		"weaknesses": ["Placed crucifixes stop its hunts from starting.", "Holy water stuns it and ends a hunt.", "Salt slows it while it hunts."],
 		"vanquish": ["Find the room it haunts.", "Lay the Ghost Writing Book in that room.", "Choose The Poltergeist as your suspect (Tab).", "Hold V inside its room to perform the Rite of Binding."],
+	},
+	"blightness": {
+		"name": "The Blightness", "kind": "ghost", "token": "tokens/blightness.png",
+		"evidence": ["emf5", "spirit_box", "writing"],
+		"hunt_threshold": 55.0, "hunt_cooldown": 27.0, "hunt_duration": 14.0,
+		"hunt_speed": 215.0, "roam_speed": 85.0, "interaction_interval": 9.0, "lair_bias": 0.65,
+		"difficulty": 1.1, "rite": "crucifix", "rite_needs": ["crucifix"], "rite_name": "Rite of Severance",
+		"blurb": "A rot in the air. It moves in lurches, and the house pings as it passes.",
+		"behaviour": "Never a clear shape: when it shows itself it is a warping blot that jumps from place to place, each lurch sending out a hollow ping. It meddles with doors and snuffs out flames.",
+		"hunting": "Hunts in sudden lurches rather than a steady glide — listen for the pings coming closer, each one a jump.",
+		"strengths": ["Hard to read: it is never where it was a moment ago."],
+		"weaknesses": ["Every movement pings — you can hear it coming.", "Placed crucifixes stop its hunts from starting.", "Holy water stuns it and ends a hunt."],
+		"vanquish": ["Find the room it haunts.", "Place a crucifix in that room.", "Choose The Blightness as your suspect (Tab).", "Hold V inside its room to perform the Rite of Severance."],
+	},
+	"crawler": {
+		"name": "The Crawler", "kind": "ghost", "token": "tokens/crawler.png",
+		"evidence": ["freezing", "uv", "orbs"],
+		"hunt_threshold": 52.0, "hunt_cooldown": 26.0, "hunt_duration": 15.0,
+		"hunt_speed": 205.0, "roam_speed": 75.0, "interaction_interval": 10.0, "lair_bias": 0.7,
+		"difficulty": 1.1, "rite": "holy_water", "rite_needs": ["holy_water"], "rite_name": "Rite of Drowning",
+		"blurb": "A shadow that moves along the floor where no shadow should be.",
+		"behaviour": "Slides across floors as a dark ripple, low and flat, rarely more than a smear in the corner of your eye. Basements suit it.",
+		"hunting": "Hunts as a shadow on the floorboards. If it reaches you it rises out of the floor and drags you under — a wound, not a death, unless you are already hurt.",
+		"strengths": ["Almost invisible while it hunts: look at the floor, not the air.", "Its grab staggers you and pulls you to it."],
+		"weaknesses": ["Placed crucifixes stop its hunts from starting.", "Holy water stuns it and ends a hunt.", "Salt slows it while it hunts."],
+		"vanquish": ["Find the room it haunts.", "Carry at least one flask of holy water.", "Choose The Crawler as your suspect (Tab).", "Hold V inside its room to perform the Rite of Drowning (it uses one flask)."],
+	},
+	"lost_one": {
+		"name": "The Lost One", "kind": "ghost", "token": "tokens/lost_one.png",
+		"evidence": ["emf5", "uv", "orbs"],
+		"hunt_threshold": 62.0, "hunt_cooldown": 32.0, "hunt_duration": 12.0,
+		"hunt_speed": 190.0, "roam_speed": 70.0, "interaction_interval": 11.0, "lair_bias": 0.75,
+		"difficulty": 1.15, "rite": "rest", "rite_needs": ["ghost_book", "salt"], "rite_name": "Rite of Rest",
+		"blurb": "A child who never left. It will not hurt you — unless you take what is theirs.",
+		"behaviour": "Clings to one keepsake in the house — a music box, a locket or a little shoe. That object twitches on its own and plays a few notes of a lullaby when you come near.",
+		"hunting": "Its ordinary hunts cannot wound you; it only frightens. But touch its keepsake and it manifests, hunting faster than anyone can run, and drags whoever it catches down to the basement furnace.",
+		"strengths": ["Touching its keepsake brings a hunt you cannot outrun.", "Its furnace drag wounds — or kills the already wounded."],
+		"weaknesses": ["Harmless while you leave its keepsake alone.", "Placed crucifixes stop its hunts from starting.", "Holy water stuns it and ends a hunt."],
+		"vanquish": ["Find the room it haunts — and leave the twitching keepsake alone.", "Pour salt and lay the Ghost Writing Book in that room.", "Choose The Lost One as your suspect (Tab).", "Hold V inside its room to perform the Rite of Rest."],
 	},
 	"vampire": {
 		"name": "Vampire", "kind": "physical", "token": "tokens/vampire.png",
@@ -67,7 +106,7 @@ const CREATURES := {
 		"behaviour": "Drifts after the investigators, leaving blood droplets on the floor. Its resting room is strewn with grave soil, and sooner or later an occupant is bitten.",
 		"hunting": "Ambushes: its hunts begin behind you and out of your light.",
 		"strengths": ["Ghost equipment is useless against it.", "Crucifixes and holy water have no power over it."],
-		"weaknesses": ["Garlic carried in your kit repels and slows it at close range.", "Shows as a dark silhouette when caught in a flashlight beam."],
+		"weaknesses": ["Garlic carried in your kit repels and slows it at close range.", "Shows as a dark silhouette when caught in your lantern's beam."],
 		"vanquish": ["Find garlic (kitchens, pantries, dining rooms) and keep it in your kit.", "Find a wooden stake (sheds, cellars, studies).", "Strike it with the stake at close range."],
 	},
 	"werewolf": {
@@ -80,7 +119,7 @@ const CREATURES := {
 		"behaviour": "Prowls the house leaving heavy paw prints, sheds fur and gouges the walls of its den.",
 		"hunting": "Hunts most often of all, and accelerates while it can see you until it outruns a walking investigator. Only sprinting and breaking line of sight save you.",
 		"strengths": ["Ghost equipment is useless against it.", "Crucifixes and holy water have no power over it.", "Gets faster the longer it sees you."],
-		"weaknesses": ["Silver.", "Shows as a dark silhouette when caught in a flashlight beam."],
+		"weaknesses": ["Silver.", "Shows as a dark silhouette when caught in your lantern's beam."],
 		"vanquish": ["Collect three pieces of silverware.", "Hold E at a stove or hearth to melt them into a silver stake.", "Strike it with the silver stake at close range."],
 	},
 	"shapeshifter": {
@@ -110,8 +149,8 @@ const CREATURES := {
 		"vanquish": ["Find the three pale sigil candles and hold E to light each one.", "When all three burn it is bound in its room and stops hunting.", "Stand beside it and hold V to perform the Final Rite."],
 	},
 }
-const ORDINARY_CREATURES := ["shade", "poltergeist", "vampire", "werewolf", "shapeshifter"]
-const ENCYCLOPEDIA_ORDER := ["shade", "poltergeist", "vampire", "werewolf", "shapeshifter", "harbinger"]
+const ORDINARY_CREATURES := ["shade", "poltergeist", "blightness", "crawler", "lost_one", "vampire", "werewolf", "shapeshifter"]
+const ENCYCLOPEDIA_ORDER := ["shade", "poltergeist", "blightness", "crawler", "lost_one", "vampire", "werewolf", "shapeshifter", "harbinger"]
 const SHAPESHIFTER_FORMS := ["human", "ghost", "vampire", "werewolf", "cat"]
 const FORM_TOKENS := {
 	"human": "tokens/occupant_d.png", "ghost": "tokens/shade.png", "vampire": "tokens/vampire.png",
@@ -120,14 +159,15 @@ const FORM_TOKENS := {
 const FORM_SPEED := {"human": 205.0, "ghost": 200.0, "vampire": 215.0, "werewolf": 245.0, "cat": 150.0, "true": 210.0}
 
 # --- Equipment ----------------------------------------------------------------
-# Slot equipment (numbers 1-9). Flashlight is a separate always-available toggle.
+# Slot equipment (numbers 1-9). The lantern is a separate always-available toggle (F).
+# Internal ids keep their original names; what the player sees is period kit.
 const EQUIPMENT := {
-	"emf": {"name": "EMF Reader", "icon": "icons/eq_emf.png", "detector": true, "desc": "Reads electromagnetic disturbance. A ghost's touch leaves short-lived hotspots; some ghosts push it to Level 5."},
-	"thermometer": {"name": "Thermometer", "icon": "icons/eq_thermometer.png", "detector": true, "desc": "Shows the temperature of the room you stand in. Any entity's room runs cold; only some fall below freezing."},
-	"uv": {"name": "UV Flashlight", "icon": "icons/eq_uv.png", "detector": true, "desc": "Reveals handprints that are invisible in ordinary light. Sweep walls near disturbances."},
-	"spirit_box": {"name": "Spirit Box", "icon": "icons/eq_spirit_box.png", "detector": true, "desc": "Click to ask a question. Near the right ghost, a voice may answer through the static."},
+	"emf": {"name": "Witch's Needle", "icon": "icons/eq_emf.png", "detector": true, "desc": "A dark needle sealed in a corked glass tube. It lies still in quiet rooms, twitches near a ghost's touch and taps the glass harder the stronger the presence. Some ghosts send it into a rattling frenzy (Level 5)."},
+	"thermometer": {"name": "Mercury Thermometer", "icon": "icons/eq_thermometer.png", "detector": true, "desc": "Shows the temperature of the room you stand in. Any entity's room runs cold; only some fall below freezing."},
+	"uv": {"name": "Wraithlight Lantern", "icon": "icons/eq_uv.png", "detector": true, "desc": "A lantern of violet glass. Its light reveals handprints invisible in ordinary light. Sweep walls near disturbances."},
+	"spirit_box": {"name": "Whisper Box", "icon": "icons/eq_spirit_box.png", "detector": true, "desc": "A wooden box with brass hinges and a lock. Open it to ask a question: near the right ghost, a voice may whisper back."},
 	"ghost_book": {"name": "Ghost Writing Book", "icon": "icons/eq_ghost_book.png", "placeable": true, "desc": "Lay it down in the haunted room. Some ghosts write in it. Also needed for the Rite of Binding."},
-	"orb_camera": {"name": "Orb Camera", "icon": "icons/eq_orb_camera.png", "detector": true, "desc": "Its viewfinder shows ghost orbs drifting in a haunted room — invisible to the naked eye."},
+	"orb_camera": {"name": "Scrying Mirror", "icon": "icons/eq_orb_camera.png", "detector": true, "desc": "A black-glass mirror. Gaze through it to see ghost orbs drifting in a haunted room — invisible to the naked eye."},
 	"salt": {"name": "Salt", "icon": "icons/eq_salt.png", "placeable": true, "charges": 3, "desc": "Pour a line (3 uses). Hunting ghosts that cross it are slowed. Needed for the Rite of Stillness."},
 	"crucifix": {"name": "Crucifix", "icon": "icons/eq_crucifix.png", "placeable": true, "charges": 2, "desc": "Place it near a ghost: it burns to stop a ghost hunt from starting (2 burns). Powerless against flesh and blood."},
 	"holy_water": {"name": "Holy Water", "icon": "icons/eq_holy_water.png", "charges": 3, "desc": "Splash a ghost to stun it and end its hunt; you are briefly blessed against a ghost's touch (3 splashes). Useless against vampires and werewolves."},
@@ -137,10 +177,11 @@ const EQUIPMENT := {
 	"silverware": {"name": "Silverware", "icon": "icons/eq_silverware.png", "resource": true, "desc": "Three pieces hide around dining rooms and kitchens. Melt them at a stove or hearth."},
 	"silver_stake": {"name": "Silver Stake", "icon": "icons/eq_silver_stake.png", "resource": true, "desc": "Cast from melted silverware. Strike at close range."},
 	"hand_mirror": {"name": "Hand Mirror", "icon": "icons/eq_hand_mirror.png", "resource": true, "desc": "Found in bathrooms and bedrooms. Hold click while facing something to see what it truly is."},
+	"voodoo_doll": {"name": "Voodoo Doll", "icon": "icons/eq_voodoo_doll.png", "resource": true, "desc": "A pin-stuck burlap doll. Stab it (click) and something answers: flesh-and-blood creatures are enraged, and a ghost takes it out on whoever is nearest to hand. Use at your peril."},
 	"iron_nails": {"name": "Iron Nails", "icon": "icons/eq_iron_nails.png", "resource": true, "desc": "Cold iron. Found in sheds, cellars, studies and kitchens. Strike at close range."},
 }
 const BASE_LOADOUT := ["emf", "thermometer", "uv", "spirit_box", "ghost_book", "orb_camera", "salt", "crucifix", "holy_water"]
-const RESOURCE_ORDER := ["garlic", "wooden_stake", "silverware", "silver_stake", "hand_mirror", "iron_nails"]
+const RESOURCE_ORDER := ["garlic", "wooden_stake", "silverware", "silver_stake", "hand_mirror", "iron_nails", "voodoo_doll"]
 const SILVERWARE_NEEDED := 3
 
 # Where resources are placed (room kinds, in preference order) and world sprite.
@@ -150,6 +191,7 @@ const RESOURCE_SPAWNS := {
 	"silverware": {"kinds": ["dining", "kitchen", "pantry", "living", "study"], "count": 3, "sprite": "items/silverware.png"},
 	"hand_mirror": {"kinds": ["bathroom", "bedroom"], "count": 1, "sprite": "items/hand_mirror.png"},
 	"iron_nails": {"kinds": ["shed", "cellar", "study", "kitchen"], "count": 1, "sprite": "items/iron_nails.png"},
+	"voodoo_doll": {"kinds": ["bedroom", "study", "cellar", "storage"], "count": 1, "sprite": "items/voodoo_doll.png"},
 }
 
 # --- Furniture ----------------------------------------------------------------

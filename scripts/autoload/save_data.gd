@@ -143,6 +143,8 @@ func _update_stats(s: Dictionary) -> void:
 	st["incorrect_ids"] += int(s["incorrect_attempts"])
 	st["wounds"] += int(s["wounds"])
 	st["transformations"] += int(s["transformations"])
+	st["voodoo"] = int(st.get("voodoo", 0)) + int(s.get("voodoo_uses", 0))
+	st["npcs_burned"] = int(st.get("npcs_burned", 0)) + int(s.get("npcs_burned", 0))
 	if s["harbinger"]:
 		st["harbinger"] += 1
 	for e in s["evidence"]:
