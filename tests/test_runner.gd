@@ -27,7 +27,7 @@ func _ready() -> void:
 		"test_audio_export", "test_game_setup",
 		"test_blightness_rushes", "test_safe_names", "test_temperatures", "test_ghost_marker_and_ruled_out",
 		"test_hellbound", "test_abyssal", "test_sailor_and_doctor", "test_consolidation", "test_home_rooms", "test_suspect_filter_and_splatter", "test_weeper_and_mimic",
-		"test_progression", "test_flee_death_immortal", "test_required_items_reachable", "test_salt_water_relic", "test_sight_and_doors",
+		"test_progression", "test_flee_death_immortal", "test_required_items_reachable", "test_salt_water_relic", "test_sight_and_doors", "test_tavern_missions",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -1648,3 +1648,53 @@ func test_sight_and_doors() -> void:
 		check(not run.map.closed_doors.has(run.view.doors[j]["cell"]), "the whole two-cell opening is passable")
 		run.set_door(j, false)
 		check(not run.view.doors[i]["open"] and run.map.closed_doors.has(run.view.doors[i]["cell"]), "closing shuts both")
+
+func _mission_summary(m: Dictionary, won: bool, outcome: String) -> Dictionary:
+	return {"house": m["house"], "house_name": "", "seed": 5, "difficulty": m["difficulty"], "original_creature": "shade",
+		"creature": "shade", "vanquished": won, "outcome": outcome, "time": 99.0 + randf(), "score": 3000, "evidence": [],
+		"evidence_ids": [], "incorrect_attempts": 0, "wounds": 0, "harbinger": false, "rules_version": Scoring.RULES_VERSION,
+		"transformations": 0, "blind": false}
+
+func test_tavern_missions() -> void:
+	SaveData.reset_all()
+	var p := SaveData.progress()
+	# The keeper's jobs stay locked until his secret is read in the madam's ledger.
+	check(Progression.mission_state(p, "marrow_tithe") == "locked" and Progression.mission_block(p, "marrow_tithe") == "blackmail", "keeper jobs locked without leverage")
+	check(not Progression.take_mission(p, "marrow_tithe", 1), "cannot take a locked job")
+	p["blackmail_keeper"] = true
+	check(Progression.mission_state(p, "marrow_tithe") == "available", "the ledger unlocks the keeper's jobs")
+	# A setup the ordinary flow understands, carrying the mission id.
+	var r := Game.resolve_setup(Progression.mission_setup("drowned_bell"))
+	check(r["house"] == "harbor" and r["entity"] == "drowned_sailor" and r["difficulty"] == "nightmare" and r["mission"] == "drowned_bell", "mission setup resolves")
+	# A merchant contract pays its bounty once.
+	check(Progression.mission_block(p, "drowned_bell") == "level", "merchant contract needs Renown")
+	p["renown"] = Progression.level_cost(1) + Progression.level_cost(2)
+	var m: Dictionary = Progression.MISSIONS["drowned_bell"]
+	SaveData.data["runs_started"] = 10
+	check(Progression.take_mission(p, "drowned_bell", 10), "contract taken")
+	var paid: Dictionary = SaveData.record_run(_mission_summary(m, true, "vanquished"))["mission"]
+	check(paid["success"] and paid["granted"] and paid["ducats"] == m["ducats"], "contract pays on success")
+	check(Progression.mission_state(p, "drowned_bell") == "completed" and not Progression.take_mission(p, "drowned_bell", 11), "completed contract closed")
+	var d := int(p["ducats"])
+	check(SaveData.record_run(_mission_summary(m, true, "vanquished"))["mission"].is_empty() and int(p["ducats"]) == d + Progression.solo_reward(_mission_summary(m, true, "vanquished"))["ducats"], "no second bounty")
+	# A one-attempt job that fails (fled) costs Renown, never below zero, and cannot be retried.
+	p["renown"] = 100
+	var k: Dictionary = Progression.MISSIONS["marrow_tithe"]
+	SaveData.data["runs_started"] = 20
+	check(Progression.take_mission(p, "marrow_tithe", 20), "job taken")
+	var lost: Dictionary = SaveData.record_run(_mission_summary(k, false, "fled"))["mission"]
+	check(not lost["success"] and lost["renown"] < 0 and int(p["renown"]) == 0, "failure costs Renown, floored at 0 (%d)" % int(p["renown"]))
+	check(Progression.mission_state(p, "marrow_tithe") == "failed" and not Progression.take_mission(p, "marrow_tithe", 21), "no retry after failure")
+	p["renown"] = 10
+	check(Progression.settle_mission(p, {}, 0).is_empty() and int(p["renown"]) == 10, "nothing to settle twice")
+	# A restarted (different) run never counts as the contract's run.
+	SaveData.data["runs_started"] = 30
+	check(Progression.take_mission(p, "hollow_harvest", 30), "second job taken")
+	SaveData.data["runs_started"] = 31
+	var h: Dictionary = Progression.MISSIONS["hollow_harvest"]
+	var res: Dictionary = SaveData.record_run(_mission_summary(h, true, "vanquished"))["mission"]
+	check(not res["success"] and Progression.mission_state(p, "hollow_harvest") == "failed", "a restarted run is a failed attempt")
+	check(int(p["renown"]) >= 0, "Renown never below 0 (%d)" % int(p["renown"]))
+	SaveData.load_data()
+	check(SaveData.progress()["missions"].get("marrow_tithe") == "failed" and SaveData.progress()["blackmail_keeper"], "mission state persists")
+	SaveData.reset_all()

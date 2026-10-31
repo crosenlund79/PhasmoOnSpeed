@@ -145,6 +145,7 @@ func resolve_setup(setup: Dictionary, rng: RandomNumberGenerator = null) -> Dict
 	out["rolled"]["blood_moon"] = s["blood_moon"] == "random"
 	out["blood_moon"] = (rng.randf() < Defs.BLOOD_MOON_CHANCE) if out["rolled"]["blood_moon"] else s["blood_moon"] == "on"
 	out["ghost_marker"] = str(s.get("ghost_marker", "off")) == "on"   # playtesting aid, never random
+	out["mission"] = str(s.get("mission", ""))   # a Forest Tavern contract id, "" for an ordinary run
 	return out
 
 ## Solo: resolve the chosen setup and start the run.

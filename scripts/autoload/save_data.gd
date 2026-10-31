@@ -123,6 +123,7 @@ func record_run(summary: Dictionary) -> Dictionary:
 			out["penalty"] = Progression.penalize(progress(), "flee", summary.get("difficulty", "normal"), key)
 		_:
 			out["reward"] = Progression.grant(progress(), Progression.solo_reward(summary), key)
+	out["mission"] = Progression.settle_mission(progress(), summary, int(data.get("runs_started", 0)))
 	end_run_guard()
 	var hist: Array = data["history"]
 	hist.append(_history_row(summary))

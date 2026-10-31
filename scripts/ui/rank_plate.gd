@@ -90,6 +90,29 @@ static func add_penalty_lines(v: VBoxContainer, pen: Dictionary) -> void:
 	if int(pen["level"]) < int(pen["level_before"]):
 		v.add_child(Art.label("Renown falls: Level %d (%s)" % [int(pen["level"]), pen["title"]], 15, Art.BLOOD, Art.font_italic))
 
+## Results-screen line for a contract settled by Progression.settle_mission().
+static func add_mission_lines(v: VBoxContainer, m: Dictionary) -> void:
+	if m.is_empty():
+		return
+	var t := ""
+	if m["success"]:
+		t = "Contract fulfilled: %s" % m["name"]
+		if int(m["ducats"]) > 0:
+			t += "  ·  +%d Gold Ducats" % int(m["ducats"])
+		if int(m["renown"]) > 0:
+			t += "  ·  +%d Renown" % int(m["renown"])
+		if not m["granted"]:
+			t += "  (already paid)"
+	else:
+		t = "Contract failed: %s" % m["name"]
+		if int(m["renown"]) < 0:
+			t += "  ·  %d Renown" % int(m["renown"])
+		if m.get("once", false):
+			t += "  ·  It will not be offered again."
+	var l := Art.label(t, 17, Color(0.42, 0.3, 0.06) if m["success"] else Art.BLOOD, Art.font_heading)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(l)
+
 ## An engraved channel filled with molten gold.
 class RenownBar extends Control:
 	var frac := 0.0

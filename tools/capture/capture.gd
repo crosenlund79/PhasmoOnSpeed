@@ -522,6 +522,16 @@ func _shot(s: String) -> void:
 			hub.player.position = Vector2(-250, -120)
 			await _wait(5)
 			hub.talk("witch")
+		elif s == "tavern_upstairs":
+			# The upper rooms, standing by the madam's parlour.
+			hub.take_stairs()
+			await _wait(40)
+			hub.player.position = hub.UP + Vector2(100, -80)
+		elif s == "tavern_missions" or s == "tavern_jobs":
+			# Crane's contracts (one done), or Gideon's jobs once you hold his secret.
+			p["missions"] = {"drowned_bell": "completed", "marrow_tithe": "failed"}
+			p["blackmail_keeper"] = s == "tavern_jobs"
+			hub.open_missions("antiquarian" if s == "tavern_missions" else "keeper")
 		else:
 			hub.player.position = Vector2(-60, -60)
 		await _wait(40)
