@@ -18,7 +18,7 @@ func _defaults() -> Dictionary:
 	return {
 		"version": SAVE_VERSION,
 		"settings": {"master": 0.8, "music": 0.6, "ui_scale": 1.0, "fullscreen": false,
-			"player_name": "Investigator", "dev_mode": true,
+			"player_name": "Investigator", "dev_mode": true, "dev_cheats": false,
 			"equip_labels": true, "ev_labels": true, "suspect_labels": true,
 			"equip_hud_opacity": 0.9, "hud_scale": 1.0, "difficulty": "normal",
 			"ev_notify": true, "ev_notify_opacity": 0.95, "ev_notify_size": 1.0,

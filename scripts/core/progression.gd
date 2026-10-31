@@ -175,7 +175,9 @@ static func needle_sense(hotspots: Array, pos: Vector2, sense: float) -> float:
 # --- Developer cheats (menus / tavern only) -----------------------------------------
 
 static func cheats_allowed() -> bool:
-	return (OS.is_debug_build() or SaveData.settings().get("dev_mode", false)) and not Net.is_online()
+	# Development builds always; a released build only when "Developer cheats" is
+	# switched on in Settings. Never online (matches, leaderboards).
+	return (OS.is_debug_build() or SaveData.settings().get("dev_cheats", false)) and not Net.is_online()
 
 static func cheat_add(p: Dictionary, key: String, amount: int) -> bool:
 	if not cheats_allowed() or not key in ["ducats", "renown"]:

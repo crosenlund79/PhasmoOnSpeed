@@ -371,6 +371,7 @@ func _build_settings(root: Control) -> void:
 	_check(v, "Show equipment labels", "equip_labels")
 	_check(v, "Show evidence labels", "ev_labels")
 	_check(v, "Show SUSPECTED panel labels", "suspect_labels")
+	_check(v, "Developer cheats (F10, testing only)", "dev_cheats")
 	_slider(v, "Equipment HUD opacity", "equip_hud_opacity", 0.2, 1.0, 0.05, false)
 	v.add_child(Art.label("Evidence notifications", 18, Color(0.35, 0.22, 0.12), Art.font_heading))
 	_check(v, "Show 'Evidence recorded' cards", "ev_notify")
