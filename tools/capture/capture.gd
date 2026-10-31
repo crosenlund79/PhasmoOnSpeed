@@ -487,6 +487,37 @@ func _shot(s: String) -> void:
 				break
 			await get_tree().process_frame
 		await _save("replay_moment")
+	elif s.begins_with("tavern"):
+		# The Forest Tavern; tavern_shop opens the Witch's wares with some progress.
+		var p := SaveData.progress()
+		Progression.reset_progress(p)
+		p["renown"] = 1900
+		p["ducats"] = 620
+		Progression.buy(p, "silver")
+		Game.goto_tavern()
+		await _wait(5)
+		var hub = get_tree().current_scene
+		if s == "tavern_shop":
+			hub.open_shop()
+		elif s == "tavern_talk":
+			hub.player.position = Vector2(-250, -120)
+			await _wait(5)
+			hub.talk("witch")
+		else:
+			hub.player.position = Vector2(-60, -60)
+		await _wait(40)
+		await _save(s)
+	elif s.begins_with("rankings"):
+		# rankings_125: the same board at the largest Menu UI scale.
+		SaveData.settings()["ui_scale"] = 1.25 if s.ends_with("_125") else 1.0
+		SaveData.data["records"]["best_score"] = 9700
+		SaveData.data["records"]["best_score_time"] = 118.4
+		SaveData.data["records"]["best_score_house"] = "Ashgrove Cottage"
+		SaveData.progress()["renown"] = 4200
+		Game.goto_rankings()
+		await _wait(20)
+		await _save(s)
+		SaveData.settings()["ui_scale"] = 1.0
 	elif s == "results":
 		var run: Run = Game.start_run("ashgrove", 5, "poltergeist")
 		await _wait(200)

@@ -75,6 +75,9 @@ func goto_stats() -> void:
 func goto_rankings() -> void:
 	_switch(preload("res://scripts/ui/rankings_screen.gd").new())
 
+func goto_tavern() -> void:
+	_switch(preload("res://scripts/ui/forest_tavern.gd").new())
+
 func goto_encyclopedia() -> void:
 	_switch(preload("res://scripts/ui/encyclopedia.gd").new())
 

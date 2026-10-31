@@ -201,12 +201,19 @@ func update_tools(delta: float) -> void:
 			var r := ph.emf_at(player.global_position)
 			var lv: int = r[0]
 			var target := ph.emf_value(player.global_position)
-			_emf_smooth = lerpf(_emf_smooth, target, clampf(delta * 8.0, 0.0, 1.0))
+			# The local hunter's equipped needle variant (Progression) only reaches a
+			# little further and settles faster on the DISPLAYED reading; evidence below
+			# still comes from emf_at() alone.
+			var nv := Progression.needle_params(player.is_local)
+			if float(nv["sense"]) > 1.0:
+				target = maxf(target, Progression.needle_sense(ph.hotspots, player.global_position, nv["sense"]))
+			_emf_smooth = lerpf(_emf_smooth, target, clampf(delta * float(nv["smooth"]), 0.0, 1.0))
 			# Witch's Needle: same thresholds as the old EMF reading (Level 5 = evidence).
 			var shown := 5.0 if lv == 5 else minf(_emf_smooth, 4.9)
 			needle = shown
 			var words := ["STILL", "STILL", "TWITCHING", "TAPPING", "STRIKING", "RATTLING!"]
-			_set_reading("NEEDLE %d · %s" % [int(shown), words[int(shown)]], HOT if shown >= 4.0 else (NORMAL if shown >= 2.0 else IDLE), shown >= 2.0)
+			var num := ("%.1f" % shown) if nv["precise"] and lv != 5 else str(int(shown))
+			_set_reading("NEEDLE %s · %s" % [num, words[int(shown)]], HOT if shown >= 4.0 else (NORMAL if shown >= 2.0 else IDLE), shown >= 2.0)
 			hint = "Witch's Needle — it stirs near a presence"
 			# Glass taps, faster and harder with the agitation; a soft rattle at Level 5.
 			_beep_t -= delta

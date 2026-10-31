@@ -27,6 +27,7 @@ func _ready() -> void:
 		"test_audio_export", "test_game_setup",
 		"test_blightness_rushes", "test_safe_names", "test_temperatures", "test_ghost_marker_and_ruled_out",
 		"test_hellbound", "test_abyssal", "test_sailor_and_doctor", "test_consolidation", "test_home_rooms", "test_suspect_filter_and_splatter", "test_weeper_and_mimic",
+		"test_progression",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -1405,3 +1406,88 @@ func test_weeper_and_mimic() -> void:
 	mr.player.charges["holy_water"] = 2
 	await _rite_in_lair(mr, "mimic", ["ghost_book"])
 	check(int(mr.player.charges["holy_water"]) == 1, "the Rite of Unmasking spends a flask")
+
+# --- Progression: Ducats, Renown, ranks, the Witch's needles -------------------------
+
+func test_progression() -> void:
+	SaveData.reset_all()
+	# Tiers, with every existing item Common by default.
+	check(Progression.TIERS.size() == 5 and Progression.TIERS.has("legendary"), "five item tiers")
+	check(Defs.EQUIPMENT.keys().all(func(id): return Progression.TIERS.has(Progression.item_tier(id))), "every item has a tier")
+	check(Progression.item_tier("thermometer") == "common", "untiered items are Common")
+	check(Progression.NEEDLE_ORDER.all(func(id): return Progression.TIERS.has(Progression.NEEDLES[id]["tier"])), "needle variants use defined tiers")
+	# Old saves migrate to 0 / 0 with the common needle.
+	SaveData.data.erase("progress")
+	SaveData.save()
+	SaveData.load_data()
+	var p := SaveData.progress()
+	check(int(p["ducats"]) == 0 and int(p["renown"]) == 0 and p["needle"] == "common", "save migration defaults")
+	# Level curve: quick at first, steadily longer; titles climb with it.
+	for lv in range(1, Progression.MAX_LEVEL - 1):
+		check(Progression.level_cost(lv + 1) > Progression.level_cost(lv), "level curve rises at %d" % lv)
+	check(Progression.level_for(0) == 1 and Progression.title_for(1) == "Uninitiated", "everyone starts Uninitiated at level 1")
+	check(Progression.level_for(Progression.level_cost(1)) == 2, "level 2 after one level's worth of Renown")
+	check(Progression.title_for(30) == "Harbinger's Bane" and Progression.title_for(10) != Progression.title_for(9), "titles by level range")
+	# A real solo victory pays out exactly once and persists.
+	var run := await _start("ashgrove", "werewolf", 41)
+	run.player.add_resource("silver_stake")
+	run.player.global_position = run.creature.position + Vector2(-30, 0)
+	run.player.aim_angle = 0.0
+	run.strike(run.player, "silver_stake")
+	await _frames(200)
+	var reward: Dictionary = Game.last_result.get("records", {}).get("reward", {})
+	check(reward.get("granted", false) and int(reward["ducats"]) > 0 and int(reward["renown"]) > 0, "a victory earns Ducats and Renown")
+	check(Progression.level_for(int(SaveData.progress()["renown"])) >= 2, "one win is enough for the first level (%d Renown)" % int(SaveData.progress()["renown"]))
+	var d1 := int(SaveData.progress()["ducats"])
+	var again := SaveData.record_run(Game.last_result["summary"])
+	check(not again["reward"]["granted"] and int(SaveData.progress()["ducats"]) == d1, "the same run never pays twice")
+	SaveData.load_data()
+	check(int(SaveData.progress()["ducats"]) == d1, "Ducats persisted")
+	var loss := Progression.solo_reward({"vanquished": false, "score": 0, "evidence_ids": ["uv"], "difficulty": "normal"})
+	check(loss["ducats"] > 0 and loss["ducats"] < reward["ducats"], "a small consolation for a loss")
+	# Competitive: the local hunter's row pays once.
+	var row := {"actor": "player_1", "rank": 1, "vanquisher": true, "alive": true, "shoves_given": 0, "shoves_taken": 0, "score": 5200}
+	var mres := {"house": "ashgrove", "creature": "shade", "outcome": "vanquished", "time": 140.0, "rows": [row], "rules_version": MpScoring.RULES_VERSION, "difficulty": "normal", "seed": 7}
+	var m1 := SaveData.record_match(mres, "player_1")
+	var m2 := SaveData.record_match(mres, "player_1")
+	check(m1["reward"]["granted"] and not m2["reward"]["granted"], "a match rewards the local hunter once")
+	# Developer cheats add and reset progression only.
+	SaveData.settings()["dev_mode"] = true
+	var best := int(SaveData.data["records"]["best_score"])
+	p = SaveData.progress()
+	check(Progression.cheat_add(p, "ducats", 500) and Progression.cheat_add(p, "renown", 300), "cheats allowed outside matches")
+	check(int(p["ducats"]) == d1 + int(m1["reward"]["ducats"]) + 500, "cheat adds Ducats")
+	Progression.reset_progress(p)
+	check(int(p["ducats"]) == 0 and int(p["renown"]) == 0 and p["owned"] == ["common"], "cheat reset clears progression")
+	check(int(SaveData.data["records"]["best_score"]) == best and SaveData.house_record("ashgrove")["runs"] >= 1, "reset never touches records")
+	# The Witch: Renown level and Ducats both required; purchases persist.
+	check(not Progression.buy(p, "silver") and Progression.buy_block(p, "silver") == "level", "refused without Renown")
+	p["renown"] = Progression.level_cost(1) + Progression.level_cost(2)
+	check(not Progression.buy(p, "silver") and Progression.buy_block(p, "silver") == "ducats", "refused without Ducats")
+	p["ducats"] = 200
+	check(Progression.buy(p, "silver") and int(p["ducats"]) == 50 and "silver" in p["owned"], "purchase deducts and owns")
+	check(not Progression.buy(p, "silver"), "no double purchase")
+	check(not Progression.equip(p, "veilpiercer") and Progression.equip(p, "silver"), "only owned needles equip")
+	SaveData.save()
+	SaveData.load_data()
+	check(SaveData.progress()["needle"] == "silver" and "silver" in SaveData.progress()["owned"], "owned and equipped needle persisted")
+	# The finest needle reads further, but evidence rules stay exactly the same.
+	SaveData.progress()["owned"].append("veilpiercer")
+	Progression.equip(SaveData.progress(), "veilpiercer")
+	_cleanup_scene()
+	await get_tree().process_frame
+	var r2 := await _start("ashgrove", "shade", 6)
+	r2.creature.set_process(false)
+	var eq: EquipmentController = r2.player.equipment
+	eq.select(Defs.BASE_LOADOUT.find("emf"))
+	var hs := {"pos": r2.player.global_position + Vector2(100, 0), "level": 5, "ttl": 30.0, "room": r2.player.room_id}
+	r2.phenomena.hotspots.append(hs)
+	await _frames(30)
+	check(eq.needle > 2.5 and eq.needle < 5.0, "the Veilpiercer stirs further out (%.2f)" % eq.needle)
+	check(eq.reading.contains("."), "precise reading wording (%s)" % eq.reading)
+	check(not r2.player.journal.has("emf5"), "a stronger needle never records evidence out of range")
+	hs["pos"] = r2.player.global_position + Vector2(40, 0)
+	await _frames(10)
+	check(r2.player.journal.has("emf5"), "Needle 5 evidence still registers inside the hotspot")
+	check(r2.hud.needle_gauge.variant["name"] == "The Veilpiercer", "your own needle's gauge in the HUD")
+	SaveData.reset_all()

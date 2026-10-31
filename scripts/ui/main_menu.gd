@@ -6,6 +6,7 @@ extends Control
 const DESK_ZOOM := 1.0
 
 var settings_panel: Control
+var rank_plate: RankPlate
 var help_panel: Control
 var world: Node2D
 var camera: Camera2D
@@ -230,8 +231,12 @@ func _build_ui(root: Control) -> void:
 	var begin := _plaque("Begin Investigation", func(): Game.goto_house_select())
 	left.add_child(begin)
 	left.add_child(_plaque("Competitive Hunt", func(): Game.goto_lobby()))
-	left.add_child(_plaque("Encyclopedia", func(): Game.goto_encyclopedia()))
-	left.add_child(_plaque("Rankings", func(): Game.goto_rankings()))
+	left.add_child(_plaque("The Forest Tavern", func(): Game.goto_tavern()))
+	var row2 := HBoxContainer.new()
+	row2.add_theme_constant_override("separation", 8)
+	left.add_child(row2)
+	row2.add_child(_plaque("Encyclopedia", func(): Game.goto_encyclopedia(), 176))
+	row2.add_child(_plaque("Rankings", func(): Game.goto_rankings(), 176))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	left.add_child(row)
@@ -244,6 +249,17 @@ func _build_ui(root: Control) -> void:
 		b.add_theme_color_override("font_outline_color", Color.BLACK)
 		b.add_theme_constant_override("outline_size", 6)
 		left.add_child(b)
+	# Hunter rank on a small brass plate; F10 opens the developer progression panel.
+	rank_plate = RankPlate.new()
+	rank_plate.anchor_left = 1.0
+	rank_plate.anchor_right = 1.0
+	rank_plate.offset_left = -370
+	rank_plate.offset_right = -24
+	rank_plate.offset_top = 24
+	root.add_child(rank_plate)
+	var cheats := DevCheats.new()
+	root.add_child(cheats)
+	cheats.changed.connect(func(): rank_plate.refresh())
 	# Developer tools live apart from the player-facing menu.
 	if SaveData.settings().get("dev_mode", true) or OS.is_debug_build():
 		var dev := _plaque("DEV STATISTICS", func(): Game.goto_stats(), 230, true)

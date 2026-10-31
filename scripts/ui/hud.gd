@@ -125,6 +125,7 @@ class Highlighter extends Node2D:
 ## the presence (level 1–5) grows.
 class NeedleGauge extends Control:
 	var level := 0.0
+	var variant: Dictionary = Progression.needle_params()   # your own equipped needle's look
 	var _y := 0.0          # needle tip deflection (px), a damped spring
 	var _v := 0.0
 	var _flash := 0.0
@@ -141,7 +142,7 @@ class NeedleGauge extends Control:
 		# Random kicks from the presence, faster and harder as it grows.
 		if randf() < _lerp_tab(RATE, lv) * delta:
 			_v += _lerp_tab(KICK, lv) * (1.0 if randf() < 0.5 else -1.0)
-		_v += (-140.0 * _y - 7.0 * _v) * delta
+		_v += (-140.0 * _y - float(variant["damp"]) * _v) * delta
 		_y += _v * delta
 		if absf(_y) >= inner:
 			_y = signf(_y) * inner
@@ -164,7 +165,11 @@ class NeedleGauge extends Control:
 		var tube := Rect2(Vector2(h * 0.3, h * 0.18) + o, Vector2(w - h * 1.6, h * 0.64))
 		var pivot := Vector2(tube.end.x - 6.0, cy) + o
 		var tip := Vector2(tube.position.x + 8.0, cy + _y) + o
-		draw_rect(tube, Color(0.86, 0.84, 0.74, 0.32))   # pale old glass behind the needle
+		var glass: Color = variant["glass"]
+		var glow: Color = variant["glow"]
+		if glow.a > 0.0:
+			draw_rect(tube.grow(3.0), glow)
+		draw_rect(tube, Color(glass.r, glass.g, glass.b, 0.32))   # pale old glass behind the needle
 		for st in _strikes:
 			# Where the needle hit: a white chip of light and a hairline crack-glint.
 			var a: float = 1.0 - st[1] / 0.35
@@ -176,8 +181,8 @@ class NeedleGauge extends Control:
 		if _flash > 0.0:
 			draw_circle(tip, 2.0 + 5.0 * _flash, Color(1.0, 0.95, 0.8, _flash * 0.9))
 		# Glass: outline, rounded end and a highlight.
-		draw_rect(tube, Color(0.9, 0.86, 0.76, 0.75), false, 1.5)
-		draw_arc(Vector2(tube.position.x, cy) + o, tube.size.y * 0.5, PI * 0.5, PI * 1.5, 16, Color(0.9, 0.86, 0.76, 0.75), 1.5, true)
+		draw_rect(tube, Color(glass.r, glass.g, glass.b, 0.75), false, 1.5)
+		draw_arc(Vector2(tube.position.x, cy) + o, tube.size.y * 0.5, PI * 0.5, PI * 1.5, 16, Color(glass.r, glass.g, glass.b, 0.75), 1.5, true)
 		draw_line(tube.position + Vector2(4, 3), Vector2(tube.end.x - 4, tube.position.y + 3), Color(1, 1, 1, 0.35), 1.0)
 		# Cork stopper with its sealing sigil.
 		var cork := Rect2(Vector2(tube.end.x, h * 0.12) + o, Vector2(h * 0.9, h * 0.76))
@@ -189,7 +194,7 @@ class NeedleGauge extends Control:
 		var pts := PackedVector2Array()
 		for i in 6:
 			pts.append(sc + Vector2.from_angle(-PI * 0.5 + i * TAU * 2.0 / 5.0) * sr * 0.75)
-		draw_polyline(pts, Art.GOLD, 1.0, true)
+		draw_polyline(pts, variant["sigil"], 1.0, true)
 
 ## The red moon beside your hearts while a Blood Moon hangs over the house.
 class BloodMoonGlyph extends Control:

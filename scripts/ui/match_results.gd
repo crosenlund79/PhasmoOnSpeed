@@ -84,6 +84,7 @@ func _ready() -> void:
 	v.add_child(Art.label("%s · %s · %s" % [mres["house_name"], Journal.format_time_precise(mres["time"]), _entity_line()], 15, Color(0.3, 0.22, 0.15), Art.font_italic))
 	for r in rows:
 		_row(v, r, r["actor"] == result.get("me", ""))
+	RankPlate.add_reward_lines(v, result.get("records", {}).get("reward", {}))
 	v.add_child(Art.label("Competitive rules %s · solo rankings are kept separately." % mres["rules_version"], 12, Color(0.4, 0.32, 0.24)))
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 8)
