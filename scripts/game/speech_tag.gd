@@ -9,6 +9,7 @@ const NAME_COLOR := Color(0.88, 0.84, 0.74)
 var name_label: Label
 var bubble: Label
 var _bubble_t := 0.0
+var occluded := false   # its owner is out of the viewer's sight: no name, no words
 
 func _init(layer: CanvasLayer, display_name: String) -> void:
 	name_label = Label.new()
@@ -42,12 +43,13 @@ func say(text: String) -> void:
 func update(pos: Vector2, alpha: float, delta: float) -> void:
 	_bubble_t -= delta
 	name_label.position = pos + Vector2(-80, 17)
-	name_label.visible = SaveData.settings().get("npc_names", true)
+	name_label.visible = SaveData.settings().get("npc_names", true) and not occluded
+	bubble.visible = not occluded
 	name_label.modulate.a = alpha
 	bubble.position = pos + Vector2(-130, -44)
 	bubble.modulate.a = clampf(_bubble_t, 0.0, 1.0) * alpha
 
 func set_visible(v: bool) -> void:
-	name_label.visible = v and SaveData.settings().get("npc_names", true)
-	bubble.visible = v
+	name_label.visible = v and SaveData.settings().get("npc_names", true) and not occluded
+	bubble.visible = v and not occluded
 

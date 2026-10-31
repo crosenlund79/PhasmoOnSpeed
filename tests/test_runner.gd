@@ -27,7 +27,7 @@ func _ready() -> void:
 		"test_audio_export", "test_game_setup",
 		"test_blightness_rushes", "test_safe_names", "test_temperatures", "test_ghost_marker_and_ruled_out",
 		"test_hellbound", "test_abyssal", "test_sailor_and_doctor", "test_consolidation", "test_home_rooms", "test_suspect_filter_and_splatter", "test_weeper_and_mimic",
-		"test_progression", "test_flee_death_immortal", "test_required_items_reachable", "test_salt_water_relic",
+		"test_progression", "test_flee_death_immortal", "test_required_items_reachable", "test_salt_water_relic", "test_sight_and_doors",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -1612,3 +1612,39 @@ func test_salt_water_relic() -> void:
 	r2.close_abyss()
 	check("abyssglass" in SaveData.progress()["owned"], "survivors keep it")
 	check(Progression.NEEDLES["abyssglass"]["tier"] == "legendary" and Progression.buy_block(SaveData.progress(), "abyssglass") == "owned", "legendary, never sold")
+
+func test_sight_and_doors() -> void:
+	var run := await _start("blackwood", "shade", 95)
+	var p := run.player
+	var o: Occupant = run.occupants[0]
+	o.set_process(false)
+	# Same room: seen.
+	o.position = p.global_position + Vector2(20, 0)
+	o.room_id = p.room_id
+	run._sight_t = 0.0
+	run._sight_tick(0.1)
+	check(o.token.visible, "an occupant beside you is seen")
+	# Another floor: never seen.
+	var other := run.map.indoor_rooms().filter(func(r): return int(r["level"]) != run.map.floor_at(p.global_position))
+	o.position = HouseMap.cell_center(run.map.random_free_cell(other[0]["id"], run.rng))
+	run._sight_t = 0.0
+	run._sight_tick(0.1)
+	check(not o.token.visible and o.tag.occluded, "an occupant on another floor is hidden, name and all")
+	# The entity too.
+	run.creature.set_process(false)
+	run.creature.position = o.position
+	run._sight_t = 0.0
+	run._sight_tick(0.1)
+	check(not run.creature.token.visible, "the entity behind walls is hidden")
+	# Double doors move as one wide door.
+	var pairs: Array = range(run.view.doors.size()).filter(func(i): return int(run.view.doors[i].get("partner", -1)) >= 0)
+	check(not pairs.is_empty(), "Blackwood has double doors")
+	if not pairs.is_empty():
+		var i: int = pairs[0]
+		var j: int = run.view.doors[i]["partner"]
+		run.set_door(i, false)
+		run.set_door(i, true)
+		check(run.view.doors[i]["open"] and run.view.doors[j]["open"], "opening one half opens both")
+		check(not run.map.closed_doors.has(run.view.doors[j]["cell"]), "the whole two-cell opening is passable")
+		run.set_door(j, false)
+		check(not run.view.doors[i]["open"] and run.map.closed_doors.has(run.view.doors[i]["cell"]), "closing shuts both")

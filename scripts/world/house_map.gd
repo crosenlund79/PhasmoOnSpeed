@@ -361,6 +361,18 @@ func _grid_path(a: Vector2i, b: Vector2i) -> PackedVector2Array:
 	return astar.get_point_path(a, b)
 
 ## Line of sight: walls and closed doors block (furniture is low).
+## Whether a hunter at `from` (in from_room) can see something at `to`: the same
+## room, or a clear line through no walls, closed doors or the void between floors.
+## (Inside the Abyss: only what is in the Abyss too.)
+func sees(from: Vector2, from_room: String, to: Vector2) -> bool:
+	var a_in := AbyssArena.contains(from)
+	var b_in := AbyssArena.contains(to)
+	if a_in or b_in:
+		return a_in and b_in
+	if from_room != "" and room_at(to) == from_room:
+		return true
+	return los(from, to)
+
 func los(a: Vector2, b: Vector2) -> bool:
 	var dist := a.distance_to(b)
 	var steps := int(ceil(dist / 8.0))

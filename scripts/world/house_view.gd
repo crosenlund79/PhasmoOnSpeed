@@ -21,13 +21,33 @@ const CONDITION := {
 const FADE_SHADER := """
 shader_type canvas_item;
 uniform float sat = 1.0;
+uniform float calm = 0.0;          // pull fine texture detail toward the material's average
+uniform vec4 base : source_color = vec4(0.5, 0.5, 0.5, 1.0);
 void fragment() {
 	vec4 c = texture(TEXTURE, UV) * COLOR;
+	c.rgb = mix(c.rgb, base.rgb * COLOR.rgb, calm);
 	float g = dot(c.rgb, vec3(0.3, 0.59, 0.11));
 	c.rgb = mix(vec3(g), c.rgb, sat);
 	COLOR = c;
 }
 """
+## Floors read calmer: speckle and grain toned down so tokens, items and evidence
+## stand out, while each material keeps its colour and character.
+const FLOOR_CALM := 0.35
+const NEGLECT_SOFTEN := 0.6
+var _avg_cache := {}
+
+func _avg_color(path: String) -> Color:
+	if not _avg_cache.has(path):
+		var img: Image = Art.tex(path).get_image()
+		if img == null:
+			_avg_cache[path] = Color(0.5, 0.5, 0.5)
+		else:
+			if img.is_compressed():
+				img.decompress()
+			img.resize(1, 1, Image.INTERPOLATE_BILINEAR)
+			_avg_cache[path] = img.get_pixel(0, 0)
+	return _avg_cache[path]
 ## Uses an overlay's alpha as a mask for a LIGHT colour (dust, pale tide marks):
 ## neglect reads as a change in value, not just more darkness.
 const MASK_SHADER := """
@@ -99,17 +119,21 @@ func _build_floors() -> void:
 	for r in map.rooms:
 		var tex := Art.tex("floors/%s.png" % r["floor"])
 		var cond: Dictionary = CONDITION.get(r.get("condition", "kept"), CONDITION["kept"])
-		var mat: ShaderMaterial = null
-		if float(cond["sat"]) < 1.0:
-			mat = ShaderMaterial.new()
-			mat.shader = _fade_shader
-			mat.set_shader_parameter("sat", cond["sat"])
+		var mat := ShaderMaterial.new()
+		mat.shader = _fade_shader
+		mat.set_shader_parameter("sat", cond["sat"])
+		mat.set_shader_parameter("calm", FLOOR_CALM)
+		mat.set_shader_parameter("base", _avg_color("floors/%s.png" % r["floor"]))
 		for rect in r["rects"]:
 			_floor_poly(tex, Rect2(Vector2(rect[0], rect[1]) * C, Vector2(rect[2], rect[3]) * C), cond["tint"], null, 1.0, mat)
 	for d in map.doors:
 		var rid := map.room_at_cell(d)
-		var tex := Art.tex("floors/%s.png" % map.room(rid).get("floor", "wood_dark"))
-		_floor_poly(tex, Rect2(Vector2(d) * C, Vector2(C, C)))
+		var fpath := "floors/%s.png" % map.room(rid).get("floor", "wood_dark")
+		var dmat := ShaderMaterial.new()
+		dmat.shader = _fade_shader
+		dmat.set_shader_parameter("calm", FLOOR_CALM)
+		dmat.set_shader_parameter("base", _avg_color(fpath))
+		_floor_poly(Art.tex(fpath), Rect2(Vector2(d) * C, Vector2(C, C)), Color.WHITE, null, 1.0, dmat)
 
 var _fade_shader: Shader
 var _mask_shader: Shader
@@ -160,7 +184,7 @@ func _build_neglect() -> void:
 				var c: Color = pass_def[2]
 				mat.set_shader_parameter("tint", Color(c.r, c.g, c.b, a))
 			for rect in r["rects"]:
-				_floor_poly(tex, Rect2(Vector2(rect[0], rect[1]) * C, Vector2(rect[2], rect[3]) * C), Color.WHITE, neglect_layer, a, mat, pass_def[3])
+				_floor_poly(tex, Rect2(Vector2(rect[0], rect[1]) * C, Vector2(rect[2], rect[3]) * C), Color.WHITE, neglect_layer, a * NEGLECT_SOFTEN, mat, pass_def[3])
 		var blocked := {}
 		for d in map.doors:
 			for o in [Vector2i.ZERO, Vector2i(0, -1), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(1, 0)]:
@@ -172,14 +196,14 @@ func _build_neglect() -> void:
 		var edge: Array = map.wall_adjacent_cells(r["id"]).filter(func(c): return not blocked.has(c))
 		if cells.is_empty():
 			continue
-		for i in int(cond["stains"]):
+		for i in int(cond["stains"]) / 2:
 			var spos := HouseMap.cell_center(cells[rng.randi_range(0, cells.size() - 1)])
 			var ssize := rng.randf_range(56.0, 110.0)
 			var srot := rng.randf() * TAU
 			var stain := "decor/stain_%d.png" % rng.randi_range(1, 3)
 			_neglect_decal(stain, spos, srot, ssize * 1.12, 0.55, false, Color(0.8, 0.77, 0.66))   # pale tide ring
 			_neglect_decal(stain, spos, srot, ssize, rng.randf_range(0.75, 1.0))
-		for i in int(cond["litter"]):
+		for i in int(cond["litter"]) / 2:
 			var kinds := ["decor/rubble.png", "decor/papers_scattered.png", "decor/dust_sheet_scrap.png"]
 			_neglect_decal(kinds[rng.randi_range(0, kinds.size() - 1)], HouseMap.cell_center(cells[rng.randi_range(0, cells.size() - 1)]), rng.randf() * TAU, rng.randf_range(22.0, 32.0), 0.95)
 		# Cobwebs in room corners (art anchored top-left; rotate about the corner point).
@@ -326,15 +350,38 @@ func _build_furniture() -> void:
 ## Doors: most start closed (deterministic per house, so every peer and every
 ## replay agrees). A closed door blocks hunters, light and sight; ghosts pass.
 func _build_doors(with_occluders: bool) -> void:
+	var index_of := {}
+	for i in map.doors.size():
+		index_of[map.doors[i]] = i
 	for i in map.doors.size():
 		var c: Vector2i = map.doors[i]
-		var across := map.is_wall(c + Vector2i(-1, 0)) or map.is_wall(c + Vector2i(1, 0))   # leaf spans x
+		var across: bool = map.is_wall(c + Vector2i(-1, 0)) or map.is_wall(c + Vector2i(1, 0))   # leaf spans x
+		# Double doors: two door cells side by side across the same wall form ONE
+		# two-cell opening: both leaves open and close together, hinged at the outer posts.
+		var step := Vector2i(1, 0) if across else Vector2i(0, 1)
+		var partner := -1
+		var second := false
+		if index_of.has(c + step):
+			partner = index_of[c + step]
+		elif index_of.has(c - step):
+			partner = index_of[c - step]
+			second = true
+		if partner >= 0:
+			across = map.is_wall(c - step * (2 if second else 1)) or map.is_wall(c + step * (1 if second else 2)) or across
 		var leaf := DoorLeaf.new()
 		leaf.across = across
-		leaf.position = Vector2(c) * C + (Vector2(2, C * 0.5) if across else Vector2(C * 0.5, 2))
+		leaf.dir = -1.0 if second else 1.0
+		leaf.position = Vector2(c) * C + ((Vector2(C - 2, C * 0.5) if second else Vector2(2, C * 0.5)) if across else ((Vector2(C * 0.5, C - 2) if second else Vector2(C * 0.5, 2))))
 		leaf.z_index = -3
 		add_child(leaf)
-		var d := {"cell": c, "open": false, "leaf": leaf, "shape": null, "occluder": null}
+		var frame := DoorFrame.new()
+		frame.across = across
+		frame.post_a = partner < 0 or not second
+		frame.post_b = partner < 0 or second
+		frame.position = Vector2(c) * C
+		frame.z_index = -2
+		add_child(frame)
+		var d := {"cell": c, "open": false, "leaf": leaf, "shape": null, "occluder": null, "partner": partner, "frame": frame}
 		if _with_collision:
 			var body := StaticBody2D.new()
 			body.collision_layer = 1
@@ -361,6 +408,12 @@ func _build_doors(with_occluders: bool) -> void:
 func set_door(i: int, open: bool, animate: bool = true) -> void:
 	if i < 0 or i >= doors.size():
 		return
+	_set_one_door(i, open, animate)
+	var partner: int = doors[i].get("partner", -1)
+	if partner >= 0 and partner < doors.size() and doors[partner]["open"] != open:
+		_set_one_door(partner, open, animate)   # a double door moves as one
+
+func _set_one_door(i: int, open: bool, animate: bool) -> void:
 	var d: Dictionary = doors[i]
 	d["open"] = open
 	if open:
@@ -372,7 +425,10 @@ func set_door(i: int, open: bool, animate: bool = true) -> void:
 	if d["occluder"]:
 		d["occluder"].visible = not open
 	var leaf: DoorLeaf = d["leaf"]
-	var target := -PI * 0.5 if open else 0.0
+	if d.get("frame"):
+		d["frame"].closed = not open
+		d["frame"].queue_redraw()
+	var target := (-PI * 0.5 * leaf.dir) if open else 0.0
 	if animate:
 		create_tween().tween_property(leaf, "rotation", target, 0.25).set_trans(Tween.TRANS_QUAD)
 	else:
@@ -388,16 +444,50 @@ func door_index_at(pos: Vector2, radius: float) -> int:
 			best = i
 	return best
 
-## A wooden door leaf hinged at one frame post; rotation 0 = closed across the gap.
+## A heavy wooden door leaf with iron straps, hinged at one frame post; rotation 0 =
+## closed across the gap. dir -1 = the second leaf of a double door (hinged at the far post).
 class DoorLeaf extends Node2D:
 	var across := true
+	var dir := 1.0
 	func _draw() -> void:
 		var C2 := Defs.CELL - 4.0
-		var r := Rect2(Vector2(0, -3), Vector2(C2, 6)) if across else Rect2(Vector2(-3, 0), Vector2(6, C2))
+		var r := Rect2(Vector2(0, -4.5), Vector2(C2, 9)) if across else Rect2(Vector2(-4.5, 0), Vector2(9, C2))
+		if dir < 0.0:
+			r = Rect2(Vector2(-C2, -4.5), Vector2(C2, 9)) if across else Rect2(Vector2(-4.5, -C2), Vector2(9, C2))
 		draw_rect(r.grow(1.5), Art.INK)
-		draw_rect(r, Color(0.36, 0.24, 0.14))
-		var mid := r.position + r.size * (Vector2(0.78, 0.5) if across else Vector2(0.5, 0.78))
-		draw_circle(mid, 1.6, Color(0.75, 0.6, 0.3))   # brass knob
+		draw_rect(r, Color(0.42, 0.27, 0.14))
+		for k in [0.22, 0.78]:   # iron straps
+			var a := r.position + r.size * (Vector2(k, 0.0) if across else Vector2(0.0, k))
+			var b := a + (Vector2(0, r.size.y) if across else Vector2(r.size.x, 0))
+			draw_line(a, b, Color(0.12, 0.1, 0.1), 2.0)
+		var knob_t := 0.85 if dir > 0.0 else 0.15
+		var mid := r.position + r.size * (Vector2(knob_t, 0.5) if across else Vector2(0.5, knob_t))
+		draw_circle(mid, 2.0, Color(0.85, 0.68, 0.32))   # brass knob
+
+## Stone posts either side of a doorway, and — while shut — a dark bar of shadow
+## across the gap, so an open door reads at a glance as an opening.
+class DoorFrame extends Node2D:
+	var across := true
+	var post_a := true
+	var post_b := true
+	var closed := true
+	func _draw() -> void:
+		var Cf := Defs.CELL
+		var post := Color(0.55, 0.5, 0.44)
+		if across:
+			if post_a:
+				draw_rect(Rect2(Vector2(-2, Cf * 0.5 - 6), Vector2(5, 12)), post)
+			if post_b:
+				draw_rect(Rect2(Vector2(Cf - 3, Cf * 0.5 - 6), Vector2(5, 12)), post)
+			if closed:
+				draw_rect(Rect2(Vector2(0, Cf * 0.5 + 5), Vector2(Cf, 4)), Color(0, 0, 0, 0.45))
+		else:
+			if post_a:
+				draw_rect(Rect2(Vector2(Cf * 0.5 - 6, -2), Vector2(12, 5)), post)
+			if post_b:
+				draw_rect(Rect2(Vector2(Cf * 0.5 - 6, Cf - 3), Vector2(12, 5)), post)
+			if closed:
+				draw_rect(Rect2(Vector2(Cf * 0.5 + 5, 0), Vector2(4, Cf)), Color(0, 0, 0, 0.45))
 
 ## A living flame: layered tongues that sway and gutter, never a static glow.
 class Flame extends Node2D:

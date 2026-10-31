@@ -378,6 +378,7 @@ func _process(delta: float) -> void:
 		_nightmare_noises(delta)
 	_phantom_steps(delta)
 	_relocation_tick(delta)
+	_sight_tick(delta)
 	_record(delta)
 	if multiplayer_match:
 		_net_tick(delta)
@@ -454,6 +455,34 @@ func relocate_home() -> void:
 	phenomena.move_lair(old, new_room)
 	record_event("relocate", {"room": new_room})   # replay only: never sent to rivals' clients
 	tell_all("The haunting has shifted…", "icons/ui_skull.png")
+
+var _sight_t := 0.0
+
+## Occupants and the entity are drawn only for a viewer who could actually see
+## them: the same room or a clear line of sight (walls, closed doors and other
+## floors hide them). The viewer is the hunter the camera follows. Purely what is
+## drawn here — the replay and the developer ghost marker still see everything.
+func _sight_tick(delta: float) -> void:
+	_sight_t -= delta
+	if _sight_t > 0.0:
+		return
+	_sight_t = 0.08
+	var viewer: Player = camera.get_parent() if camera and camera.get_parent() is Player else player
+	if viewer == null:
+		return
+	var vp := viewer.global_position
+	var vr := map.room_at(vp, viewer.room_id)
+	for o in occupants:
+		var seen := map.sees(vp, vr, o.position)
+		o.token.visible = seen
+		if o.tag:
+			o.tag.occluded = not seen
+	if creature:
+		var cs := map.sees(vp, vr, creature.position)
+		creature.token.visible = cs
+		creature.glow.visible = cs
+		if creature.tag:
+			creature.tag.occluded = not cs
 
 var _phantom_t := 40.0
 
@@ -681,10 +710,15 @@ func set_light(i: int, on: bool) -> void:
 	record_event("light", {"i": i, "on": on})
 
 func _someone_in_doorway(i: int) -> bool:
-	var pos := HouseMap.cell_center(view.doors[i]["cell"])
-	for h: Player in hunters:
-		if not h.dead and h.global_position.distance_to(pos) < 30.0:
-			return true
+	var cells: Array = [view.doors[i]["cell"]]
+	var partner: int = view.doors[i].get("partner", -1)
+	if partner >= 0:
+		cells.append(view.doors[partner]["cell"])   # a double door shuts both halves
+	for c in cells:
+		var pos := HouseMap.cell_center(c)
+		for h: Player in hunters:
+			if not h.dead and h.global_position.distance_to(pos) < 30.0:
+				return true
 	return false
 
 ## Occupants and creatures of flesh open the doors they pass through. Ghosts
@@ -1994,7 +2028,7 @@ func find_interactable(p: Player, pos: Vector2) -> Dictionary:
 	for i in view.doors.size():
 		var dc: Vector2 = HouseMap.cell_center(view.doors[i]["cell"])
 		var dopen: bool = view.doors[i]["open"]
-		if dopen and _someone_in_doorway(i) and pos.distance_to(dc) < 30.0:
+		if dopen and _someone_in_doorway(i):
 			continue   # never close a door on yourself
 		cands.append([{"kind": "door", "i": i, "pos": dc, "icon": "icons/ui_house.png",
 			"label": "Close Door" if dopen else "Open Door", "hold": 0.0}, DOOR_REACH])

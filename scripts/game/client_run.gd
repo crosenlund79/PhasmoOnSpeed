@@ -263,8 +263,13 @@ func _update_puppets(delta: float) -> void:
 			if tk.token_path == "tokens/crawler.png":
 				tk.sprite.modulate = Color(0.06, 0.04, 0.08)
 				tk.scale = Vector2(1.35 + sin(elapsed * 7.0) * 0.1, 0.5)
+		# Seen only by this hunter's own eyes: same room or a clear line of sight.
+		var viewer: Node2D = camera.get_parent() if camera and camera.get_parent() is Player else player
+		var seen := map.sees(viewer.global_position, map.room_at(viewer.global_position, player.room_id), node.position)
+		node.visible = seen
 		if node.has_meta("tag"):
 			var tag: SpeechTag = node.get_meta("tag")
+			tag.occluded = not seen
 			var show_tag: bool = id.begins_with("npc") or tgt[4] & 2 == 2
 			tag.set_visible(show_tag and node.modulate.a > 0.05)
 			if show_tag:
