@@ -718,17 +718,17 @@ func _build_big_message(root: Control) -> void:
 	big_box.anchor_right = 1.0
 	big_box.anchor_top = 0.3
 	big_box.anchor_bottom = 0.3
-	big_box.offset_left = 220
-	big_box.offset_right = -220
+	big_box.offset_left = _px(220)
+	big_box.offset_right = -_px(220)
 	big_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	big_box.modulate.a = 0.0
 	root.add_child(big_box)
-	big_title = Art.label("", 58, Art.GOLD, Art.font_heading)
+	big_title = Art.label("", _px(58), Art.GOLD, Art.font_heading)
 	big_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	big_title.add_theme_color_override("font_outline_color", Color.BLACK)
-	big_title.add_theme_constant_override("outline_size", 12)
+	big_title.add_theme_constant_override("outline_size", _px(12))
 	big_box.add_child(big_title)
-	big_sub = Art.label("", 22, BONE, Art.font_italic)
+	big_sub = Art.label("", _px(22), BONE, Art.font_italic)
 	big_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	big_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	big_sub.add_theme_color_override("font_outline_color", Color.BLACK)
@@ -1210,8 +1210,8 @@ func toast(text: String, icon: String = "", quiet: bool = false) -> void:
 	h.add_theme_constant_override("separation", 8)
 	p.add_child(h)
 	if icon != "":
-		h.add_child(Art.icon_rect(icon, 22))
-	h.add_child(Art.label(text, 16, INK))
+		h.add_child(Art.icon_rect(icon, _px(22)))
+	h.add_child(Art.label(text, _px(16), INK))
 	toast_box.add_child(p)
 	while toast_box.get_child_count() > 3:
 		var old := toast_box.get_child(0)

@@ -40,6 +40,10 @@ VIAddVersionKey "LegalCopyright" "SPECTRAL RUN"
 
 !include "MUI2.nsh"
 !define MUI_ABORTWARNING
+!ifdef ICON
+  !define MUI_ICON "${ICON}"
+  !define MUI_UNICON "${ICON}"
+!endif
 !define MUI_FINISHPAGE_RUN "$INSTDIR\SpectralRun.exe"
 !define MUI_FINISHPAGE_RUN_TEXT "Play ${APPNAME} now"
 !insertmacro MUI_PAGE_WELCOME

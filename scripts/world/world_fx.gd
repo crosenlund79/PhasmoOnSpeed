@@ -128,6 +128,10 @@ static func ring(parent: Node, pos: Vector2, color: Color, radius: float = 60.0,
 	parent.add_child(r)
 
 ## Returns true when the event was a world-visual event handled here.
+## Replays run faster than real time: timed effects (hellfire, miasma, flicker)
+## are shortened to match, so they line up with the action.
+var time_scale := 1.0
+
 func apply(type: String, d: Dictionary) -> bool:
 	match type:
 		"decal":
@@ -150,7 +154,7 @@ func apply(type: String, d: Dictionary) -> bool:
 			if decals.has(d["id"]) and is_instance_valid(decals[d["id"]]):
 				decals[d["id"]].texture = Art.tex(d["sprite"])
 		"flicker":
-			view.flicker(float(d["dur"]), float(d["strength"]))
+			view.flicker(float(d["dur"]) / time_scale, float(d["strength"]))
 		"darkness":
 			view.set_darkness(Color.html(d["color"]), float(d["t"]))
 		"mirror":
@@ -176,7 +180,7 @@ func apply(type: String, d: Dictionary) -> bool:
 				"counter": ring(view.overlay_layer, Vector2(d["x"], d["y"]), Art.GOLD, 80.0, 0.7)
 				"lights": view.flicker_near(Vector2(d["x"], d["y"]), 170.0, 1.2)
 				"emerge": view.emerge_splash(Vector2(d["x"], d["y"]))
-				"miasma": view.miasma(Vector2(d["x"], d["y"]), float(d.get("r", 70.0)), float(d.get("dur", 9.0)))
+				"miasma": view.miasma(Vector2(d["x"], d["y"]), float(d.get("r", 70.0)), float(d.get("dur", 9.0)) / time_scale)
 				"twitch":
 					if decals.has(d["id"]) and is_instance_valid(decals[d["id"]]):
 						twitch(decals[d["id"]])
@@ -186,11 +190,11 @@ func apply(type: String, d: Dictionary) -> bool:
 				decals["splatter_%d" % int(d["seed"])] = s   # cleared with the other decals
 		"hellfire":
 			if d["phase"] == "warn":
-				view.hellfire_warning(Vector2(d["x"], d["y"]), 34.0, 1.6)
+				view.hellfire_warning(Vector2(d["x"], d["y"]), 34.0, 1.6 / time_scale)
 			else:
-				view.burst_flames(Vector2(d["x"], d["y"]), 3.5, 1.9)
+				view.burst_flames(Vector2(d["x"], d["y"]), 3.5 / time_scale, 1.9)
 		"portal":
-			view.portal_warning(str(d["room"]), 2.5)
+			view.portal_warning(str(d["room"]), 2.5 / time_scale)
 		"abyss":
 			if d["phase"] == "open":
 				view.ensure_abyss().open(int(d["seed"]))

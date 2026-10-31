@@ -543,7 +543,8 @@ func test_hud_layout() -> void:
 	run.discover(run.player, "bite_marks", run.player.room_id)
 	check(run.player.journal.has("bite_marks") and hud._ev_discs["bite_marks"].ring == Art.GOLD, "discovered evidence is highlighted")
 	check(hud._ev_discs["fur"].ring != Art.GOLD, "undiscovered evidence stays greyed")
-	check(run.player.suspect == sus, "discovering evidence never changes the suspect")
+	# (0.11.0) Evidence that contradicts the suspect moves it to one that fits.
+	check(run.player.suspect == sus if "bite_marks" in Defs.CREATURES[sus]["evidence"] else (run.player.suspect == "" or Defs.fits(run.player.suspect, run.player.journal)), "the suspect always fits the evidence")
 
 func test_nightmare() -> void:
 	SaveData.reset_all()

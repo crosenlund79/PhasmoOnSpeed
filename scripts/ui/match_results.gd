@@ -19,7 +19,7 @@ func _ready() -> void:
 		replay_player.setup(result["replay"])
 		replay_player.follow = result.get("me", "player_1") if result.get("me", "") != "" else "player_1"
 		# Centre the replayed hunter in the area left of the panel (which starts at 50%).
-		replay_player.camera_offset = Vector2(get_viewport_rect().size.x * (0.5 - 0.5 * 0.5) / replay_player.zoom, 0.0)
+		replay_player.camera_offset = Vector2(get_viewport_rect().size.x * (0.5 - 0.5 * 0.5) / replay_player.effective_zoom(), 0.0)
 		var holder := Node2D.new()
 		add_child(holder)
 		holder.add_child(replay_player)

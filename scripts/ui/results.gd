@@ -20,7 +20,7 @@ func _ready() -> void:
 	replay_player = ReplayPlayer.new()
 	replay_player.setup(result["replay"])
 	# Keep the replayed investigator centred in the area left of the results panel.
-	replay_player.camera_offset = Vector2(get_viewport_rect().size.x * (0.5 - 0.5 * 0.62) / replay_player.zoom, 0.0)
+	replay_player.camera_offset = Vector2(get_viewport_rect().size.x * (0.5 - 0.5 * 0.62) / replay_player.effective_zoom(), 0.0)
 	var world_holder := Node2D.new()
 	add_child(world_holder)
 	world_holder.add_child(replay_player)

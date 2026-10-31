@@ -31,6 +31,12 @@ var _moment_layer: CanvasLayer
 var _moment_box: VBoxContainer
 var _moments: Array = []         # [{node, t, text}]
 var zoom := 1.25
+
+## Camera zoom in canvas units: compensates the Menu UI scale that results screens apply
+## to the whole canvas, so the replayed world is framed the same at every menu scale.
+func effective_zoom() -> float:
+	var f: float = get_tree().root.content_scale_factor if is_inside_tree() else (Engine.get_main_loop() as SceneTree).root.content_scale_factor
+	return zoom / maxf(0.01, f)
 var camera_offset := Vector2.ZERO
 
 func setup(p_replay: Dictionary) -> void:
@@ -52,6 +58,7 @@ func _ready() -> void:
 	text_layer.follow_viewport_enabled = true
 	add_child(text_layer)
 	fx = WorldFx.new(view, text_layer)
+	fx.time_scale = SPEED
 	duration = float(replay.get("duration", 0.0))
 	var mp: bool = replay.get("multiplayer", false)
 	for aid in replay.get("actors", {}):
@@ -83,7 +90,9 @@ func _ready() -> void:
 			text_layer.add_child(l)
 			_labels[aid] = l
 	camera = Camera2D.new()
-	camera.zoom = Vector2(zoom, zoom)
+	# Menu UI scale enlarges the whole canvas on results screens; the replayed
+	# world keeps its own framing regardless.
+	camera.zoom = Vector2.ONE * effective_zoom()
 	camera.position_smoothing_enabled = true
 	camera.position_smoothing_speed = 6.0
 	camera.offset = camera_offset
@@ -332,7 +341,7 @@ func _tick_moments(delta: float) -> void:
 		return
 	# Centred at the bottom of the replay area (the screen minus the camera offset).
 	var vs := get_viewport().get_visible_rect().size
-	var cx := vs.x * 0.5 - camera_offset.x * zoom
+	var cx := vs.x * 0.5 - camera_offset.x * effective_zoom()
 	_moment_box.position = Vector2(cx - 300.0, vs.y - 330.0)   # under the investigator, clear of the taunt line
 	_moment_box.size = Vector2(600.0, 150.0)
 	for m in _moments.duplicate():

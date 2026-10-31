@@ -5,10 +5,10 @@ config_version=5
 
 config/name="SPECTRAL RUN"
 config/description="A fast Gothic Noir supernatural investigation speedrunner."
-config/version="0.10.0"
+config/version="0.11.0"
 run/main_scene="res://scenes/boot.tscn"
 config/features=PackedStringArray("4.3", "GL Compatibility")
-config/icon="res://icon.svg"
+config/icon="res://icon.png"
 
 [autoload]
 
