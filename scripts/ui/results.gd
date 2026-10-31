@@ -171,6 +171,7 @@ func _build_panel(root: Control, won: bool) -> void:
 		v.add_child(Art.label(rtext, 15, Color(0.3, 0.22, 0.15), Art.font_italic))
 		v.add_child(Art.label("(The legendary hunters are fictional.)", 12, Color(0.4, 0.32, 0.24)))
 	RankPlate.add_reward_lines(v, recs.get("reward", {}))
+	RankPlate.add_penalty_lines(v, recs.get("penalty", {}))
 	_online_label = Art.label(Online.last_status, 13, Color(0.35, 0.28, 0.22), Art.font_italic)
 	_online_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(_online_label)
@@ -197,6 +198,8 @@ func _reveal_text() -> String:
 	var orig: String = summary["original_creature"]
 	var fin: String = summary["creature"]
 	var name := Defs.creature_name(fin)
+	if str(summary.get("outcome", "")) == "fled":
+		return "You fled %s. Whatever haunts it is still there." % summary["house_name"]
 	var verb := "vanquished" if summary["vanquished"] else "claimed you"
 	if summary["harbinger"]:
 		return "The Harbinger %s — it replaced %s." % ["was banished" if summary["vanquished"] else "claimed you", _article(Defs.creature_name(orig))]

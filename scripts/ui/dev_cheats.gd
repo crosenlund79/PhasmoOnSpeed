@@ -37,6 +37,15 @@ func _init() -> void:
 	row.add_child(_btn("+ Ducats", func(): _add("ducats")))
 	row.add_child(_btn("+ Renown", func(): _add("renown")))
 	v.add_child(_btn("Reset test progression", _reset))
+	# Immortal: the local hunter cannot die (solo; never in a match). Session only.
+	var imm := CheckBox.new()
+	imm.text = "Immortal (cannot die)"
+	imm.button_pressed = Progression.immortal
+	imm.add_theme_color_override("font_color", Color(0.75, 0.88, 1.0))
+	imm.toggled.connect(func(on):
+		Progression.immortal = on
+		_status.text = "Immortal is ON — fatal blows are ignored." if on else "Immortal is off.")
+	v.add_child(imm)
 	_status = Art.label("Scores and leaderboards are untouched.", 12, Color(0.7, 0.75, 0.85), Art.font_italic)
 	v.add_child(_status)
 

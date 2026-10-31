@@ -285,6 +285,12 @@ func setup(p_run) -> void:
 	_build_pause(root)
 	_build_shared_pause(root)
 	_build_help(root)
+	_build_flee(root)
+	if Progression.immortal_active() and not run.multiplayer_match:
+		var imm := _outlined("IMMORTAL (dev cheat)", _px(16), Color(0.55, 0.85, 1.0), Art.font_heading, 4)
+		imm.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		imm.position = Vector2(_px(200), _px(10))
+		root.add_child(imm)
 	notify_root = Node2D.new()
 	notify_root.z_index = 40
 	run.world_text.add_child(notify_root)
@@ -837,12 +843,60 @@ func _build_pause(root: Control) -> void:
 			run.set_paused(false)
 			run.restart()))
 	v.add_child(Art.button("Controls", func(): help_panel.visible = true))
-	v.add_child(Art.button("Leave match" if run.multiplayer_match else "Abandon to menu", func():
+	v.add_child(Art.button("Flee the match" if run.multiplayer_match else "Flee the house", func(): show_flee_confirm()))
+
+# --- Fleeing ------------------------------------------------------------------------------
+var flee_panel: Control
+var _flee_text: Label
+
+func _build_flee(root: Control) -> void:
+	var v := _centered_panel(root, 460)
+	flee_panel = v.get_parent().get_parent()
+	flee_panel.z_index = 6
+	var t := Art.heading("Flee?", 38)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(t)
+	_flee_text = _small("", 17, INK, Art.font_italic)
+	_flee_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_flee_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_flee_text.custom_minimum_size = Vector2(420, 0)
+	v.add_child(_flee_text)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 12)
+	v.add_child(row)
+	row.add_child(Art.button("Flee", func(): _confirm_flee(), 180))
+	row.add_child(Art.button("Stay", func():
+		flee_panel.visible = false
+		if not pause_panel.visible and not run.multiplayer_match:
+			run.set_paused(false), 180))
+
+## Shows what fleeing costs before the hunter commits.
+func show_flee_confirm() -> void:
+	var cost: int = run.flee_cost() if run.has_method("flee_cost") else _client_flee_cost()
+	_flee_text.text = ("Abandon this investigation? It ends here and costs you %d Renown." % cost) if not run.multiplayer_match \
+		else ("Leave the match? Your rivals hunt on without you, and it costs you %d Renown." % cost)
+	flee_panel.visible = true
+	if not run.multiplayer_match:
+		run.set_paused(true)   # nothing moves while you decide
+
+func _client_flee_cost() -> int:
+	var loss := int(round(float(Progression.PENALTIES["flee_renown"]) * float(Progression.DIFF_MULT.get(str(run.difficulty), 1.0))))
+	return mini(loss, int(SaveData.progress()["renown"]))
+
+func _confirm_flee() -> void:
+	flee_panel.visible = false
+	if pause_panel.visible:
+		toggle_pause()
+	if run.multiplayer_match:
+		SaveData.flee_now(str(run.difficulty))
 		run.set_paused(false)
 		Sfx.stop_all_loops()
-		if run.multiplayer_match:
-			Net.leave()
-		Game.goto_menu()))
+		Net.leave()
+		Game.goto_menu()
+	else:
+		run.set_paused(false)
+		run.flee(run.player)
 
 ## Multiplayer: the banner every hunter sees while the match is paused.
 func _build_shared_pause(root: Control) -> void:

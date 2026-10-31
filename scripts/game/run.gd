@@ -144,6 +144,7 @@ func _ready() -> void:
 		add_child(guide)
 	Sfx.stop_loop("music", 0.8)
 	Sfx.start_loop("ambience", "ambience_house", -6.0, 1.5)
+	SaveData.begin_run_guard(difficulty)   # quitting mid-run counts as fleeing
 	record_event("start", {"house": house_id})
 	tell_all(map.name + " — something is here.", "icons/ui_house.png")
 	# Reveal what was rolled (never the entity).
@@ -1194,6 +1195,15 @@ func _counterattack(p: Player, c: Creature, item: String) -> void:
 func _wound(p: Player, c: Creature, source: String) -> void:
 	if p.dead or state != "playing":
 		return
+	if p.is_local and p.wounds >= 1 and Progression.immortal_active():
+		# Developer cheat: the blow lands (and shows) but never kills.
+		sound_to(p, "player_hurt", 0.0)
+		if p.is_local:
+			hud.wound()
+		p.invuln = Player.INVULN_AFTER_HIT
+		tell(p, "IMMORTAL (dev): a fatal blow was ignored.", "icons/ui_skull.png", true)
+		record_event("attack", {"actor": p.actor_id, "wounds": p.wounds, "source": source, "immortal": true})
+		return
 	p.wounds += 1
 	if creature and creature.is_hunting():
 		p.set_meta("hit_this_hunt", true)
@@ -1953,6 +1963,10 @@ func find_interactable(p: Player, pos: Vector2) -> Dictionary:
 			continue   # never close a door on yourself
 		cands.append([{"kind": "door", "i": i, "pos": dc, "icon": "icons/ui_house.png",
 			"label": "Close Door" if dopen else "Open Door", "hold": 0.0}, DOOR_REACH])
+	# The way out: the hunter may flee the investigation from where they came in.
+	if p.is_local and not multiplayer_match:
+		cands.append([{"kind": "flee", "pos": HouseMap.cell_center(map.spawn_cell), "icon": "icons/ui_skull.png",
+			"label": "Flee the House", "hold": 0.8}, 52.0])
 	var sc := map.nearest_stair(pos, STAIR_REACH)
 	if sc != Vector2i(-99, -99):
 		var dest := map.stair_target(sc)
@@ -2030,6 +2044,9 @@ func do_interact(p: Player, it: Dictionary) -> void:
 				return
 			_light_sigil(p, it["sigil"])
 			pickups.erase(it)
+		"flee":
+			if p.is_local:
+				hud.show_flee_confirm()
 		"relight":
 			set_light(it["i"], true)
 			add_investigation(p, 0, "relight")
@@ -2128,7 +2145,8 @@ func build_summary(p: Player = null) -> Dictionary:
 		"voodoo_uses": int(p.get_meta("voodoo_uses", 0)), "npcs_burned": npcs_burned,
 		"abyss_trips": int(p.get_meta("abyss_trips", 0)), "abyss_escapes": int(p.get_meta("abyss_escapes", 0)),
 		"hellfire_burns": int(p.get_meta("hellfire_burns", 0)),
-		"vanquished": won, "time": snappedf(elapsed, 0.01),
+		"vanquished": won, "time": snappedf(elapsed, 0.01), "outcome": _outcome,
+		"dev_immortal": Progression.immortal_active(),   # cheated runs never reach records or leaderboards
 		"evidence": all_entries, "evidence_ids": entries.map(func(e): return e["id"]),
 		"true_evidence": true_ev, "incorrect_attempts": p.wrong_attempts, "reckless_attempts": p.reckless_attempts,
 		"incomplete_attempts": p.incomplete_attempts, "attempts": p.attempts, "wounds": p.wounds,
@@ -2195,8 +2213,34 @@ func _finish() -> void:
 func restart() -> void:
 	if multiplayer_match:
 		return
+	if elapsed > RESTART_GRACE and state == "playing":
+		SaveData.flee_now(difficulty)   # restarting a run under way is fleeing it
 	Sfx.stop_all_loops()
 	Game.start_run(house_id, -1, creature_override, difficulty, blood_moon, setup_info)   # same resolved setup
+
+const RESTART_GRACE := 10.0   # a restart within the first seconds costs nothing
+
+## Renown a flight from this investigation would cost the local player right now.
+func flee_cost() -> int:
+	var loss := int(round(float(Progression.PENALTIES["flee_renown"]) * float(Progression.DIFF_MULT.get(difficulty, 1.0))))
+	return mini(loss, int(SaveData.progress()["renown"]))
+
+## Solo: the hunter abandons the investigation. It ends as "fled" (a Renown penalty,
+## recorded in results and statistics).
+func flee(p: Player) -> void:
+	if state != "playing" or multiplayer_match or p.dead:
+		return
+	close_abyss()
+	if creature and creature.is_hunting():
+		creature.end_hunt()
+	state = "ending"
+	_outcome = "fled"
+	_end_t = 1.6
+	p.input_enabled = false
+	record_event("fled", {"actor": p.actor_id})
+	Sfx.stop_loop("hunt", 0.4)
+	fx_darkness(Color(0.1, 0.08, 0.1), 1.2)
+	announce("YOU FLED", "The house keeps its secret — for now.", Color(0.75, 0.7, 0.6), 1.6)
 
 func set_paused(p: bool) -> void:
 	if multiplayer_match:

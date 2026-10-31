@@ -12,6 +12,7 @@ var data := {}
 
 func _ready() -> void:
 	load_data()
+	_settle_abandoned_run()
 	Sfx.apply_volumes(settings().get("master", 0.8), settings().get("music", 0.6))
 
 func _defaults() -> Dictionary:
@@ -101,7 +102,7 @@ func record_run(summary: Dictionary) -> Dictionary:
 		"prev_best_time": rec["best_time"], "prev_best_score": rec["best_score"],
 		"prev_overall_best": data["records"]["best_score"]}
 	rec["runs"] = int(rec["runs"]) + 1
-	if summary["vanquished"]:
+	if summary["vanquished"] and not summary.get("dev_immortal", false):
 		rec["wins"] = int(rec["wins"]) + 1
 		if rec["best_time"] <= 0.0 or summary["time"] < rec["best_time"]:
 			rec["best_time"] = summary["time"]
@@ -114,8 +115,15 @@ func record_run(summary: Dictionary) -> Dictionary:
 			data["records"]["best_score_time"] = summary["time"]
 			data["records"]["best_score_house"] = summary.get("house_name", house_id)
 	_update_stats(summary)
-	out["reward"] = Progression.grant(progress(), Progression.solo_reward(summary),
-		"solo:%s:%d:%.2f" % [house_id, int(summary.get("seed", 0)), float(summary["time"])])
+	var key := "solo:%s:%d:%.2f" % [house_id, int(summary.get("seed", 0)), float(summary["time"])]
+	match str(summary.get("outcome", "")):
+		"perished":
+			out["penalty"] = Progression.penalize(progress(), "death", summary.get("difficulty", "normal"), key)
+		"fled":
+			out["penalty"] = Progression.penalize(progress(), "flee", summary.get("difficulty", "normal"), key)
+		_:
+			out["reward"] = Progression.grant(progress(), Progression.solo_reward(summary), key)
+	end_run_guard()
 	var hist: Array = data["history"]
 	hist.append(_history_row(summary))
 	while hist.size() > HISTORY_LIMIT:
@@ -195,8 +203,11 @@ func record_match(results: Dictionary, my_actor: String) -> Dictionary:
 	if int(me["score"]) > int(mp.get(best_key, 0)):
 		mp[best_key] = int(me["score"])
 		out["new_best"] = true
-	out["reward"] = Progression.grant(progress(), Progression.match_reward(results, me),
-		"mp:%s:%d:%.2f:%s" % [results.get("house", ""), int(results.get("seed", 0)), float(results.get("time", 0.0)), my_actor])
+	var key := "mp:%s:%d:%.2f:%s" % [results.get("house", ""), int(results.get("seed", 0)), float(results.get("time", 0.0)), my_actor]
+	out["reward"] = Progression.grant(progress(), Progression.match_reward(results, me), key)
+	if not me["alive"]:
+		out["penalty"] = Progression.penalize(progress(), "death", results.get("difficulty", "normal"), key + ":death")
+	end_run_guard()
 	var hist: Array = mp["history"]
 	hist.append({"house": results["house"], "creature": results["creature"], "outcome": results["outcome"],
 		"time": results["time"], "score": me["score"], "rank": me["rank"], "players": results["rows"].size(),
@@ -205,6 +216,39 @@ func record_match(results: Dictionary, my_actor: String) -> Dictionary:
 		hist.pop_front()
 	save()
 	return out
+
+# --- Run guard ---------------------------------------------------------------------------
+# An investigation in progress is noted in the save. Finishing it normally (results)
+# clears the note; quitting the game or dropping out mid-run leaves it, and it is
+# settled as fleeing on the next launch — closing the window is no escape.
+
+func begin_run_guard(difficulty: String) -> void:
+	progress()["pending"] = {"key": "pending:%d" % Time.get_ticks_usec() + ":" + str(Time.get_unix_time_from_system()), "difficulty": difficulty}
+	save()
+
+func end_run_guard() -> void:
+	progress().erase("pending")
+
+## Deliberate fleeing (or leaving a match): the penalty now, the guard cleared.
+func flee_now(difficulty: String) -> Dictionary:
+	var g: Dictionary = progress().get("pending", {})
+	var out := Progression.penalize(progress(), "flee", difficulty, str(g.get("key", "flee:%d" % Time.get_ticks_usec())))
+	end_run_guard()
+	save()
+	return out
+
+## On launch: an investigation abandoned by quitting counts as fleeing.
+var startup_notice := ""
+
+func _settle_abandoned_run() -> void:
+	var g = progress().get("pending")
+	if typeof(g) != TYPE_DICTIONARY:
+		return
+	var r := Progression.penalize(progress(), "flee", str(g.get("difficulty", "normal")), str(g.get("key", "")))
+	end_run_guard()
+	save()
+	if r["applied"]:
+		startup_notice = "You abandoned your last investigation: %d Renown." % int(r["renown"])
 
 func save_replay(replay: Dictionary) -> void:
 	var f := FileAccess.open(replay_path, FileAccess.WRITE)

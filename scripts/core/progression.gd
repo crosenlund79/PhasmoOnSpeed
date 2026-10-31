@@ -35,12 +35,34 @@ const NEEDLES := {
 		"sense": 1.32, "smooth": 14.0, "precise": true, "damp": 10.0,
 		"glass": Color(0.95, 0.5, 0.5), "sigil": Color(1.0, 0.78, 0.35), "glow": Color(1.0, 0.25, 0.2, 0.22),
 		"desc": "Sealed with a hunter's blood. Steady as a heartbeat, keen as a wound."},
+	"abyssglass": {"name": "Abyss-Glass Needle", "tier": "legendary", "level": 1, "price": 0, "drop": true,
+		"sense": 1.4, "smooth": 15.0, "precise": true, "damp": 11.0,
+		"glass": Color(0.72, 0.5, 0.95), "sigil": Color(0.85, 0.6, 1.0), "glow": Color(0.7, 0.35, 1.0, 0.3),
+		"desc": "Torn from the floor of Abyssal Hell. Never sold — only carried out by those who survive it."},
 	"veilpiercer": {"name": "The Veilpiercer", "tier": "legendary", "level": 15, "price": 2000,
 		"sense": 1.45, "smooth": 16.0, "precise": true, "damp": 11.0,
 		"glass": Color(0.75, 0.95, 1.0), "sigil": Color(1.0, 0.72, 0.25), "glow": Color(0.6, 0.95, 1.0, 0.3),
 		"desc": "Forged where the Veil is thinnest. It points before the dead have moved."},
 }
-const NEEDLE_ORDER := ["common", "silver", "raven", "bloodglass", "veilpiercer"]
+const NEEDLE_ORDER := ["common", "silver", "raven", "bloodglass", "veilpiercer", "abyssglass"]
+
+## Consequences — every number in one place.
+##   flee_renown / death_renown — Renown lost (× the difficulty's DIFF_MULT); death costs more
+##   death_loss_chance          — chance (by tier) that dying costs the EQUIPPED needle;
+##                                the starter needle is never lost, nothing else is touched
+##   abyss_drop_chance          — chance per Abyss visit that a Legendary needle lies in the realm
+const PENALTIES := {
+	"flee_renown": 40,
+	"death_renown": 110,
+	"death_loss_chance": {"uncommon": 0.5, "rare": 0.35, "epic": 0.2, "legendary": 0.1},
+	"abyss_drop_chance": 0.18,
+}
+
+## Developer cheat (session only, never saved): the local hunter cannot die.
+static var immortal := false
+
+static func immortal_active() -> bool:
+	return immortal and cheats_allowed()
 
 ## Hunter titles by minimum level.
 const TITLES := [[1, "Uninitiated"], [3, "Gravewalker"], [6, "Spirit Seeker"], [10, "Occult Hunter"],
@@ -128,6 +150,40 @@ static func grant(p: Dictionary, reward: Dictionary, key: String) -> Dictionary:
 		"level": after["level"], "title": after["title"]}, true)
 	return out
 
+## Fleeing or dying: Renown lost (never below zero) and, for a death, perhaps the
+## equipped needle. Applied once per key (shares the rewarded-key ledger).
+static func penalize(p: Dictionary, kind: String, difficulty: String, key: String) -> Dictionary:
+	var before := level_info(int(p["renown"]))
+	var out := {"applied": false, "kind": kind, "renown": 0, "lost_item": "",
+		"level_before": before["level"], "level": before["level"], "title": before["title"], "title_before": before["title"]}
+	var keys: Array = p["rewarded"]
+	if key in keys:
+		return out
+	keys.append(key)
+	while keys.size() > REWARD_KEYS_KEPT:
+		keys.pop_front()
+	var loss := int(round(float(PENALTIES[kind + "_renown"]) * float(DIFF_MULT.get(difficulty, 1.0))))
+	var r := int(p["renown"])
+	p["renown"] = maxi(0, r - loss)
+	out["renown"] = int(p["renown"]) - r
+	if kind == "death":
+		var nid: String = p.get("needle", "common")
+		var chance: float = PENALTIES["death_loss_chance"].get(NEEDLES.get(nid, {}).get("tier", "common"), 0.0)
+		if nid != "common" and float(absi(hash(key)) % 1000) / 1000.0 < chance:
+			p["owned"].erase(nid)
+			p["needle"] = "common"
+			out["lost_item"] = NEEDLES[nid]["name"]
+	var after := level_info(int(p["renown"]))
+	out.merge({"applied": true, "level": after["level"], "title": after["title"]}, true)
+	return out
+
+## A Legendary find carried out of the Abyss.
+static func grant_item(p: Dictionary, id: String) -> bool:
+	if id in p["owned"] or not NEEDLES.has(id):
+		return false
+	p["owned"].append(id)
+	return true
+
 # --- The Witch's wares ---------------------------------------------------------------
 
 ## "" when the needle can be bought, otherwise why not.
@@ -137,6 +193,8 @@ static func buy_block(p: Dictionary, id: String) -> String:
 		return "unknown"
 	if id in p["owned"]:
 		return "owned"
+	if n.get("drop", false):
+		return "abyss"   # not for sale: found only in Abyssal Hell
 	if level_for(int(p["renown"])) < int(n["level"]):
 		return "level"
 	if int(p["ducats"]) < int(n["price"]):

@@ -85,6 +85,7 @@ func _ready() -> void:
 	for r in rows:
 		_row(v, r, r["actor"] == result.get("me", ""))
 	RankPlate.add_reward_lines(v, result.get("records", {}).get("reward", {}))
+	RankPlate.add_penalty_lines(v, result.get("records", {}).get("penalty", {}))
 	v.add_child(Art.label("Competitive rules %s · solo rankings are kept separately." % mres["rules_version"], 12, Color(0.4, 0.32, 0.24)))
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 8)

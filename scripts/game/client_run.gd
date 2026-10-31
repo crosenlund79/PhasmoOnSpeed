@@ -120,6 +120,7 @@ func _ready() -> void:
 		guide.setup(self)
 		add_child(guide)
 	Sfx.stop_loop("music", 0.8)
+	SaveData.begin_run_guard(difficulty)   # leaving mid-match counts as fleeing
 	Sfx.start_loop("ambience", "ambience_house", -6.0, 1.5)
 
 func _apply_camera_limits(pos: Vector2) -> void:

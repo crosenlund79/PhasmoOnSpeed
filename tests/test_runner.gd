@@ -27,7 +27,7 @@ func _ready() -> void:
 		"test_audio_export", "test_game_setup",
 		"test_blightness_rushes", "test_safe_names", "test_temperatures", "test_ghost_marker_and_ruled_out",
 		"test_hellbound", "test_abyssal", "test_sailor_and_doctor", "test_consolidation", "test_home_rooms", "test_suspect_filter_and_splatter", "test_weeper_and_mimic",
-		"test_progression",
+		"test_progression", "test_flee_death_immortal",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -1510,3 +1510,52 @@ func test_progression() -> void:
 	check(r2.player.journal.has("emf5"), "Needle 5 evidence still registers inside the hotspot")
 	check(r2.hud.needle_gauge.variant["name"] == "The Veilpiercer", "your own needle's gauge in the HUD")
 	SaveData.reset_all()
+
+# --- 0.12.0 ------------------------------------------------------------------------------
+
+func test_flee_death_immortal() -> void:
+	var pr := SaveData.progress()
+	pr["renown"] = 1000
+	pr["owned"] = ["common", "raven"]
+	pr["needle"] = "raven"
+	# Fleeing: confirmed cost, ends the run as "fled", charged once.
+	var run := await _start("ashgrove", "shade", 81)
+	check(pr.has("pending"), "a run under way is guarded")
+	var cost: int = run.flee_cost()
+	check(cost == Progression.PENALTIES["flee_renown"], "flee cost shown up front (%d)" % cost)
+	run.flee(run.player)
+	await get_tree().create_timer(2.5).timeout
+	check(Game.last_result["summary"]["outcome"] == "fled", "the run ended as fled")
+	check(int(pr["renown"]) == 1000 - cost and not pr.has("pending"), "flee penalty applied once (renown %d)" % int(pr["renown"]))
+	var again := SaveData.record_run(Game.last_result["summary"])
+	check(not again.has("penalty") or not again["penalty"]["applied"], "never charged twice for the same run")
+	_cleanup_scene()
+	await get_tree().process_frame
+	# Dying costs more; Renown never below zero.
+	pr["renown"] = 50
+	var run2 := await _start("ashgrove", "shade", 82)
+	run2.player.invuln = 0.0
+	run2._wound(run2.player, null, "test")
+	run2.player.invuln = 0.0
+	run2._wound(run2.player, null, "test")
+	await get_tree().create_timer(3.5).timeout
+	var pen: Dictionary = Game.last_result["records"].get("penalty", {})
+	check(pen.get("kind", "") == "death" and int(pr["renown"]) == 0, "death penalty, floored at zero")
+	check(Progression.PENALTIES["death_renown"] > Progression.PENALTIES["flee_renown"], "death costs more than fleeing")
+	check("common" in pr["owned"], "the starter needle is never lost")
+	_cleanup_scene()
+	await get_tree().process_frame
+	# Quitting mid-run is settled as fleeing on the next launch.
+	pr["renown"] = 500
+	SaveData.begin_run_guard("normal")
+	SaveData._settle_abandoned_run()
+	check(int(pr["renown"]) == 500 - Progression.PENALTIES["flee_renown"] and SaveData.startup_notice != "", "an abandoned run costs Renown on the next launch")
+	# Immortal (dev cheat): wounds show, death never comes.
+	Progression.immortal = true
+	var run3 := await _start("ashgrove", "shade", 83)
+	for i in 4:
+		run3.player.invuln = 0.0
+		run3._wound(run3.player, null, "test")
+	check(not run3.player.dead and run3.state == "playing", "immortal: no death")
+	check(run3.build_summary()["dev_immortal"], "the run is marked as cheated (kept off records)")
+	Progression.immortal = false

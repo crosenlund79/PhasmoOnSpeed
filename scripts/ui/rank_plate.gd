@@ -76,6 +76,20 @@ static func add_reward_lines(v: VBoxContainer, reward: Dictionary) -> void:
 		var info := Progression.level_info(int(SaveData.progress()["renown"]))
 		v.add_child(Art.label("%s · Level %d · %d / %d Renown to the next" % [info["title"], info["level"], info["into"], info["need"]], 14, Color(0.3, 0.22, 0.15), Art.font_italic))
 
+## What fleeing or dying cost (results screens).
+static func add_penalty_lines(v: VBoxContainer, pen: Dictionary) -> void:
+	if pen.is_empty() or not pen.get("applied", false):
+		return
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	v.add_child(row)
+	row.add_child(Art.label("Fled" if pen["kind"] == "flee" else "The price of death", 18, Art.INK, Art.font_heading))
+	row.add_child(Art.label("%d Renown" % int(pen["renown"]), 18, Art.BLOOD, Art.font_heading))
+	if str(pen.get("lost_item", "")) != "":
+		v.add_child(Art.label("Lost: %s — it shattered as you fell." % pen["lost_item"], 16, Art.BLOOD, Art.font_italic))
+	if int(pen["level"]) < int(pen["level_before"]):
+		v.add_child(Art.label("Renown falls: Level %d (%s)" % [int(pen["level"]), pen["title"]], 15, Art.BLOOD, Art.font_italic))
+
 ## An engraved channel filled with molten gold.
 class RenownBar extends Control:
 	var frac := 0.0

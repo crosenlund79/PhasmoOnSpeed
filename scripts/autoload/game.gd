@@ -169,7 +169,7 @@ func finish_run(summary: Dictionary, replay: Dictionary) -> void:
 	var records := SaveData.record_run(summary)
 	SaveData.save_replay(replay)
 	# The global leaderboard ranks Normal runs only; Nightmare records stay local and separate.
-	if summary.get("difficulty", "normal") == "normal":
+	if summary.get("difficulty", "normal") == "normal" and not summary.get("dev_immortal", false):
 		Online.submit(summary, SaveData.settings().get("player_name", "Investigator"))
 	last_result = {"summary": summary, "replay": replay, "records": records}
 	var res = preload("res://scripts/ui/results.gd").new()
