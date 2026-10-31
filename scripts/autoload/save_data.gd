@@ -116,6 +116,7 @@ func record_run(summary: Dictionary) -> Dictionary:
 	_update_stats(summary)
 	out["reward"] = Progression.grant(progress(), Progression.solo_reward(summary),
 		"solo:%s:%d:%.2f" % [house_id, int(summary.get("seed", 0)), float(summary["time"])])
+	out["mission"] = Progression.settle_mission(progress(), summary, int(data.get("runs_started", 0)))
 	var hist: Array = data["history"]
 	hist.append(_history_row(summary))
 	while hist.size() > HISTORY_LIMIT:
