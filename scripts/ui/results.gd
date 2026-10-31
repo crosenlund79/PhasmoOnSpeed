@@ -170,6 +170,7 @@ func _build_panel(root: Control, won: bool) -> void:
 		var rtext := "You stand above every legend. For now." if rival.is_empty() else "Next: %s — %d pts" % [rival["name"], rival["score"]]
 		v.add_child(Art.label(rtext, 15, Color(0.3, 0.22, 0.15), Art.font_italic))
 		v.add_child(Art.label("(The legendary hunters are fictional.)", 12, Color(0.4, 0.32, 0.24)))
+	RankPlate.add_reward_lines(v, recs.get("reward", {}))
 	_online_label = Art.label(Online.last_status, 13, Color(0.35, 0.28, 0.22), Art.font_italic)
 	_online_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(_online_label)

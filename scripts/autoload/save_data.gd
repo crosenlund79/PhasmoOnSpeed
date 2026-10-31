@@ -30,6 +30,8 @@ func _defaults() -> Dictionary:
 		# Competitive multiplayer is kept completely separate from solo records.
 		"mp": {"matches": 0, "wins": 0, "best_score": 0, "vanquishes": 0, "deaths": 0, "shoves_given": 0,
 			"shoves_taken": 0, "history": []},
+		# Gold Ducats, Renown, owned and equipped wares (see Progression).
+		"progress": Progression.defaults(),
 	}
 
 func load_data() -> void:
@@ -51,6 +53,12 @@ func load_data() -> void:
 			data["settings"][k] = _defaults()["settings"][k]
 	if not data.has("mp"):
 		data["mp"] = _defaults()["mp"]
+	# Saves from before progression start at 0 Ducats / 0 Renown with the common needle.
+	if typeof(data.get("progress")) != TYPE_DICTIONARY:
+		data["progress"] = Progression.defaults()
+	for k in Progression.defaults():
+		if not data["progress"].has(k):
+			data["progress"][k] = Progression.defaults()[k]
 
 func save() -> void:
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
@@ -63,6 +71,9 @@ func reset_all() -> void:
 
 func settings() -> Dictionary:
 	return data["settings"]
+
+func progress() -> Dictionary:
+	return data["progress"]
 
 func set_setting(key: String, value) -> void:
 	data["settings"][key] = value
@@ -103,6 +114,8 @@ func record_run(summary: Dictionary) -> Dictionary:
 			data["records"]["best_score_time"] = summary["time"]
 			data["records"]["best_score_house"] = summary.get("house_name", house_id)
 	_update_stats(summary)
+	out["reward"] = Progression.grant(progress(), Progression.solo_reward(summary),
+		"solo:%s:%d:%.2f" % [house_id, int(summary.get("seed", 0)), float(summary["time"])])
 	var hist: Array = data["history"]
 	hist.append(_history_row(summary))
 	while hist.size() > HISTORY_LIMIT:
@@ -182,6 +195,8 @@ func record_match(results: Dictionary, my_actor: String) -> Dictionary:
 	if int(me["score"]) > int(mp.get(best_key, 0)):
 		mp[best_key] = int(me["score"])
 		out["new_best"] = true
+	out["reward"] = Progression.grant(progress(), Progression.match_reward(results, me),
+		"mp:%s:%d:%.2f:%s" % [results.get("house", ""), int(results.get("seed", 0)), float(results.get("time", 0.0)), my_actor])
 	var hist: Array = mp["history"]
 	hist.append({"house": results["house"], "creature": results["creature"], "outcome": results["outcome"],
 		"time": results["time"], "score": me["score"], "rank": me["rank"], "players": results["rows"].size(),
