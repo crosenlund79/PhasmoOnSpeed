@@ -1,4 +1,4 @@
-"""Stamps the exported Windows .exe with the SPECTRAL RUN icon and version details.
+"""Stamps the exported Windows .exe with the game icon and version details.
 
 Godot 4.3 can only do this through rcedit (a Windows tool); this does the same
 with LIEF so the build works anywhere:  python3 stamp_exe.py <exe> <icon.png> <version>
@@ -52,9 +52,9 @@ def main(exe, icon_png, version):
         new = lief.PE.ResourceIcon.from_serialization(buf.getvalue())
         new.id, new.lang, new.sublang = old.id, old.lang, old.sublang
         m.change_icon(old, new)
-    strings = {"CompanyName": "SPECTRAL RUN", "FileDescription": "SPECTRAL RUN", "FileVersion": version,
-               "InternalName": "SpectralRun", "LegalCopyright": "SPECTRAL RUN. Made with Godot Engine (MIT licence).",
-               "OriginalFilename": "SpectralRun.exe", "ProductName": "SPECTRAL RUN", "ProductVersion": version}
+    strings = {"CompanyName": "THE WITCHENING TALES", "FileDescription": "THE WITCHENING TALES", "FileVersion": version,
+               "InternalName": "SpectralRun", "LegalCopyright": "THE WITCHENING TALES. Made with Godot Engine (MIT licence).",
+               "OriginalFilename": "SpectralRun.exe", "ProductName": "THE WITCHENING TALES", "ProductVersion": version}
     for d in b.resources.childs:
         if d.id == 16:   # RT_VERSION
             for name_dir in d.childs:
@@ -66,7 +66,7 @@ def main(exe, icon_png, version):
     # Verify.
     chk = lief.PE.parse(exe).resources_manager
     got = {e.key: e.value for v in chk.version for t in v.string_file_info.children for e in t.entries}
-    assert got.get("ProductName") == "SPECTRAL RUN" and got.get("ProductVersion") == version, got
+    assert got.get("ProductName") == "THE WITCHENING TALES" and got.get("ProductVersion") == version, got
     print("stamped %s: %d icons, version %s" % (exe, len(list(chk.icons)), version))
 
 

@@ -1,4 +1,4 @@
-; SPECTRAL RUN — Windows installer (NSIS 3).
+; THE WITCHENING TALES (formerly SPECTRAL RUN) — Windows installer (NSIS 3).
 ; Built by tools/installer/build_installer.sh, which exports the game first and
 ; passes VERSION and SRC (the folder holding SpectralRun.exe / SpectralRun.pck).
 ;
@@ -6,9 +6,12 @@
 ;   %LOCALAPPDATA%\Programs\SpectralRun
 ; registered under HKCU ...\Uninstall\SpectralRun. Running a newer installer
 ; finds the previous folder through that key and updates it in place.
-; Player data (saves, settings, statistics, leaderboards, replays) lives in
+; Player data (saves, settings, statistics, leaderboards, replays, Renown,
+; Ducats, owned equipment) lives in
 ;   %APPDATA%\Godot\app_userdata\SPECTRAL RUN
-; and is never touched — not by updates, not by the uninstaller.
+; (kept under its original name after the rename) and is never touched — not by
+; updates, not by the uninstaller. The install identity (folder, registry key,
+; SpectralRun.exe) is unchanged, so this updates any earlier version in place.
 
 Unicode true
 !ifndef VERSION
@@ -18,10 +21,11 @@ Unicode true
   !error "pass /DSRC=<export folder>"
 !endif
 !ifndef OUTFILE
-  !define OUTFILE "SpectralRun-Setup-${VERSION}.exe"
+  !define OUTFILE "TheWitcheningTales-Setup-${VERSION}.exe"
 !endif
 
-!define APPNAME "SPECTRAL RUN"
+!define APPNAME "THE WITCHENING TALES"
+!define OLDNAME "SPECTRAL RUN"   ; shortcuts created by earlier versions
 !define APPID "SpectralRun"
 !define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPID}"
 
@@ -36,7 +40,7 @@ VIAddVersionKey "ProductName" "${APPNAME}"
 VIAddVersionKey "ProductVersion" "${VERSION}"
 VIAddVersionKey "FileVersion" "${VERSION}"
 VIAddVersionKey "FileDescription" "${APPNAME} installer"
-VIAddVersionKey "LegalCopyright" "SPECTRAL RUN"
+VIAddVersionKey "LegalCopyright" "${APPNAME}"
 
 !include "MUI2.nsh"
 !define MUI_ABORTWARNING
@@ -76,6 +80,11 @@ Section "Install"
   File "${SRC}\SpectralRun.exe"
   File "${SRC}\SpectralRun.pck"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
+  ; The game was renamed: replace the old shortcuts rather than leave both.
+  Delete "$SMPROGRAMS\${OLDNAME}\${OLDNAME}.lnk"
+  Delete "$SMPROGRAMS\${OLDNAME}\Uninstall ${OLDNAME}.lnk"
+  RMDir "$SMPROGRAMS\${OLDNAME}"
+  Delete "$DESKTOP\${OLDNAME}.lnk"
   CreateDirectory "$SMPROGRAMS\${APPNAME}"
   CreateShortcut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\SpectralRun.exe"
   CreateShortcut "$SMPROGRAMS\${APPNAME}\Uninstall ${APPNAME}.lnk" "$INSTDIR\Uninstall.exe"

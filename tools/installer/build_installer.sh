@@ -5,7 +5,7 @@
 # Python with LIEF + Pillow (pip install lief pillow) to stamp the game icon and
 # version into the .exe (Godot 4.3 itself would need rcedit for that).
 # Output: export/windows/SpectralRun.{exe,pck} and
-#         export/installer/SpectralRun-Setup-<version>.exe   (export/ is not committed)
+#         export/installer/TheWitcheningTales-Setup-<version>.exe   (export/ is not committed)
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 GODOT="${GODOT:-godot}"
@@ -17,5 +17,5 @@ test -s export/windows/SpectralRun.exe && test -s export/windows/SpectralRun.pck
 python3 tools/icon/make_icon.py >/dev/null
 python3 tools/installer/stamp_exe.py export/windows/SpectralRun.exe icon.png "$VERSION"
 makensis -V2 -DVERSION="$VERSION" -DSRC="$(pwd)/export/windows" \
-  -DOUTFILE="$(pwd)/export/installer/SpectralRun-Setup-$VERSION.exe" -DICON="$(pwd)/icon.ico" tools/installer/spectral_run.nsi
-ls -l export/installer/SpectralRun-Setup-"$VERSION".exe
+  -DOUTFILE="$(pwd)/export/installer/TheWitcheningTales-Setup-$VERSION.exe" -DICON="$(pwd)/icon.ico" tools/installer/spectral_run.nsi
+ls -l export/installer/TheWitcheningTales-Setup-"$VERSION".exe

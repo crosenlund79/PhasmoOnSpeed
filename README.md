@@ -1,4 +1,4 @@
-# SPECTRAL RUN
+# THE WITCHENING TALES
 
 A fast, single-player Gothic Noir supernatural investigation speedrunner for
 **Godot 4.3** (GL Compatibility renderer, strictly 2D, directly overhead).
@@ -29,12 +29,12 @@ GODOT=/path/to/godot-4.3 tools/installer/build_installer.sh
 
 Needs the Godot 4.3 export templates and NSIS (`makensis`). It exports
 `export/windows/SpectralRun.exe` + `.pck` and builds
-`export/installer/SpectralRun-Setup-<version>.exe` (the version comes from
+`export/installer/TheWitcheningTales-Setup-<version>.exe` (the version comes from
 `project.godot`; `export/` is not committed). The installer is per-user (no
 admin rights), installs to `%LOCALAPPDATA%\Programs\SpectralRun`, and a newer
 installer updates that folder in place, asking you to close the game first if it
 is running. Saves, settings, statistics and leaderboards live in
-`%APPDATA%\Godot\app_userdata\SPECTRAL RUN` and are never touched by updates or
+`%APPDATA%\Godot\app_userdata\SPECTRAL RUN` and (kept under the original name, SPECTRAL RUN) are never touched by updates or
 the uninstaller.
 
 ## Controls
