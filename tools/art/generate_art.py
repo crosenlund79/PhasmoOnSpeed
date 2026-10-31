@@ -3,7 +3,7 @@
 
     python3 tools/art/generate_art.py                 # everything
     python3 tools/art/generate_art.py floors tokens   # only some groups
-        groups: floors furniture tokens items icons ui | rev. 2: basement decor menu
+        groups: floors furniture tokens items icons ui | rev. 2: basement decor menu | rev. 6: locations
     python3 tools/art/generate_art.py --check         # verify sizes vs docs/ASSET_MANIFEST.md
     python3 tools/art/generate_art.py --preview DIR   # also write contact sheets to DIR
 
@@ -41,6 +41,11 @@ FURNITURE2 = {
     "covered_sofa": (4, 2), "broken_chair": (1, 1), "old_trunk": (2, 1), "water_tank": (2, 2), "pipes": (4, 1),
     "boards": (2, 1), "debris": (2, 2), "desk_large": (6, 4), "stairs_down": (1, 1), "stairs_up": (1, 1),
     "hatch": (1, 1),
+}
+# revision 6: the inn and the harbour (built by locations.py, group "locations")
+FURNITURE3 = {
+    "bar_counter": (4, 1), "keg_rack": (3, 1), "rope_coil": (1, 1), "bollard": (1, 1), "fishing_net": (2, 2),
+    "water": (2, 2), "boat_hull": (6, 14),
 }
 DECOR = {"grime": (512, 512), "damp": (512, 512), "cracks": (512, 512), "cobweb": (64, 64), "stain_1": (128, 128),
          "stain_2": (128, 128), "stain_3": (128, 128), "peel": (128, 32), "dust_sheet_scrap": (64, 64),
@@ -82,6 +87,8 @@ def expected():
     for f, (w, h) in FURNITURE.items():
         exp[f"furniture/{f}.png"] = (w * C, h * C)
     for f, (w, h) in FURNITURE2.items():
+        exp[f"furniture/{f}.png"] = (w * C, h * C)
+    for f, (w, h) in FURNITURE3.items():
         exp[f"furniture/{f}.png"] = (w * C, h * C)
     for f, s in DECOR.items():
         exp[f"decor/{f}.png"] = s
@@ -136,7 +143,7 @@ def check():
     return ok
 
 
-GROUPS = ["floors", "furniture", "tokens", "items", "ui", "basement", "decor", "menu"]
+GROUPS = ["floors", "furniture", "tokens", "items", "ui", "basement", "decor", "menu", "locations"]
 
 
 def main(argv):
@@ -178,6 +185,9 @@ def main(argv):
         elif g == "menu":
             import menu_props
             menu_props.build_all()
+        elif g == "locations":
+            import locations
+            locations.build_all()
         else:
             print("unknown group", g)
             continue

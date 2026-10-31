@@ -339,6 +339,154 @@ HOUSES.append({
     ],
 })
 
+# ---------------------------------------------------------------------------
+# 6. The Black Lantern Inn — coaching inn: common room, taproom, kitchen, stables.
+HOUSES.append({
+    "id": "tavern", "name": "The Black Lantern Inn",
+    "blurb": "Last orders were called in 1871. Somebody is still drinking.",
+    "size": [50, 34], "spawn": [24, 30], "npcs": 3,
+    "rooms": [
+        room("west_lane", "Drovers' Lane", "gravel", "yard", [[1, 1, 3, 27]], lit=False, outdoor=True),
+        room("stable_yard", "Stable Yard", "dirt", "yard", [[43, 1, 6, 27]], lit=False, outdoor=True),
+        room("coaching_yard", "Coaching Yard", "gravel", "yard", [[1, 28, 48, 5]], lit=False, outdoor=True),
+        room("kitchen", "Inn Kitchen", "tile_checker", "kitchen", [[5, 1, 11, 7]]),
+        room("pantry", "Pantry", "stone", "pantry", [[17, 1, 6, 7]], lit=False),
+        room("brewhouse", "Brewhouse", "stone", "shed", [[24, 1, 6, 7]], lit=False),
+        room("stables", "Stables", "dirt", "shed", [[31, 1, 11, 7]], lit=False),
+        room("back_passage", "Back Passage", "wood_dark", "hall", [[5, 9, 37, 3]], lit=False),
+        room("common_room", "Common Room", "wood_dark", "dining", [[5, 13, 18, 14]]),
+        room("taproom", "Taproom", "parquet", "living", [[24, 13, 10, 14]]),
+        room("snug", "The Snug", "carpet_red", "living", [[35, 13, 7, 6]], lit=False),
+        room("office", "Innkeeper's Office", "carpet_green", "study", [[35, 20, 7, 7]]),
+    ],
+    "doors": [
+        [10, 8], [19, 8], [27, 8], [36, 8], [16, 4], [23, 4], [30, 4], [4, 4], [42, 4], [4, 10], [42, 10],
+        [10, 12], [28, 12], [38, 12], [23, 17], [23, 22], [34, 15], [34, 23], [38, 19],
+        [13, 27], [14, 27], [29, 27], [38, 27],
+    ],
+    "furniture": [
+        # kitchen (south-west corner: cellar stairs)
+        ["stove", 5, 1, 0], ["stove", 7, 1, 0], ["counter", 9, 1, 0], ["sink_kitchen", 12, 1, 0], ["icebox", 14, 1, 0],
+        ["dining_table", 7, 4, 0], ["barrel", 15, 7, 0], ["cabinet", 12, 7, 0],
+        # pantry
+        ["storage_shelf", 17, 1, 0], ["cabinet", 20, 1, 0], ["barrel", 22, 1, 0], ["crates", 21, 5, 0], ["barrel", 17, 7, 0],
+        # brewhouse
+        ["keg_rack", 24, 1, 0], ["wash_tub", 27, 1, 0], ["workbench", 24, 7, 0], ["woodpile", 28, 7, 0],
+        # stables
+        ["hay", 31, 1, 0], ["workbench", 35, 1, 0], ["hay", 39, 1, 0], ["barrel", 41, 1, 0], ["hay", 31, 6, 0],
+        ["crates", 33, 5, 0], ["wash_tub", 39, 6, 0],
+        # back passage
+        ["grandfather_clock", 5, 9, 0], ["rug_rect", 13, 9, 0], ["wall_mirror", 24, 9, 0], ["side_table", 33, 11, 0],
+        ["potted_plant", 41, 11, 0],
+        # common room (south-west corner: the main staircase)
+        ["fireplace", 5, 13, 0], ["pew", 15, 13, 0], ["dining_table", 8, 16, 0], ["dining_table", 15, 16, 0],
+        ["dining_table", 8, 21, 0], ["dining_table", 15, 21, 0], ["candelabra", 22, 13, 0], ["candelabra", 22, 26, 0],
+        ["barrel", 19, 26, 0],
+        # taproom
+        ["bar_counter", 30, 14, 1], ["bar_counter", 30, 20, 1], ["keg_rack", 33, 18, 1], ["chair", 29, 15, 0],
+        ["chair", 29, 21, 0], ["dining_table", 25, 19, 1], ["candelabra", 24, 13, 0], ["barrel", 31, 26, 0],
+        ["wine_rack", 31, 13, 0],
+        # snug
+        ["armchair", 35, 13, 0], ["fireplace", 39, 13, 0], ["armchair", 40, 16, 0], ["coffee_table", 36, 17, 0],
+        # office (south-east corner: back stairs)
+        ["bookshelf", 35, 20, 0], ["cabinet", 40, 20, 0], ["desk", 38, 22, 0], ["chair", 39, 24, 2], ["trunk", 35, 26, 0],
+        # outside
+        ["hay", 45, 2, 0], ["wash_tub", 45, 8, 0], ["barrel", 47, 20, 0], ["tree", 45, 23, 0], ["barrel", 1, 7, 0],
+        ["crates", 1, 18, 0], ["tree", 2, 29, 0], ["barrel", 20, 29, 0], ["hedge", 40, 30, 0], ["hedge", 33, 31, 0],
+        ["floor_lamp", 12, 28, 0], ["floor_lamp", 30, 28, 0],
+    ],
+})
+
+# ---------------------------------------------------------------------------
+# 7. Saltmarsh Harbour — warehouse, harbour master's office, quays, jetties and a
+# moored lugger over black water (water = solid tiles drawn under the actors).
+HARBOUR_WATER = [1, 24, 54, 14]           # x, y, w, h of the basin (2-cell tiles, odd x / even y)
+HARBOUR_DRY = [[9, 24, 2, 12], [29, 24, 2, 12], [31, 34, 6, 2], [37, 24, 2, 12]]   # jetties (part of the quay)
+HARBOUR_DECK = [[13, 26, 4, 10], [11, 30, 2, 2]]                                   # the lugger's deck + gangway
+
+
+def harbour_water():
+    """Rects of open water (basin minus jetties and deck) and the water tiles covering them."""
+    x0, y0, w, h = HARBOUR_WATER
+    dry = set()
+    for rx, ry, rw, rh in HARBOUR_DRY + HARBOUR_DECK:
+        dry |= {(x, y) for x in range(rx, rx + rw) for y in range(ry, ry + rh)}
+    rects, tiles = [], []
+    for y in range(y0, y0 + h, 2):
+        x = x0
+        while x < x0 + w:
+            if (x, y) in dry:
+                x += 2
+                continue
+            start = x
+            while x < x0 + w and (x, y) not in dry:
+                tiles.append(["water", x, y, 0])
+                x += 2
+            rects.append([start, y, x - start, 2])
+    return rects, tiles
+
+
+_HW_RECTS, _HW_TILES = harbour_water()
+
+HOUSES.append({
+    "id": "harbor", "name": "Saltmarsh Harbour",
+    "blurb": "The tide brought the boat back. It did not bring back the crew.",
+    "size": [56, 39], "spawn": [27, 2], "npcs": 2,
+    "rooms": [
+        room("harbour_road", "Harbour Road", "gravel", "yard", [[1, 1, 54, 3]], lit=False, outdoor=True),
+        room("rope_walk", "Rope Walk", "gravel", "yard", [[1, 4, 3, 16]], lit=False, outdoor=True),
+        room("quay", "Quay and Jetties", "wood_dark", "yard", [[1, 20, 54, 4]] + HARBOUR_DRY + _HW_RECTS, lit=False, outdoor=True),
+        room("deck", "Deck of the Mary Ellen", "wood_light", "yard", HARBOUR_DECK, lit=False, outdoor=True),
+        room("warehouse", "Warehouse", "wood_dark", "shed", [[5, 5, 18, 8]], lit=False),
+        room("salting_house", "Salting House", "stone", "pantry", [[5, 14, 11, 5]], lit=False),
+        room("cooperage", "Cooperage", "dirt", "shed", [[17, 14, 6, 5]], lit=False),
+        room("harbour_office", "Harbour Master's Office", "carpet_green", "study", [[24, 5, 10, 7]]),
+        room("customs_hall", "Customs Hall", "stone", "hall", [[24, 13, 10, 6]]),
+        room("mess", "Seamen's Mess", "tile_checker", "kitchen", [[35, 5, 11, 7]]),
+        room("chandlery", "Ship Chandlery", "wood_light", "pantry", [[35, 13, 11, 6]], lit=False),
+        room("net_shed", "Net Shed", "dirt", "shed", [[47, 5, 8, 14]], lit=False),
+    ],
+    "doors": [
+        [4, 8], [12, 4], [23, 8], [10, 13], [4, 16], [16, 16], [10, 19], [20, 19], [20, 13],
+        [28, 4], [28, 12], [34, 8], [28, 19], [34, 16], [23, 16], [40, 4], [40, 12], [40, 19], [46, 16],
+        [50, 4], [50, 19], [46, 8],
+    ],
+    "furniture": _HW_TILES + [
+        ["boat_hull", 12, 24, 0],
+        # the lugger's deck
+        ["barrel", 13, 26, 0], ["crates", 15, 27, 0], ["rope_coil", 16, 31, 0], ["fishing_net", 13, 33, 0], ["barrel", 16, 35, 0],
+        # harbour road and rope walk
+        ["floor_lamp", 8, 1, 0], ["floor_lamp", 34, 1, 0], ["floor_lamp", 46, 1, 0], ["crates", 19, 1, 0], ["barrel", 22, 1, 0],
+        ["rope_coil", 31, 2, 0], ["barrel", 1, 6, 0], ["crates", 1, 10, 0],
+        # quay
+        ["bollard", 7, 23, 0], ["bollard", 12, 23, 0], ["bollard", 17, 23, 0], ["bollard", 26, 23, 0], ["bollard", 35, 23, 0],
+        ["bollard", 42, 23, 0], ["bollard", 52, 23, 0], ["rope_coil", 8, 21, 0], ["crates", 44, 21, 0], ["barrel", 47, 20, 0],
+        ["fishing_net", 22, 21, 0], ["floor_lamp", 31, 20, 0], ["rope_coil", 10, 35, 0], ["bollard", 38, 35, 0],
+        # warehouse (north-east corner: loft stairs, south-west corner: cellar stairs)
+        ["crates", 6, 5, 0], ["crates", 14, 5, 0], ["storage_shelf", 16, 5, 0], ["barrel", 19, 5, 0], ["crates", 8, 9, 0],
+        ["crates", 14, 9, 0], ["fishing_net", 17, 9, 0], ["barrel", 19, 11, 0], ["barrel", 20, 11, 0], ["rope_coil", 11, 7, 0],
+        # salting house
+        ["barrel", 5, 14, 0], ["barrel", 6, 14, 0], ["counter", 12, 14, 0], ["wash_tub", 13, 17, 0], ["cabinet", 5, 18, 0],
+        # cooperage
+        ["workbench", 17, 14, 0], ["barrel", 22, 14, 0], ["barrel", 22, 15, 0], ["woodpile", 21, 18, 0], ["barrel", 17, 18, 0],
+        # harbour master's office (north-east corner: stairs up)
+        ["bookshelf", 24, 5, 0], ["grandfather_clock", 27, 5, 0], ["desk", 29, 8, 0], ["chair", 30, 10, 2],
+        ["cabinet", 24, 11, 0], ["wall_mirror", 31, 11, 0], ["side_table", 33, 11, 0],
+        # customs hall
+        ["pew", 24, 14, 0], ["counter", 30, 13, 0], ["cabinet", 32, 13, 0], ["crates", 31, 17, 0], ["rug_rect", 25, 15, 0],
+        ["wall_mirror", 24, 18, 0],
+        # seamen's mess
+        ["stove", 36, 5, 0], ["counter", 38, 5, 0], ["sink_kitchen", 42, 5, 0], ["icebox", 44, 5, 0],
+        ["dining_table", 38, 7, 0], ["chair", 37, 8, 0], ["chair", 43, 8, 0], ["barrel", 35, 11, 0],
+        # chandlery (north-east corner: cellar stairs)
+        ["storage_shelf", 35, 13, 0], ["storage_shelf", 41, 13, 0], ["crates", 37, 17, 0], ["rope_coil", 42, 18, 0],
+        ["cabinet", 43, 16, 0], ["barrel", 35, 18, 0],
+        # net shed
+        ["fishing_net", 48, 6, 0], ["fishing_net", 52, 10, 0], ["fishing_net", 48, 12, 0], ["rope_coil", 53, 5, 0],
+        ["rope_coil", 54, 5, 0], ["barrel", 54, 18, 0], ["crates", 52, 16, 0], ["workbench", 54, 8, 1],
+    ],
+})
+
 
 # ---------------------------------------------------------------------------
 # Basements (revision 2). Coordinates are local to the basement; the basement
@@ -471,6 +619,293 @@ BASEMENTS = {
             {"name": "Basement Stairs", "a": [34, 17], "a_land": [33, 17], "b": [30, 7], "b_land": [29, 7], "style": "stairs"},
         ],
     },
+    "tavern": {
+        "size": [44, 17],
+        "rooms": [
+            broom("beer_cellar", "Beer Cellar", "stone", "cellar", [[5, 1, 14, 7]]),
+            broom("boiler_room", "Boiler Room", "stone", "cellar", [[20, 1, 9, 7]], lit=True),
+            broom("wine_vault", "Wine Vault", "stone", "cellar", [[30, 1, 12, 7]]),
+            broom("cellar_passage", "Cellar Passage", "stone", "hall", [[5, 9, 37, 2]]),
+            broom("smugglers_hold", "Smugglers' Hold", "dirt", "cellar", [[5, 12, 18, 4]]),
+            broom("coal_store", "Coal Store", "dirt", "shed", [[24, 12, 18, 4]]),
+        ],
+        "doors": [[10, 8], [24, 8], [36, 8], [19, 4], [29, 4], [12, 11], [32, 11], [23, 13]],
+        "furniture": [
+            ["keg_rack", 9, 1, 0], ["keg_rack", 13, 1, 0], ["keg_rack", 5, 4, 1], ["barrel", 17, 1, 0], ["barrel", 18, 1, 0],
+            ["barrel", 8, 6, 0], ["barrel", 12, 6, 0], ["crates", 16, 6, 0],
+            ["boiler", 23, 1, 0], ["coal_pile", 20, 5, 0], ["pipes", 25, 7, 0], ["water_tank", 27, 1, 0],
+            ["wine_rack", 30, 1, 0], ["wine_rack", 34, 1, 0], ["wine_rack", 37, 1, 0], ["wine_rack", 31, 7, 0], ["barrel", 38, 6, 0],
+            ["pipes", 14, 9, 0], ["debris", 26, 9, 0],
+            ["old_trunk", 5, 12, 0], ["crates", 7, 14, 0], ["barrel", 16, 12, 0], ["covered_armchair", 18, 14, 0],
+            ["broken_chair", 11, 15, 0],
+            ["coal_pile", 25, 12, 0], ["coal_pile", 38, 13, 0], ["woodpile", 30, 15, 0], ["barrel", 41, 15, 0],
+        ],
+        "stairs": [
+            {"name": "Cellar Stairs", "a": [5, 7], "a_land": [6, 7], "b": [5, 1], "b_land": [5, 2], "style": "stairs"},
+            {"name": "Keg Drop", "a": [48, 14], "a_land": [47, 14], "b": [41, 1], "b_land": [41, 2], "style": "hatch"},
+        ],
+    },
+    "harbor": {
+        "size": [50, 17],
+        "rooms": [
+            broom("bonded_vaults", "Bonded Vaults", "stone", "cellar", [[5, 1, 14, 7]]),
+            broom("boiler_room", "Boiler Room", "stone", "cellar", [[20, 1, 9, 7]], lit=True),
+            broom("ice_house", "Ice House", "stone", "cellar", [[30, 1, 16, 7]]),
+            broom("tunnel", "Smugglers' Tunnel", "dirt", "hall", [[5, 9, 41, 2]]),
+            broom("rum_store", "Rum Store", "stone", "cellar", [[5, 12, 18, 4]]),
+            broom("tide_cistern", "Tide Cistern", "stone", "cellar", [[24, 12, 22, 4]]),
+        ],
+        "doors": [[10, 8], [24, 8], [38, 8], [19, 4], [29, 4], [12, 11], [34, 11], [23, 13]],
+        "furniture": [
+            ["barrel", 5, 1, 0], ["wine_rack", 9, 1, 0], ["storage_shelf", 13, 1, 0], ["barrel", 17, 1, 0], ["barrel", 18, 1, 0],
+            ["crates", 12, 4, 0], ["keg_rack", 15, 6, 0],
+            ["boiler", 23, 1, 0], ["coal_pile", 20, 5, 0], ["pipes", 25, 7, 0], ["water_tank", 27, 1, 0],
+            ["storage_shelf", 30, 1, 0], ["crates", 34, 1, 0], ["barrel", 38, 1, 0], ["water_tank", 40, 5, 0], ["crates", 31, 6, 0],
+            ["pipes", 14, 9, 0], ["debris", 30, 9, 0],
+            ["barrel", 5, 12, 0], ["barrel", 6, 12, 0], ["keg_rack", 6, 15, 0], ["crates", 16, 12, 0], ["old_trunk", 19, 15, 0],
+            ["water_tank", 26, 12, 0], ["water_tank", 40, 13, 0], ["debris", 30, 13, 0], ["boards", 36, 14, 0],
+        ],
+        "stairs": [
+            {"name": "Warehouse Stairs", "a": [5, 12], "a_land": [6, 12], "b": [5, 7], "b_land": [6, 7], "style": "stairs"},
+            {"name": "Chandlery Stairs", "a": [45, 13], "a_land": [45, 14], "b": [45, 1], "b_land": [45, 2], "style": "stairs"},
+        ],
+    },
+}
+
+# ---------------------------------------------------------------------------
+# Upper floors (revision 6). Coordinates are local to the floor; it is placed
+# below everything else (main floor, basement) with the same void gap, so the
+# levels never share walls, light or line of sight. Rooms get "level": 1.
+# Each staircase: "top" is the cell on the upper floor (+ its landing), "main"
+# the cell on the main floor. Every flight sits in a corner of its room, its
+# steps running into a wall, so the two-cell flight stays inside the room.
+
+
+def uroom(rid, name, floor, kind, rects, lit=False):
+    r = room(rid, name, floor, kind, rects, lit=lit)
+    r["level"] = 1
+    return r
+
+
+UPPERS = {
+    "ashgrove": {
+        "size": [44, 19],
+        "rooms": [
+            uroom("attic_landing", "Attic Landing", "wood_light", "hall", [[5, 8, 34, 3]], lit=True),
+            uroom("nursery", "Nursery", "carpet_blue", "bedroom", [[5, 1, 10, 6]]),
+            uroom("sewing_room", "Sewing Room", "carpet_green", "study", [[16, 1, 10, 6]]),
+            uroom("attic_store", "Attic Store", "wood_dark", "storage", [[27, 1, 12, 6]]),
+            uroom("box_room", "Box Room", "wood_light", "storage", [[5, 12, 8, 6]]),
+            uroom("maids_room", "Maid's Room", "wood_light", "bedroom", [[14, 12, 8, 6]]),
+            uroom("lumber_attic", "Lumber Attic", "wood_dark", "shed", [[23, 12, 16, 6]]),
+        ],
+        "doors": [[10, 7], [21, 7], [32, 7], [15, 4], [26, 4], [8, 11], [17, 11], [30, 11], [13, 15], [22, 15]],
+        "furniture": [
+            ["bed_single", 5, 1, 0], ["rug_round", 9, 2, 0], ["chair", 8, 1, 0], ["trunk", 12, 1, 0], ["dresser", 5, 6, 0],
+            ["desk", 18, 1, 0], ["chair", 19, 3, 2], ["cabinet", 22, 1, 0], ["storage_shelf", 16, 6, 0],
+            ["covered_armchair", 23, 5, 0], ["wall_mirror", 24, 1, 0],
+            ["crates", 27, 1, 0], ["old_trunk", 30, 1, 0], ["covered_sofa", 33, 1, 0], ["storage_shelf", 36, 6, 0],
+            ["debris", 29, 4, 0], ["broken_chair", 35, 4, 0],
+            ["rug_rect", 12, 8, 0], ["candelabra", 5, 8, 0], ["wall_mirror", 24, 8, 0], ["side_table", 27, 10, 0],
+            ["trunk", 5, 12, 0], ["crates", 10, 12, 0], ["bed_single", 5, 14, 0], ["barrel", 12, 17, 0],
+            ["bed_single", 19, 12, 0], ["nightstand", 21, 12, 0], ["washbasin", 14, 12, 0], ["wall_mirror", 14, 17, 0],
+            ["dresser", 17, 17, 0],
+            ["woodpile", 24, 12, 0], ["water_tank", 36, 12, 0], ["crates", 33, 15, 0], ["boards", 27, 14, 0],
+            ["covered_armchair", 26, 16, 0], ["barrel", 38, 17, 0], ["old_trunk", 31, 17, 0],
+        ],
+        "stairs": [
+            {"name": "Attic Stairs", "main": [38, 7], "main_land": [38, 8], "top": [38, 10], "top_land": [37, 10]},
+        ],
+    },
+    "blackwood": {
+        "size": [52, 22],
+        "rooms": [
+            uroom("long_gallery", "Upper Gallery", "carpet_red", "hall", [[5, 9, 42, 3]], lit=True),
+            uroom("boudoir", "Lady's Boudoir", "carpet_red", "bedroom", [[5, 1, 10, 7]]),
+            uroom("blue_room", "Blue Guest Room", "carpet_blue", "bedroom", [[16, 1, 10, 7]]),
+            uroom("sewing_room", "Sewing Room", "wood_light", "study", [[27, 1, 8, 7]]),
+            uroom("linen_room", "Linen Room", "wood_light", "storage", [[36, 1, 11, 7]]),
+            uroom("rose_room", "Rose Guest Room", "carpet_green", "bedroom", [[5, 13, 13, 8]]),
+            uroom("governess_room", "Governess's Room", "wood_dark", "bedroom", [[19, 13, 13, 8]]),
+            uroom("library_gallery", "Library Gallery", "wood_dark", "study", [[33, 13, 14, 8]]),
+        ],
+        "doors": [[10, 8], [21, 8], [31, 8], [41, 8], [15, 4], [26, 4], [35, 4], [11, 12], [25, 12], [39, 12],
+                  [18, 16], [32, 16]],
+        "furniture": [
+            ["bed_double", 10, 1, 0], ["nightstand", 9, 1, 0], ["nightstand", 13, 1, 0], ["dresser", 5, 7, 0],
+            ["wall_mirror", 7, 7, 0], ["armchair", 12, 5, 0],
+            ["bed_double", 19, 1, 0], ["nightstand", 18, 1, 0], ["nightstand", 22, 1, 0], ["wardrobe", 16, 7, 0],
+            ["dresser", 23, 7, 0], ["chair", 24, 1, 0],
+            ["desk", 28, 1, 0], ["chair", 29, 3, 2], ["cabinet", 32, 1, 0], ["covered_armchair", 27, 6, 0],
+            ["storage_shelf", 32, 7, 0],
+            ["storage_shelf", 37, 1, 0], ["storage_shelf", 41, 1, 0], ["wash_tub", 45, 1, 0], ["cabinet", 36, 7, 0],
+            ["trunk", 44, 7, 0], ["boards", 39, 5, 0],
+            ["grandfather_clock", 5, 9, 0], ["rug_rect", 14, 9, 0], ["rug_rect", 32, 9, 0], ["wall_mirror", 27, 9, 0],
+            ["candelabra", 46, 9, 0], ["potted_plant", 46, 11, 0], ["pew", 16, 11, 0],
+            ["bed_double", 5, 14, 0], ["nightstand", 8, 14, 0], ["wardrobe", 5, 20, 0], ["dresser", 13, 13, 0],
+            ["rug_round", 10, 16, 0], ["armchair", 15, 19, 0],
+            ["bed_single", 29, 13, 0], ["nightstand", 31, 13, 0], ["desk", 20, 13, 0], ["chair", 21, 15, 2],
+            ["bookshelf", 22, 20, 0], ["trunk", 28, 20, 0], ["washbasin", 19, 20, 0],
+            ["bookshelf", 33, 13, 0], ["bookshelf", 41, 13, 0], ["bookshelf", 36, 20, 0], ["bookshelf", 40, 20, 0],
+            ["desk", 37, 16, 0], ["chair", 38, 18, 2], ["armchair", 44, 16, 0], ["floor_lamp", 46, 13, 0],
+        ],
+        "stairs": [
+            {"name": "Back Stairs", "main": [20, 5], "main_land": [20, 6], "top": [5, 1], "top_land": [5, 2]},
+            {"name": "Library Stair", "main": [46, 28], "main_land": [46, 27], "top": [46, 20], "top_land": [46, 19]},
+        ],
+    },
+    "hollow_lane": {
+        "size": [48, 20],
+        "rooms": [
+            uroom("upstairs_hall", "Upstairs Hall", "wood_dark", "hall", [[5, 8, 26, 3]], lit=True),
+            uroom("farmhand_room", "Farmhand's Room", "wood_light", "bedroom", [[5, 1, 8, 6]]),
+            uroom("sewing_room", "Sewing Room", "carpet_green", "study", [[14, 1, 8, 6]]),
+            uroom("spare_room", "Spare Room", "wood_light", "bedroom", [[23, 1, 8, 6]]),
+            uroom("grandmother_room", "Grandmother's Room", "carpet_red", "bedroom", [[5, 12, 10, 7]]),
+            uroom("attic", "Attic", "wood_dark", "storage", [[16, 12, 15, 7]]),
+            uroom("hayloft", "Hayloft", "dirt", "shed", [[32, 1, 11, 18]]),
+        ],
+        "doors": [[9, 7], [18, 7], [27, 7], [13, 4], [22, 4], [10, 11], [23, 11], [15, 15], [31, 9], [31, 15]],
+        "furniture": [
+            ["bed_single", 5, 1, 0], ["trunk", 11, 1, 0], ["chair", 8, 3, 0], ["dresser", 5, 6, 0],
+            ["desk", 15, 1, 0], ["chair", 16, 3, 2], ["cabinet", 20, 1, 0], ["covered_armchair", 14, 5, 0],
+            ["wall_mirror", 20, 6, 0],
+            ["bed_single", 29, 1, 0], ["nightstand", 28, 1, 0], ["covered_sofa", 23, 1, 0], ["broken_chair", 24, 6, 0],
+            ["debris", 25, 4, 0],
+            ["rug_rect", 12, 8, 0], ["side_table", 30, 8, 0], ["candelabra", 20, 10, 0],
+            ["bed_single", 5, 12, 0], ["nightstand", 7, 12, 0], ["armchair", 12, 17, 0], ["wardrobe", 5, 18, 0],
+            ["dresser", 11, 12, 0],
+            ["crates", 16, 12, 0], ["old_trunk", 19, 12, 0], ["covered_armchair", 26, 12, 0], ["debris", 20, 15, 0],
+            ["storage_shelf", 16, 18, 0], ["water_tank", 28, 17, 0], ["boards", 23, 16, 0],
+            ["hay", 33, 1, 0], ["hay", 37, 1, 0], ["hay", 40, 4, 0], ["hay", 34, 12, 0], ["hay", 40, 16, 0],
+            ["crates", 36, 7, 0], ["barrel", 42, 10, 0], ["woodpile", 38, 18, 0],
+        ],
+        "stairs": [
+            {"name": "Farmhouse Stairs", "main": [14, 25], "main_land": [14, 24], "top": [5, 10], "top_land": [6, 10]},
+        ],
+    },
+    "evangeline": {
+        "size": [48, 22],
+        "rooms": [
+            uroom("bell_tower", "Bell Tower", "stone", "chapel", [[5, 1, 10, 9]]),
+            uroom("organ_loft", "Organ Loft", "wood_dark", "chapel", [[16, 1, 15, 6]], lit=True),
+            uroom("curate_room", "Curate's Room", "carpet_blue", "bedroom", [[32, 1, 11, 6]]),
+            uroom("clerestory", "Clerestory Walk", "stone", "hall", [[16, 8, 27, 3]]),
+            uroom("linen_press", "Linen Press", "wood_light", "storage", [[16, 12, 8, 6]]),
+            uroom("housekeeper_room", "Housekeeper's Room", "carpet_green", "bedroom", [[25, 12, 8, 6]]),
+            uroom("rectory_landing", "Rectory Landing", "wood_dark", "hall", [[34, 12, 9, 8]], lit=True),
+        ],
+        "doors": [[15, 5], [15, 9], [31, 3], [23, 7], [37, 7], [20, 11], [24, 14], [28, 11], [33, 14], [38, 11]],
+        "furniture": [
+            ["old_trunk", 5, 1, 0], ["broken_chair", 8, 4, 0], ["debris", 9, 6, 0], ["boards", 6, 8, 0],
+            ["storage_shelf", 11, 1, 0], ["candelabra", 5, 9, 0], ["barrel", 12, 8, 0],
+            ["piano", 22, 1, 0], ["pew", 18, 4, 0], ["pew", 25, 4, 0], ["candelabra", 30, 1, 0], ["chair", 23, 3, 0],
+            ["bed_single", 41, 1, 0], ["nightstand", 40, 1, 0], ["desk", 33, 1, 0], ["chair", 34, 3, 2],
+            ["wardrobe", 38, 6, 0], ["wall_mirror", 32, 6, 0],
+            ["pew", 25, 8, 0], ["candelabra", 42, 8, 0], ["rug_rect", 30, 8, 0], ["potted_plant", 42, 10, 0],
+            ["storage_shelf", 16, 12, 0], ["cabinet", 16, 17, 0], ["wash_tub", 21, 16, 0], ["trunk", 22, 12, 0],
+            ["bed_single", 29, 16, 1], ["nightstand", 32, 15, 0], ["dresser", 25, 12, 0], ["washbasin", 31, 12, 0],
+            ["chair", 26, 16, 0],
+            ["grandfather_clock", 42, 12, 0], ["side_table", 34, 12, 0], ["potted_plant", 42, 19, 0], ["rug_rect", 37, 15, 0],
+            ["bookshelf", 39, 12, 0],
+        ],
+        "stairs": [
+            {"name": "Loft Stairs", "main": [16, 4], "main_land": [16, 5], "top": [16, 1], "top_land": [16, 2]},
+            {"name": "Rectory Stairs", "main": [32, 27], "main_land": [32, 26], "top": [34, 19], "top_land": [34, 18]},
+        ],
+    },
+    "marrow_street": {
+        "size": [40, 20],
+        "rooms": [
+            uroom("landing", "First-Floor Landing", "parquet", "hall", [[4, 8, 32, 3]], lit=True),
+            uroom("master", "Master Bedroom", "carpet_red", "bedroom", [[4, 1, 12, 6]]),
+            uroom("dressing_room", "Dressing Room", "carpet_blue", "bedroom", [[17, 1, 6, 6]]),
+            uroom("nursery", "Nursery", "carpet_green", "bedroom", [[24, 1, 12, 6]]),
+            uroom("upper_study", "Upstairs Study", "wood_dark", "study", [[4, 12, 11, 7]]),
+            uroom("water_closet", "Water Closet", "tile_white", "bathroom", [[16, 12, 6, 7]]),
+            uroom("garret", "Maid's Garret", "wood_light", "bedroom", [[23, 12, 13, 7]]),
+        ],
+        "doors": [[10, 7], [20, 7], [30, 7], [16, 4], [23, 4], [9, 11], [19, 11], [29, 11], [15, 15], [22, 15]],
+        "furniture": [
+            ["bed_double", 8, 1, 0], ["nightstand", 7, 1, 0], ["nightstand", 11, 1, 0], ["wardrobe", 4, 1, 0],
+            ["dresser", 13, 6, 0], ["armchair", 4, 5, 0], ["fireplace", 13, 1, 0],
+            ["wardrobe", 17, 1, 0], ["wall_mirror", 21, 1, 0], ["dresser", 17, 6, 0],
+            ["bed_single", 34, 1, 0], ["rug_round", 27, 2, 0], ["chair", 25, 1, 0], ["trunk", 32, 6, 0], ["dresser", 24, 6, 0],
+            ["rug_rect", 12, 8, 0], ["rug_rect", 23, 8, 0], ["grandfather_clock", 35, 8, 0], ["side_table", 35, 10, 0],
+            ["candelabra", 25, 10, 0],
+            ["bookshelf", 4, 12, 0], ["bookshelf", 11, 12, 0], ["desk", 6, 15, 0], ["chair", 7, 17, 2], ["armchair", 11, 17, 0],
+            ["floor_lamp", 14, 18, 0],
+            ["bathtub", 16, 12, 0], ["toilet", 21, 18, 0], ["washbasin", 21, 12, 0], ["wall_mirror", 18, 18, 0],
+            ["bed_single", 34, 12, 0], ["bed_single", 31, 12, 0], ["nightstand", 33, 12, 0], ["trunk", 23, 18, 0],
+            ["washbasin", 35, 18, 0], ["broken_chair", 27, 17, 0], ["wash_tub", 25, 12, 0],
+        ],
+        "stairs": [
+            {"name": "Main Stairs", "main": [4, 9], "main_land": [4, 10], "top": [4, 10], "top_land": [5, 10]},
+        ],
+    },
+    "tavern": {
+        "size": [44, 20],
+        "rooms": [
+            uroom("guest_corridor", "Guest Corridor", "wood_dark", "hall", [[5, 8, 37, 3]], lit=True),
+            uroom("room_one", "Guest Room One", "wood_light", "bedroom", [[5, 1, 8, 6]]),
+            uroom("room_two", "Guest Room Two", "carpet_blue", "bedroom", [[14, 1, 8, 6]]),
+            uroom("room_three", "Guest Room Three", "carpet_red", "bedroom", [[23, 1, 8, 6]]),
+            uroom("washroom", "Washroom", "tile_white", "bathroom", [[32, 1, 10, 6]]),
+            uroom("room_four", "Guest Room Four", "carpet_green", "bedroom", [[5, 12, 14, 7]]),
+            uroom("linen_store", "Linen Store", "wood_light", "storage", [[20, 12, 7, 7]]),
+            uroom("quarters", "Innkeeper's Quarters", "carpet_red", "bedroom", [[28, 12, 14, 7]]),
+        ],
+        "doors": [[9, 7], [18, 7], [27, 7], [36, 7], [13, 5], [22, 5], [31, 5], [10, 11], [23, 11], [34, 11],
+                  [19, 15], [27, 15]],
+        "furniture": [
+            ["bed_single", 5, 1, 0], ["nightstand", 7, 1, 0], ["wardrobe", 10, 1, 0], ["dresser", 5, 6, 0],
+            ["bed_single", 14, 1, 0], ["nightstand", 16, 1, 0], ["wardrobe", 19, 1, 0], ["dresser", 20, 6, 0],
+            ["bed_double", 27, 1, 0], ["nightstand", 26, 1, 0], ["nightstand", 30, 1, 0], ["trunk", 23, 6, 0],
+            ["bathtub", 39, 1, 0], ["toilet", 41, 6, 0], ["washbasin", 33, 1, 0], ["wall_mirror", 34, 1, 0],
+            ["wash_tub", 32, 3, 0],
+            ["rug_rect", 14, 8, 0], ["rug_rect", 28, 8, 0], ["candelabra", 24, 8, 0], ["side_table", 41, 8, 0],
+            ["potted_plant", 41, 10, 0],
+            ["bed_double", 5, 13, 0], ["nightstand", 8, 13, 0], ["wardrobe", 14, 12, 0], ["dresser", 16, 18, 0],
+            ["armchair", 11, 16, 0],
+            ["storage_shelf", 20, 12, 0], ["cabinet", 25, 12, 0], ["trunk", 20, 18, 0], ["crates", 24, 17, 0],
+            ["bed_double", 36, 12, 0], ["nightstand", 35, 12, 0], ["nightstand", 39, 12, 0], ["desk", 29, 12, 0],
+            ["chair", 30, 14, 2], ["wardrobe", 28, 18, 0], ["wall_mirror", 32, 18, 0], ["candelabra", 41, 12, 0],
+            ["trunk", 34, 18, 0], ["rug_rect", 33, 15, 0],
+        ],
+        "stairs": [
+            {"name": "Inn Stairs", "main": [5, 26], "main_land": [6, 26], "top": [5, 10], "top_land": [6, 10]},
+            {"name": "Back Stairs", "main": [41, 26], "main_land": [40, 26], "top": [41, 18], "top_land": [40, 18]},
+        ],
+    },
+    "harbor": {
+        "size": [50, 16],
+        "rooms": [
+            uroom("loft", "Warehouse Loft", "wood_dark", "storage", [[5, 1, 18, 13]]),
+            uroom("lodging", "Harbour Master's Lodging", "carpet_red", "bedroom", [[24, 1, 10, 6]]),
+            uroom("washroom", "Washroom", "tile_white", "bathroom", [[35, 1, 5, 6]]),
+            uroom("lamp_room", "Signal Lamp Room", "wood_light", "study", [[41, 1, 8, 6]], lit=True),
+            uroom("upper_gallery", "Upper Gallery", "wood_dark", "hall", [[24, 8, 25, 2]]),
+            uroom("chart_room", "Chart Room", "carpet_green", "study", [[24, 11, 12, 4]]),
+            uroom("bunkroom", "Clerks' Bunkroom", "wood_light", "bedroom", [[37, 11, 12, 4]]),
+        ],
+        "doors": [[23, 8], [23, 3], [28, 7], [34, 5], [40, 5], [44, 7], [30, 10], [36, 12], [42, 10]],
+        "furniture": [
+            ["crates", 5, 1, 0], ["crates", 8, 1, 0], ["fishing_net", 12, 2, 0], ["rope_coil", 16, 1, 0], ["old_trunk", 19, 1, 0],
+            ["covered_sofa", 6, 6, 0], ["crates", 14, 8, 0], ["storage_shelf", 5, 13, 0], ["barrel", 18, 10, 0],
+            ["debris", 10, 10, 0], ["boards", 16, 12, 0],
+            ["bed_double", 30, 1, 0], ["nightstand", 29, 1, 0], ["wardrobe", 24, 1, 0], ["dresser", 24, 6, 0], ["chair", 27, 4, 0],
+            ["bathtub", 35, 1, 0], ["washbasin", 39, 1, 0], ["wall_mirror", 37, 1, 0], ["toilet", 39, 6, 0],
+            ["desk", 44, 2, 0], ["chair", 45, 4, 2], ["floor_lamp", 48, 1, 0], ["bookshelf", 41, 1, 0], ["trunk", 47, 6, 0],
+            ["candelabra", 33, 9, 0], ["candelabra", 48, 9, 0],
+            ["desk", 29, 12, 0], ["bookshelf", 32, 11, 0], ["chair", 30, 14, 2], ["floor_lamp", 35, 14, 0], ["cabinet", 26, 11, 0],
+            ["bed_single", 37, 13, 1], ["bed_single", 44, 13, 1], ["trunk", 47, 11, 0], ["nightstand", 41, 14, 0],
+            ["wall_mirror", 39, 11, 0],
+        ],
+        "stairs": [
+            {"name": "Loft Stairs", "main": [22, 5], "main_land": [22, 6], "top": [22, 13], "top_land": [22, 12]},
+            {"name": "Office Stairs", "main": [33, 5], "main_land": [33, 6], "top": [24, 14], "top_land": [24, 13]},
+        ],
+    },
 }
 
 # Neglect: some rooms are lived in and kept, others forgotten. Outdoor rooms have none.
@@ -508,36 +943,83 @@ MAIN_NEGLECT = {
 }
 
 
-def attach_basement(h):
-    b = BASEMENTS.get(h["id"])
-    w, main_h = h["size"]
-    oy = main_h + FLOOR_GAP
+# Upper floors and the two newer locations.
+CONDITIONS["ashgrove"].update({"attic_landing": "worn", "nursery": "abandoned", "sewing_room": "neglected",
+                               "attic_store": "abandoned", "box_room": "neglected", "maids_room": "worn",
+                               "lumber_attic": "abandoned"})
+CONDITIONS["blackwood"].update({"long_gallery": "kept", "boudoir": "worn", "blue_room": "kept", "sewing_room": "neglected",
+                                "linen_room": "worn", "rose_room": "worn", "governess_room": "abandoned",
+                                "library_gallery": "neglected"})
+CONDITIONS["hollow_lane"].update({"upstairs_hall": "worn", "farmhand_room": "neglected", "sewing_room": "worn",
+                                  "spare_room": "abandoned", "grandmother_room": "kept", "attic": "abandoned",
+                                  "hayloft": "neglected"})
+CONDITIONS["evangeline"].update({"bell_tower": "abandoned", "organ_loft": "worn", "curate_room": "neglected",
+                                 "clerestory": "neglected", "linen_press": "worn", "housekeeper_room": "kept",
+                                 "rectory_landing": "worn"})
+CONDITIONS["marrow_street"].update({"landing": "kept", "master": "kept", "dressing_room": "worn", "nursery": "abandoned",
+                                    "upper_study": "neglected", "water_closet": "worn", "garret": "neglected"})
+CONDITIONS["tavern"] = {"kitchen": "worn", "pantry": "worn", "brewhouse": "neglected", "stables": "neglected",
+                        "back_passage": "worn", "common_room": "kept", "taproom": "kept", "snug": "worn", "office": "kept",
+                        "beer_cellar": "worn", "boiler_room": "worn", "wine_vault": "neglected", "cellar_passage": "neglected",
+                        "smugglers_hold": "abandoned", "coal_store": "abandoned", "guest_corridor": "worn",
+                        "room_one": "kept", "room_two": "worn", "room_three": "neglected", "washroom": "worn",
+                        "room_four": "abandoned", "linen_store": "neglected", "quarters": "kept"}
+CONDITIONS["harbor"] = {"warehouse": "neglected", "salting_house": "worn", "cooperage": "neglected", "harbour_office": "kept",
+                        "customs_hall": "worn", "mess": "kept", "chandlery": "worn", "net_shed": "abandoned",
+                        "bonded_vaults": "neglected", "boiler_room": "worn", "ice_house": "abandoned", "tunnel": "abandoned",
+                        "rum_store": "neglected", "tide_cistern": "abandoned", "loft": "abandoned", "lodging": "kept",
+                        "washroom": "worn", "lamp_room": "worn", "upper_gallery": "worn", "chart_room": "neglected",
+                        "bunkroom": "neglected"}
+MAIN_NEGLECT["tavern"] = [["debris", 36, 3, 0], ["boards", 26, 10, 0]]
+MAIN_NEGLECT["harbor"] = [["debris", 49, 13, 0], ["boards", 8, 11, 0]]
+
+
+def _attach_level(h, extra, oy, prefix):
+    """Append another floor's rooms/doors/furniture to the house, shifted down by oy."""
+    taken = {x["id"] for x in h["rooms"]}
+    for r in extra["rooms"]:
+        r = dict(r)
+        cond = CONDITIONS.get(h["id"], {}).get(r["id"])
+        r["id"] = r["id"] if r["id"] not in taken else prefix + r["id"]
+        r["rects"] = [[x, y + oy, rw, rh] for x, y, rw, rh in r["rects"]]
+        if cond:
+            r["condition"] = cond
+        h["rooms"].append(r)
+    h["doors"] = h["doors"] + [[x, y + oy] for x, y in extra["doors"]]
+    h["furniture"] = h["furniture"] + [[t, x, y + oy, rot] for t, x, y, rot in extra["furniture"]]
+    h["size"] = [max(h["size"][0], extra["size"][0]), oy + extra["size"][1]]
+
+
+def attach_levels(h):
+    """Main floor (level 0), then the basement (-1) and the upper floor (1) further down the world."""
     for r in h["rooms"]:
         r.setdefault("level", 0)
         cond = CONDITIONS.get(h["id"], {}).get(r["id"])
         if cond:
             r["condition"] = cond
     h["furniture"] = h["furniture"] + MAIN_NEGLECT.get(h["id"], [])
-    if not b:
-        return
-    h["size"] = [max(w, b["size"][0]), oy + b["size"][1]]
-    for r in b["rooms"]:
-        r = dict(r)
-        cond = CONDITIONS.get(h["id"], {}).get(r["id"])
-        r["id"] = r["id"] if r["id"] not in [x["id"] for x in h["rooms"]] else "basement_" + r["id"]
-        r["rects"] = [[x, y + oy, rw, rh] for x, y, rw, rh in r["rects"]]
-        if cond:
-            r["condition"] = cond
-        h["rooms"].append(r)
-    h["doors"] = h["doors"] + [[x, y + oy] for x, y in b["doors"]]
-    h["furniture"] = h["furniture"] + [[t, x, y + oy, rot] for t, x, y, rot in b["furniture"]]
-    h["stairs"] = [{"name": st["name"], "style": st["style"], "a": st["a"], "a_land": st["a_land"],
-                    "b": [st["b"][0], st["b"][1] + oy], "b_land": [st["b_land"][0], st["b_land"][1] + oy]}
-                   for st in b["stairs"]]
+    h["stairs"] = []
+    b = BASEMENTS.get(h["id"])
+    if b:
+        oy = h["size"][1] + FLOOR_GAP
+        _attach_level(h, b, oy, "basement_")
+        # Basement stairs: "a" on the main floor, "b" below.
+        h["stairs"] += [{"name": st["name"], "style": st["style"], "a": st["a"], "a_land": st["a_land"],
+                         "b": [st["b"][0], st["b"][1] + oy], "b_land": [st["b_land"][0], st["b_land"][1] + oy]}
+                        for st in b["stairs"]]
+    u = UPPERS.get(h["id"])
+    if u:
+        oy = h["size"][1] + FLOOR_GAP
+        _attach_level(h, u, oy, "upper_")
+        # Upper stairs: "a" is always the higher floor (drawn going down), "b" the main floor.
+        h["stairs"] += [{"name": st["name"], "style": st.get("style", "stairs"),
+                         "a": [st["top"][0], st["top"][1] + oy], "a_land": [st["top_land"][0], st["top_land"][1] + oy],
+                         "b": st["main"], "b_land": st["main_land"]}
+                        for st in u["stairs"]]
 
 
 for _h in HOUSES:
-    attach_basement(_h)
+    attach_levels(_h)
 
 
 FURN_SIZES = {}
@@ -674,6 +1156,8 @@ def validate(h, grid):
         for k, land in (("a", "a_land"), ("b", "b_land")):
             if abs(st[k][0] - st[land][0]) + abs(st[k][1] - st[land][1]) != 1:
                 problems.append(f"stair {st['name']}: landing {land} not beside {k}")
+        if (h["id"], st["name"]) not in LEGACY_STAIRS:
+            problems += _check_flight(h, grid, st, solid, door_adj)
     start = tuple(h["spawn"])
     if start not in walk:
         problems.append("spawn not walkable")
@@ -693,6 +1177,8 @@ def validate(h, grid):
     if lost:
         problems.append(f"{len(lost)} unreachable walkable cells e.g. {sorted(lost)[:6]}")
     # Dead ends: rooms with a single doorway (outdoor-open boundaries count as exits).
+    # One is tolerated (the game's own check allows it): an outdoor nook such as a moored boat.
+    dead = []
     for r in h["rooms"]:
         exits = 0
         cells = {(x, y) for y in range(ht) for x in range(w) if grid[y][x] == r["id"]}
@@ -703,8 +1189,67 @@ def validate(h, grid):
                          for (x, y) in cells for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
                          if 0 <= x + dx < w and 0 <= y + dy < ht)
         if exits + (1 if open_edges else 0) < 2:
-            problems.append(f"dead end room: {r['id']} ({exits} doors)")
+            dead.append(r)
+            if not (r["outdoor"] and open_edges):
+                problems.append(f"dead end room: {r['id']} ({exits} doors)")
+    if len(dead) > 1:
+        problems.append(f"{len(dead)} dead-end rooms: {[r['id'] for r in dead]}")
     return problems
+
+
+# The original basement stairs predate the corner rule below.
+LEGACY_STAIRS = {("ashgrove", "Cellar Stairs"), ("ashgrove", "Garden Hatch"), ("blackwood", "Cellar Stairs"),
+                 ("blackwood", "Servants' Stairs"), ("hollow_lane", "Cellar Stairs"), ("hollow_lane", "Barn Trapdoor"),
+                 ("evangeline", "Crypt Stairs"), ("evangeline", "Kitchen Stairs"), ("marrow_street", "Coal Chute"),
+                 ("marrow_street", "Basement Stairs")}
+
+
+def _check_flight(h, grid, st, solid, door_adj):
+    """Mirror of HouseMap's two-cell flight: the steps run into a wall, the flight's second
+    cell is the sideways neighbour (same rule and order as the game), and a staircase sits
+    in a corner. Nothing is placed on the flight or its landings, and no doorway touches them."""
+    w, ht = h["size"]
+    out = []
+    covered = set()
+    for t, x, y, rot in h["furniture"]:
+        fw, fh, _ = FURN_SIZES[t]
+        if rot % 2 == 1:
+            fw, fh = fh, fw
+        covered |= {(xx, yy) for xx in range(x, x + fw) for yy in range(y, y + fh)}
+
+    def at(c):
+        return grid[c[1]][c[0]] if 0 <= c[0] < w and 0 <= c[1] < ht else None
+
+    for side in ("a", "b"):
+        c, land = tuple(st[side]), tuple(st[side + "_land"])
+        dv = (c[0] - land[0], c[1] - land[1])
+        perp = (dv[1], dv[0])
+        rid = at(c)
+        if at((c[0] + dv[0], c[1] + dv[1])) != "#":
+            out.append(f"stair {st['name']} {side}: steps do not run into a wall")
+        wide = None
+        for cand in ((c[0] + perp[0], c[1] + perp[1]), (c[0] - perp[0], c[1] - perp[1])):
+            cl = (cand[0] - dv[0], cand[1] - dv[1])
+            if at(cand) == rid and cand not in solid and at(cl) == rid and cl not in solid:
+                wide = cand
+                break
+        cells = [c, land]
+        if wide:
+            cells += [wide, (wide[0] - dv[0], wide[1] - dv[1])]
+            if at((wide[0] + dv[0], wide[1] + dv[1])) != "#":
+                out.append(f"stair {st['name']} {side}: second step cell {wide} sticks out from the wall")
+        elif st.get("style", "stairs") == "stairs":
+            out.append(f"stair {st['name']} {side}: no room for a two-cell flight")
+        for cc in cells:
+            if cc in covered:
+                out.append(f"stair {st['name']} {side}: furniture on {cc}")
+            if cc in door_adj:
+                out.append(f"stair {st['name']} {side}: {cc} touches a doorway")
+        if st.get("style", "stairs") == "stairs" and wide:
+            corner = at((2 * c[0] - wide[0], 2 * c[1] - wide[1])) == "#" or at((2 * wide[0] - c[0], 2 * wide[1] - c[1])) == "#"
+            if not corner:
+                out.append(f"stair {st['name']} {side}: not in a corner")
+    return out
 
 
 if __name__ == "__main__" and "--validate" in sys.argv:

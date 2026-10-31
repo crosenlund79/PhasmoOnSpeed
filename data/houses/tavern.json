@@ -1,0 +1,1573 @@
+{
+ "id": "tavern",
+ "name": "The Black Lantern Inn",
+ "blurb": "Last orders were called in 1871. Somebody is still drinking.",
+ "size": [
+  50,
+  95
+ ],
+ "spawn": [
+  24,
+  30
+ ],
+ "npcs": 3,
+ "rooms": [
+  {
+   "id": "west_lane",
+   "name": "Drovers' Lane",
+   "floor": "gravel",
+   "kind": "yard",
+   "lit": false,
+   "outdoor": true,
+   "rects": [
+    [
+     1,
+     1,
+     3,
+     27
+    ]
+   ],
+   "level": 0
+  },
+  {
+   "id": "stable_yard",
+   "name": "Stable Yard",
+   "floor": "dirt",
+   "kind": "yard",
+   "lit": false,
+   "outdoor": true,
+   "rects": [
+    [
+     43,
+     1,
+     6,
+     27
+    ]
+   ],
+   "level": 0
+  },
+  {
+   "id": "coaching_yard",
+   "name": "Coaching Yard",
+   "floor": "gravel",
+   "kind": "yard",
+   "lit": false,
+   "outdoor": true,
+   "rects": [
+    [
+     1,
+     28,
+     48,
+     5
+    ]
+   ],
+   "level": 0
+  },
+  {
+   "id": "kitchen",
+   "name": "Inn Kitchen",
+   "floor": "tile_checker",
+   "kind": "kitchen",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     1,
+     11,
+     7
+    ]
+   ],
+   "level": 0,
+   "condition": "worn"
+  },
+  {
+   "id": "pantry",
+   "name": "Pantry",
+   "floor": "stone",
+   "kind": "pantry",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     17,
+     1,
+     6,
+     7
+    ]
+   ],
+   "level": 0,
+   "condition": "worn"
+  },
+  {
+   "id": "brewhouse",
+   "name": "Brewhouse",
+   "floor": "stone",
+   "kind": "shed",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     24,
+     1,
+     6,
+     7
+    ]
+   ],
+   "level": 0,
+   "condition": "neglected"
+  },
+  {
+   "id": "stables",
+   "name": "Stables",
+   "floor": "dirt",
+   "kind": "shed",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     31,
+     1,
+     11,
+     7
+    ]
+   ],
+   "level": 0,
+   "condition": "neglected"
+  },
+  {
+   "id": "back_passage",
+   "name": "Back Passage",
+   "floor": "wood_dark",
+   "kind": "hall",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     9,
+     37,
+     3
+    ]
+   ],
+   "level": 0,
+   "condition": "worn"
+  },
+  {
+   "id": "common_room",
+   "name": "Common Room",
+   "floor": "wood_dark",
+   "kind": "dining",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     13,
+     18,
+     14
+    ]
+   ],
+   "level": 0,
+   "condition": "kept"
+  },
+  {
+   "id": "taproom",
+   "name": "Taproom",
+   "floor": "parquet",
+   "kind": "living",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     24,
+     13,
+     10,
+     14
+    ]
+   ],
+   "level": 0,
+   "condition": "kept"
+  },
+  {
+   "id": "snug",
+   "name": "The Snug",
+   "floor": "carpet_red",
+   "kind": "living",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     35,
+     13,
+     7,
+     6
+    ]
+   ],
+   "level": 0,
+   "condition": "worn"
+  },
+  {
+   "id": "office",
+   "name": "Innkeeper's Office",
+   "floor": "carpet_green",
+   "kind": "study",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     35,
+     20,
+     7,
+     7
+    ]
+   ],
+   "level": 0,
+   "condition": "kept"
+  },
+  {
+   "id": "beer_cellar",
+   "name": "Beer Cellar",
+   "floor": "stone",
+   "kind": "cellar",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     47,
+     14,
+     7
+    ]
+   ],
+   "level": -1,
+   "condition": "worn"
+  },
+  {
+   "id": "boiler_room",
+   "name": "Boiler Room",
+   "floor": "stone",
+   "kind": "cellar",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     20,
+     47,
+     9,
+     7
+    ]
+   ],
+   "level": -1,
+   "condition": "worn"
+  },
+  {
+   "id": "wine_vault",
+   "name": "Wine Vault",
+   "floor": "stone",
+   "kind": "cellar",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     30,
+     47,
+     12,
+     7
+    ]
+   ],
+   "level": -1,
+   "condition": "neglected"
+  },
+  {
+   "id": "cellar_passage",
+   "name": "Cellar Passage",
+   "floor": "stone",
+   "kind": "hall",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     55,
+     37,
+     2
+    ]
+   ],
+   "level": -1,
+   "condition": "neglected"
+  },
+  {
+   "id": "smugglers_hold",
+   "name": "Smugglers' Hold",
+   "floor": "dirt",
+   "kind": "cellar",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     58,
+     18,
+     4
+    ]
+   ],
+   "level": -1,
+   "condition": "abandoned"
+  },
+  {
+   "id": "coal_store",
+   "name": "Coal Store",
+   "floor": "dirt",
+   "kind": "shed",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     24,
+     58,
+     18,
+     4
+    ]
+   ],
+   "level": -1,
+   "condition": "abandoned"
+  },
+  {
+   "id": "guest_corridor",
+   "name": "Guest Corridor",
+   "floor": "wood_dark",
+   "kind": "hall",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     83,
+     37,
+     3
+    ]
+   ],
+   "level": 1,
+   "condition": "worn"
+  },
+  {
+   "id": "room_one",
+   "name": "Guest Room One",
+   "floor": "wood_light",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     76,
+     8,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "kept"
+  },
+  {
+   "id": "room_two",
+   "name": "Guest Room Two",
+   "floor": "carpet_blue",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     14,
+     76,
+     8,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "worn"
+  },
+  {
+   "id": "room_three",
+   "name": "Guest Room Three",
+   "floor": "carpet_red",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     23,
+     76,
+     8,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "neglected"
+  },
+  {
+   "id": "washroom",
+   "name": "Washroom",
+   "floor": "tile_white",
+   "kind": "bathroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     32,
+     76,
+     10,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "worn"
+  },
+  {
+   "id": "room_four",
+   "name": "Guest Room Four",
+   "floor": "carpet_green",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     87,
+     14,
+     7
+    ]
+   ],
+   "level": 1,
+   "condition": "abandoned"
+  },
+  {
+   "id": "linen_store",
+   "name": "Linen Store",
+   "floor": "wood_light",
+   "kind": "storage",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     20,
+     87,
+     7,
+     7
+    ]
+   ],
+   "level": 1,
+   "condition": "neglected"
+  },
+  {
+   "id": "quarters",
+   "name": "Innkeeper's Quarters",
+   "floor": "carpet_red",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     28,
+     87,
+     14,
+     7
+    ]
+   ],
+   "level": 1,
+   "condition": "kept"
+  }
+ ],
+ "doors": [
+  [
+   10,
+   8
+  ],
+  [
+   19,
+   8
+  ],
+  [
+   27,
+   8
+  ],
+  [
+   36,
+   8
+  ],
+  [
+   16,
+   4
+  ],
+  [
+   23,
+   4
+  ],
+  [
+   30,
+   4
+  ],
+  [
+   4,
+   4
+  ],
+  [
+   42,
+   4
+  ],
+  [
+   4,
+   10
+  ],
+  [
+   42,
+   10
+  ],
+  [
+   10,
+   12
+  ],
+  [
+   28,
+   12
+  ],
+  [
+   38,
+   12
+  ],
+  [
+   23,
+   17
+  ],
+  [
+   23,
+   22
+  ],
+  [
+   34,
+   15
+  ],
+  [
+   34,
+   23
+  ],
+  [
+   38,
+   19
+  ],
+  [
+   13,
+   27
+  ],
+  [
+   14,
+   27
+  ],
+  [
+   29,
+   27
+  ],
+  [
+   38,
+   27
+  ],
+  [
+   10,
+   54
+  ],
+  [
+   24,
+   54
+  ],
+  [
+   36,
+   54
+  ],
+  [
+   19,
+   50
+  ],
+  [
+   29,
+   50
+  ],
+  [
+   12,
+   57
+  ],
+  [
+   32,
+   57
+  ],
+  [
+   23,
+   59
+  ],
+  [
+   9,
+   82
+  ],
+  [
+   18,
+   82
+  ],
+  [
+   27,
+   82
+  ],
+  [
+   36,
+   82
+  ],
+  [
+   13,
+   80
+  ],
+  [
+   22,
+   80
+  ],
+  [
+   31,
+   80
+  ],
+  [
+   10,
+   86
+  ],
+  [
+   23,
+   86
+  ],
+  [
+   34,
+   86
+  ],
+  [
+   19,
+   90
+  ],
+  [
+   27,
+   90
+  ]
+ ],
+ "furniture": [
+  [
+   "stove",
+   5,
+   1,
+   0
+  ],
+  [
+   "stove",
+   7,
+   1,
+   0
+  ],
+  [
+   "counter",
+   9,
+   1,
+   0
+  ],
+  [
+   "sink_kitchen",
+   12,
+   1,
+   0
+  ],
+  [
+   "icebox",
+   14,
+   1,
+   0
+  ],
+  [
+   "dining_table",
+   7,
+   4,
+   0
+  ],
+  [
+   "barrel",
+   15,
+   7,
+   0
+  ],
+  [
+   "cabinet",
+   12,
+   7,
+   0
+  ],
+  [
+   "storage_shelf",
+   17,
+   1,
+   0
+  ],
+  [
+   "cabinet",
+   20,
+   1,
+   0
+  ],
+  [
+   "barrel",
+   22,
+   1,
+   0
+  ],
+  [
+   "crates",
+   21,
+   5,
+   0
+  ],
+  [
+   "barrel",
+   17,
+   7,
+   0
+  ],
+  [
+   "keg_rack",
+   24,
+   1,
+   0
+  ],
+  [
+   "wash_tub",
+   27,
+   1,
+   0
+  ],
+  [
+   "workbench",
+   24,
+   7,
+   0
+  ],
+  [
+   "woodpile",
+   28,
+   7,
+   0
+  ],
+  [
+   "hay",
+   31,
+   1,
+   0
+  ],
+  [
+   "workbench",
+   35,
+   1,
+   0
+  ],
+  [
+   "hay",
+   39,
+   1,
+   0
+  ],
+  [
+   "barrel",
+   41,
+   1,
+   0
+  ],
+  [
+   "hay",
+   31,
+   6,
+   0
+  ],
+  [
+   "crates",
+   33,
+   5,
+   0
+  ],
+  [
+   "wash_tub",
+   39,
+   6,
+   0
+  ],
+  [
+   "grandfather_clock",
+   5,
+   9,
+   0
+  ],
+  [
+   "rug_rect",
+   13,
+   9,
+   0
+  ],
+  [
+   "wall_mirror",
+   24,
+   9,
+   0
+  ],
+  [
+   "side_table",
+   33,
+   11,
+   0
+  ],
+  [
+   "potted_plant",
+   41,
+   11,
+   0
+  ],
+  [
+   "fireplace",
+   5,
+   13,
+   0
+  ],
+  [
+   "pew",
+   15,
+   13,
+   0
+  ],
+  [
+   "dining_table",
+   8,
+   16,
+   0
+  ],
+  [
+   "dining_table",
+   15,
+   16,
+   0
+  ],
+  [
+   "dining_table",
+   8,
+   21,
+   0
+  ],
+  [
+   "dining_table",
+   15,
+   21,
+   0
+  ],
+  [
+   "candelabra",
+   22,
+   13,
+   0
+  ],
+  [
+   "candelabra",
+   22,
+   26,
+   0
+  ],
+  [
+   "barrel",
+   19,
+   26,
+   0
+  ],
+  [
+   "bar_counter",
+   30,
+   14,
+   1
+  ],
+  [
+   "bar_counter",
+   30,
+   20,
+   1
+  ],
+  [
+   "keg_rack",
+   33,
+   18,
+   1
+  ],
+  [
+   "chair",
+   29,
+   15,
+   0
+  ],
+  [
+   "chair",
+   29,
+   21,
+   0
+  ],
+  [
+   "dining_table",
+   25,
+   19,
+   1
+  ],
+  [
+   "candelabra",
+   24,
+   13,
+   0
+  ],
+  [
+   "barrel",
+   31,
+   26,
+   0
+  ],
+  [
+   "wine_rack",
+   31,
+   13,
+   0
+  ],
+  [
+   "armchair",
+   35,
+   13,
+   0
+  ],
+  [
+   "fireplace",
+   39,
+   13,
+   0
+  ],
+  [
+   "armchair",
+   40,
+   16,
+   0
+  ],
+  [
+   "coffee_table",
+   36,
+   17,
+   0
+  ],
+  [
+   "bookshelf",
+   35,
+   20,
+   0
+  ],
+  [
+   "cabinet",
+   40,
+   20,
+   0
+  ],
+  [
+   "desk",
+   38,
+   22,
+   0
+  ],
+  [
+   "chair",
+   39,
+   24,
+   2
+  ],
+  [
+   "trunk",
+   35,
+   26,
+   0
+  ],
+  [
+   "hay",
+   45,
+   2,
+   0
+  ],
+  [
+   "wash_tub",
+   45,
+   8,
+   0
+  ],
+  [
+   "barrel",
+   47,
+   20,
+   0
+  ],
+  [
+   "tree",
+   45,
+   23,
+   0
+  ],
+  [
+   "barrel",
+   1,
+   7,
+   0
+  ],
+  [
+   "crates",
+   1,
+   18,
+   0
+  ],
+  [
+   "tree",
+   2,
+   29,
+   0
+  ],
+  [
+   "barrel",
+   20,
+   29,
+   0
+  ],
+  [
+   "hedge",
+   40,
+   30,
+   0
+  ],
+  [
+   "hedge",
+   33,
+   31,
+   0
+  ],
+  [
+   "floor_lamp",
+   12,
+   28,
+   0
+  ],
+  [
+   "floor_lamp",
+   30,
+   28,
+   0
+  ],
+  [
+   "debris",
+   36,
+   3,
+   0
+  ],
+  [
+   "boards",
+   26,
+   10,
+   0
+  ],
+  [
+   "keg_rack",
+   9,
+   47,
+   0
+  ],
+  [
+   "keg_rack",
+   13,
+   47,
+   0
+  ],
+  [
+   "keg_rack",
+   5,
+   50,
+   1
+  ],
+  [
+   "barrel",
+   17,
+   47,
+   0
+  ],
+  [
+   "barrel",
+   18,
+   47,
+   0
+  ],
+  [
+   "barrel",
+   8,
+   52,
+   0
+  ],
+  [
+   "barrel",
+   12,
+   52,
+   0
+  ],
+  [
+   "crates",
+   16,
+   52,
+   0
+  ],
+  [
+   "boiler",
+   23,
+   47,
+   0
+  ],
+  [
+   "coal_pile",
+   20,
+   51,
+   0
+  ],
+  [
+   "pipes",
+   25,
+   53,
+   0
+  ],
+  [
+   "water_tank",
+   27,
+   47,
+   0
+  ],
+  [
+   "wine_rack",
+   30,
+   47,
+   0
+  ],
+  [
+   "wine_rack",
+   34,
+   47,
+   0
+  ],
+  [
+   "wine_rack",
+   37,
+   47,
+   0
+  ],
+  [
+   "wine_rack",
+   31,
+   53,
+   0
+  ],
+  [
+   "barrel",
+   38,
+   52,
+   0
+  ],
+  [
+   "pipes",
+   14,
+   55,
+   0
+  ],
+  [
+   "debris",
+   26,
+   55,
+   0
+  ],
+  [
+   "old_trunk",
+   5,
+   58,
+   0
+  ],
+  [
+   "crates",
+   7,
+   60,
+   0
+  ],
+  [
+   "barrel",
+   16,
+   58,
+   0
+  ],
+  [
+   "covered_armchair",
+   18,
+   60,
+   0
+  ],
+  [
+   "broken_chair",
+   11,
+   61,
+   0
+  ],
+  [
+   "coal_pile",
+   25,
+   58,
+   0
+  ],
+  [
+   "coal_pile",
+   38,
+   59,
+   0
+  ],
+  [
+   "woodpile",
+   30,
+   61,
+   0
+  ],
+  [
+   "barrel",
+   41,
+   61,
+   0
+  ],
+  [
+   "bed_single",
+   5,
+   76,
+   0
+  ],
+  [
+   "nightstand",
+   7,
+   76,
+   0
+  ],
+  [
+   "wardrobe",
+   10,
+   76,
+   0
+  ],
+  [
+   "dresser",
+   5,
+   81,
+   0
+  ],
+  [
+   "bed_single",
+   14,
+   76,
+   0
+  ],
+  [
+   "nightstand",
+   16,
+   76,
+   0
+  ],
+  [
+   "wardrobe",
+   19,
+   76,
+   0
+  ],
+  [
+   "dresser",
+   20,
+   81,
+   0
+  ],
+  [
+   "bed_double",
+   27,
+   76,
+   0
+  ],
+  [
+   "nightstand",
+   26,
+   76,
+   0
+  ],
+  [
+   "nightstand",
+   30,
+   76,
+   0
+  ],
+  [
+   "trunk",
+   23,
+   81,
+   0
+  ],
+  [
+   "bathtub",
+   39,
+   76,
+   0
+  ],
+  [
+   "toilet",
+   41,
+   81,
+   0
+  ],
+  [
+   "washbasin",
+   33,
+   76,
+   0
+  ],
+  [
+   "wall_mirror",
+   34,
+   76,
+   0
+  ],
+  [
+   "wash_tub",
+   32,
+   78,
+   0
+  ],
+  [
+   "rug_rect",
+   14,
+   83,
+   0
+  ],
+  [
+   "rug_rect",
+   28,
+   83,
+   0
+  ],
+  [
+   "candelabra",
+   24,
+   83,
+   0
+  ],
+  [
+   "side_table",
+   41,
+   83,
+   0
+  ],
+  [
+   "potted_plant",
+   41,
+   85,
+   0
+  ],
+  [
+   "bed_double",
+   5,
+   88,
+   0
+  ],
+  [
+   "nightstand",
+   8,
+   88,
+   0
+  ],
+  [
+   "wardrobe",
+   14,
+   87,
+   0
+  ],
+  [
+   "dresser",
+   16,
+   93,
+   0
+  ],
+  [
+   "armchair",
+   11,
+   91,
+   0
+  ],
+  [
+   "storage_shelf",
+   20,
+   87,
+   0
+  ],
+  [
+   "cabinet",
+   25,
+   87,
+   0
+  ],
+  [
+   "trunk",
+   20,
+   93,
+   0
+  ],
+  [
+   "crates",
+   24,
+   92,
+   0
+  ],
+  [
+   "bed_double",
+   36,
+   87,
+   0
+  ],
+  [
+   "nightstand",
+   35,
+   87,
+   0
+  ],
+  [
+   "nightstand",
+   39,
+   87,
+   0
+  ],
+  [
+   "desk",
+   29,
+   87,
+   0
+  ],
+  [
+   "chair",
+   30,
+   89,
+   2
+  ],
+  [
+   "wardrobe",
+   28,
+   93,
+   0
+  ],
+  [
+   "wall_mirror",
+   32,
+   93,
+   0
+  ],
+  [
+   "candelabra",
+   41,
+   87,
+   0
+  ],
+  [
+   "trunk",
+   34,
+   93,
+   0
+  ],
+  [
+   "rug_rect",
+   33,
+   90,
+   0
+  ]
+ ],
+ "stairs": [
+  {
+   "name": "Cellar Stairs",
+   "style": "stairs",
+   "a": [
+    5,
+    7
+   ],
+   "a_land": [
+    6,
+    7
+   ],
+   "b": [
+    5,
+    47
+   ],
+   "b_land": [
+    5,
+    48
+   ]
+  },
+  {
+   "name": "Keg Drop",
+   "style": "hatch",
+   "a": [
+    48,
+    14
+   ],
+   "a_land": [
+    47,
+    14
+   ],
+   "b": [
+    41,
+    47
+   ],
+   "b_land": [
+    41,
+    48
+   ]
+  },
+  {
+   "name": "Inn Stairs",
+   "style": "stairs",
+   "a": [
+    5,
+    85
+   ],
+   "a_land": [
+    6,
+    85
+   ],
+   "b": [
+    5,
+    26
+   ],
+   "b_land": [
+    6,
+    26
+   ]
+  },
+  {
+   "name": "Back Stairs",
+   "style": "stairs",
+   "a": [
+    41,
+    93
+   ],
+   "a_land": [
+    40,
+    93
+   ],
+   "b": [
+    41,
+    26
+   ],
+   "b_land": [
+    40,
+    26
+   ]
+  }
+ ]
+}

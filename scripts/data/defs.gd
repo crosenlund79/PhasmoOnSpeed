@@ -280,6 +280,15 @@ const FURNITURE := {
 	"boards": {"size": Vector2i(2, 1), "solid": false, "under": true},
 	"debris": {"size": Vector2i(2, 2), "solid": false, "under": true},
 	"desk_large": {"size": Vector2i(6, 4), "solid": true},
+	# Revision 6: the inn and the harbour. Water is impassable, drawn under the actors
+	# and never blocks sight; the boat hull is drawn over the water around its deck.
+	"bar_counter": {"size": Vector2i(4, 1), "solid": true},
+	"keg_rack": {"size": Vector2i(3, 1), "solid": true},
+	"bollard": {"size": Vector2i(1, 1), "solid": true},
+	"rope_coil": {"size": Vector2i(1, 1), "solid": true},
+	"fishing_net": {"size": Vector2i(2, 2), "solid": false, "under": true},
+	"water": {"size": Vector2i(2, 2), "solid": true, "under": true},
+	"boat_hull": {"size": Vector2i(6, 14), "solid": false, "under": true},
 }
 
 static func evidence_name(id: String) -> String:

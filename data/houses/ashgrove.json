@@ -4,7 +4,7 @@
  "blurb": "A widow's cottage at the edge of the moor. The kettle is still warm.",
  "size": [
   44,
-  56
+  87
  ],
  "spawn": [
   11,
@@ -325,6 +325,132 @@
    ],
    "level": -1,
    "condition": "neglected"
+  },
+  {
+   "id": "attic_landing",
+   "name": "Attic Landing",
+   "floor": "wood_light",
+   "kind": "hall",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     76,
+     34,
+     3
+    ]
+   ],
+   "level": 1,
+   "condition": "worn"
+  },
+  {
+   "id": "nursery",
+   "name": "Nursery",
+   "floor": "carpet_blue",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     69,
+     10,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "abandoned"
+  },
+  {
+   "id": "sewing_room",
+   "name": "Sewing Room",
+   "floor": "carpet_green",
+   "kind": "study",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     16,
+     69,
+     10,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "neglected"
+  },
+  {
+   "id": "attic_store",
+   "name": "Attic Store",
+   "floor": "wood_dark",
+   "kind": "storage",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     27,
+     69,
+     12,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "abandoned"
+  },
+  {
+   "id": "box_room",
+   "name": "Box Room",
+   "floor": "wood_light",
+   "kind": "storage",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     80,
+     8,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "neglected"
+  },
+  {
+   "id": "maids_room",
+   "name": "Maid's Room",
+   "floor": "wood_light",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     14,
+     80,
+     8,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "worn"
+  },
+  {
+   "id": "lumber_attic",
+   "name": "Lumber Attic",
+   "floor": "wood_dark",
+   "kind": "shed",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     23,
+     80,
+     16,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "abandoned"
   }
  ],
  "doors": [
@@ -423,6 +549,46 @@
   [
    12,
    49
+  ],
+  [
+   10,
+   75
+  ],
+  [
+   21,
+   75
+  ],
+  [
+   32,
+   75
+  ],
+  [
+   15,
+   72
+  ],
+  [
+   26,
+   72
+  ],
+  [
+   8,
+   79
+  ],
+  [
+   17,
+   79
+  ],
+  [
+   30,
+   79
+  ],
+  [
+   13,
+   83
+  ],
+  [
+   22,
+   83
   ]
  ],
  "furniture": [
@@ -899,6 +1065,228 @@
    17,
    52,
    0
+  ],
+  [
+   "bed_single",
+   5,
+   69,
+   0
+  ],
+  [
+   "rug_round",
+   9,
+   70,
+   0
+  ],
+  [
+   "chair",
+   8,
+   69,
+   0
+  ],
+  [
+   "trunk",
+   12,
+   69,
+   0
+  ],
+  [
+   "dresser",
+   5,
+   74,
+   0
+  ],
+  [
+   "desk",
+   18,
+   69,
+   0
+  ],
+  [
+   "chair",
+   19,
+   71,
+   2
+  ],
+  [
+   "cabinet",
+   22,
+   69,
+   0
+  ],
+  [
+   "storage_shelf",
+   16,
+   74,
+   0
+  ],
+  [
+   "covered_armchair",
+   23,
+   73,
+   0
+  ],
+  [
+   "wall_mirror",
+   24,
+   69,
+   0
+  ],
+  [
+   "crates",
+   27,
+   69,
+   0
+  ],
+  [
+   "old_trunk",
+   30,
+   69,
+   0
+  ],
+  [
+   "covered_sofa",
+   33,
+   69,
+   0
+  ],
+  [
+   "storage_shelf",
+   36,
+   74,
+   0
+  ],
+  [
+   "debris",
+   29,
+   72,
+   0
+  ],
+  [
+   "broken_chair",
+   35,
+   72,
+   0
+  ],
+  [
+   "rug_rect",
+   12,
+   76,
+   0
+  ],
+  [
+   "candelabra",
+   5,
+   76,
+   0
+  ],
+  [
+   "wall_mirror",
+   24,
+   76,
+   0
+  ],
+  [
+   "side_table",
+   27,
+   78,
+   0
+  ],
+  [
+   "trunk",
+   5,
+   80,
+   0
+  ],
+  [
+   "crates",
+   10,
+   80,
+   0
+  ],
+  [
+   "bed_single",
+   5,
+   82,
+   0
+  ],
+  [
+   "barrel",
+   12,
+   85,
+   0
+  ],
+  [
+   "bed_single",
+   19,
+   80,
+   0
+  ],
+  [
+   "nightstand",
+   21,
+   80,
+   0
+  ],
+  [
+   "washbasin",
+   14,
+   80,
+   0
+  ],
+  [
+   "wall_mirror",
+   14,
+   85,
+   0
+  ],
+  [
+   "dresser",
+   17,
+   85,
+   0
+  ],
+  [
+   "woodpile",
+   24,
+   80,
+   0
+  ],
+  [
+   "water_tank",
+   36,
+   80,
+   0
+  ],
+  [
+   "crates",
+   33,
+   83,
+   0
+  ],
+  [
+   "boards",
+   27,
+   82,
+   0
+  ],
+  [
+   "covered_armchair",
+   26,
+   84,
+   0
+  ],
+  [
+   "barrel",
+   38,
+   85,
+   0
+  ],
+  [
+   "old_trunk",
+   31,
+   85,
+   0
   ]
  ],
  "stairs": [
@@ -940,6 +1328,26 @@
    "b_land": [
     22,
     46
+   ]
+  },
+  {
+   "name": "Attic Stairs",
+   "style": "stairs",
+   "a": [
+    38,
+    78
+   ],
+   "a_land": [
+    37,
+    78
+   ],
+   "b": [
+    38,
+    7
+   ],
+   "b_land": [
+    38,
+    8
    ]
   }
  ]

@@ -176,6 +176,18 @@ UI: `ui_heart`, `ui_heart_wounded`, `ui_skull`, `ui_clock`, `ui_quill`,
 | `debris.png` | 2×2 | no | fallen plaster, rubble, splinters (decoration) |
 | `desk_large.png` | 6×4 | yes | the investigator's desk for the main menu: leather blotter, scattered case papers, photographs, brass lamp base, inkwell |
 
+### Inn and harbour furniture (revision 6) — `furniture/*.png`, built by `tools/art/locations.py`
+
+| file | footprint | blocks | notes |
+|---|---|---|---|
+| `bar_counter.png` | 4×1 | yes | polished mahogany bar, brass rail, beer-engine handles, pewter tankards |
+| `keg_rack.png` | 3×1 | yes | three casks lying on a stillage, brass taps to the front |
+| `rope_coil.png` | 1×1 | yes | coiled hawser with a loose end |
+| `bollard.png` | 1×1 | yes | iron mooring post with a rope looped round it |
+| `fishing_net.png` | 2×2 | no | heaped net with cork floats (decoration, drawn under actors) |
+| `water.png` | 2×2 | yes | seamless, opaque black harbour water; tiled 2×2 over a basin, never blocks sight |
+| `boat_hull.png` | 6×14 | no | moored lugger from above, bow up; deck is the walkable middle 4×10, gangway gap on the port side at rows 6–7 |
+
 ### Stairs — `furniture/` (walkable, drawn under actors)
 
 | file | footprint | notes |

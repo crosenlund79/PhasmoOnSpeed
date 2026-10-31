@@ -310,20 +310,39 @@ func _shot(s: String) -> void:
 		await _wait(220)
 		await _save("abyssal_hell")
 	elif s.begins_with("overview_"):
-		var run: Run = Game.start_run(s.substr(9), 5, "shade")
+		# overview_<house> (whole map), or overview_<house>:<level> (one floor, fitted to the frame).
+		var parts := s.substr(9).split(":")
+		var run: Run = Game.start_run(parts[0], 5, "shade")
 		await _wait(10)
+		run.creature.set_process(false)
 		run.hud.visible = false
 		run.world_text.visible = false
 		for c in run.hud.get_children():
 			c.visible = false
 		run.camera.zoom = Vector2(0.62, 0.62)
 		run.camera.offset = Vector2.ZERO
+		run.camera.limit_left = -100000
+		run.camera.limit_top = -100000
 		run.camera.limit_right = 100000
 		run.camera.limit_bottom = 100000
 		run.player.global_position = run.map.world_size() * 0.5
+		if parts.size() > 1:
+			var lv := int(parts[1])
+			var b := run.map.floor_bounds(lv)
+			var z := minf(1600.0 / b.size.x, 900.0 / b.size.y)
+			run.camera.zoom = Vector2(z, z)
+			run.player.global_position = b.get_center()
+			run.player.input_enabled = false
+			run._on_local_floor(lv)
+			run.camera.limit_left = -100000
+			run.camera.limit_top = -100000
+			run.camera.limit_right = 100000
+			run.camera.limit_bottom = 100000
+			run.camera.global_position = b.get_center()
+			run.camera.reset_smoothing()
 		run.hud.set_process(false)
 		await _wait(60)
-		await _save(s)
+		await _save(s.replace(":", "_"))
 	elif s.begins_with("hunt_"):
 		var run: Run = Game.start_run(s.substr(5).split(":")[0], 9, s.split(":")[1] if ":" in s else "werewolf")
 		await _wait(20)

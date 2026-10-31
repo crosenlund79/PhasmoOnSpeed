@@ -22,7 +22,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-HOUSES = {"ashgrove", "blackwood", "hollow_lane", "evangeline", "marrow_street"}
+HOUSES = {"ashgrove", "blackwood", "hollow_lane", "evangeline", "marrow_street", "tavern", "harbor"}
 CREATURE_EVIDENCE = {"shade": 3, "poltergeist": 3, "vampire": 3, "werewolf": 3, "shapeshifter": 3, "harbinger": 0}
 NAME_RE = re.compile(r"^[\w .'\-]{1,24}$", re.UNICODE)
 RATE_LIMIT = 12          # submissions per install id per hour

@@ -4,7 +4,7 @@
  "blurb": "The livestock left first. Nobody asks where to.",
  "size": [
   48,
-  62
+  94
  ],
  "spawn": [
   14,
@@ -350,6 +350,132 @@
    ],
    "level": -1,
    "condition": "abandoned"
+  },
+  {
+   "id": "upstairs_hall",
+   "name": "Upstairs Hall",
+   "floor": "wood_dark",
+   "kind": "hall",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     82,
+     26,
+     3
+    ]
+   ],
+   "level": 1,
+   "condition": "worn"
+  },
+  {
+   "id": "farmhand_room",
+   "name": "Farmhand's Room",
+   "floor": "wood_light",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     75,
+     8,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "neglected"
+  },
+  {
+   "id": "sewing_room",
+   "name": "Sewing Room",
+   "floor": "carpet_green",
+   "kind": "study",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     14,
+     75,
+     8,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "worn"
+  },
+  {
+   "id": "spare_room",
+   "name": "Spare Room",
+   "floor": "wood_light",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     23,
+     75,
+     8,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "abandoned"
+  },
+  {
+   "id": "grandmother_room",
+   "name": "Grandmother's Room",
+   "floor": "carpet_red",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     86,
+     10,
+     7
+    ]
+   ],
+   "level": 1,
+   "condition": "kept"
+  },
+  {
+   "id": "attic",
+   "name": "Attic",
+   "floor": "wood_dark",
+   "kind": "storage",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     16,
+     86,
+     15,
+     7
+    ]
+   ],
+   "level": 1,
+   "condition": "abandoned"
+  },
+  {
+   "id": "hayloft",
+   "name": "Hayloft",
+   "floor": "dirt",
+   "kind": "shed",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     32,
+     75,
+     11,
+     18
+    ]
+   ],
+   "level": 1,
+   "condition": "neglected"
   }
  ],
  "doors": [
@@ -488,6 +614,46 @@
   [
    17,
    58
+  ],
+  [
+   9,
+   81
+  ],
+  [
+   18,
+   81
+  ],
+  [
+   27,
+   81
+  ],
+  [
+   13,
+   78
+  ],
+  [
+   22,
+   78
+  ],
+  [
+   10,
+   85
+  ],
+  [
+   23,
+   85
+  ],
+  [
+   15,
+   89
+  ],
+  [
+   31,
+   83
+  ],
+  [
+   31,
+   89
   ]
  ],
  "furniture": [
@@ -970,6 +1136,228 @@
    19,
    54,
    0
+  ],
+  [
+   "bed_single",
+   5,
+   75,
+   0
+  ],
+  [
+   "trunk",
+   11,
+   75,
+   0
+  ],
+  [
+   "chair",
+   8,
+   77,
+   0
+  ],
+  [
+   "dresser",
+   5,
+   80,
+   0
+  ],
+  [
+   "desk",
+   15,
+   75,
+   0
+  ],
+  [
+   "chair",
+   16,
+   77,
+   2
+  ],
+  [
+   "cabinet",
+   20,
+   75,
+   0
+  ],
+  [
+   "covered_armchair",
+   14,
+   79,
+   0
+  ],
+  [
+   "wall_mirror",
+   20,
+   80,
+   0
+  ],
+  [
+   "bed_single",
+   29,
+   75,
+   0
+  ],
+  [
+   "nightstand",
+   28,
+   75,
+   0
+  ],
+  [
+   "covered_sofa",
+   23,
+   75,
+   0
+  ],
+  [
+   "broken_chair",
+   24,
+   80,
+   0
+  ],
+  [
+   "debris",
+   25,
+   78,
+   0
+  ],
+  [
+   "rug_rect",
+   12,
+   82,
+   0
+  ],
+  [
+   "side_table",
+   30,
+   82,
+   0
+  ],
+  [
+   "candelabra",
+   20,
+   84,
+   0
+  ],
+  [
+   "bed_single",
+   5,
+   86,
+   0
+  ],
+  [
+   "nightstand",
+   7,
+   86,
+   0
+  ],
+  [
+   "armchair",
+   12,
+   91,
+   0
+  ],
+  [
+   "wardrobe",
+   5,
+   92,
+   0
+  ],
+  [
+   "dresser",
+   11,
+   86,
+   0
+  ],
+  [
+   "crates",
+   16,
+   86,
+   0
+  ],
+  [
+   "old_trunk",
+   19,
+   86,
+   0
+  ],
+  [
+   "covered_armchair",
+   26,
+   86,
+   0
+  ],
+  [
+   "debris",
+   20,
+   89,
+   0
+  ],
+  [
+   "storage_shelf",
+   16,
+   92,
+   0
+  ],
+  [
+   "water_tank",
+   28,
+   91,
+   0
+  ],
+  [
+   "boards",
+   23,
+   90,
+   0
+  ],
+  [
+   "hay",
+   33,
+   75,
+   0
+  ],
+  [
+   "hay",
+   37,
+   75,
+   0
+  ],
+  [
+   "hay",
+   40,
+   78,
+   0
+  ],
+  [
+   "hay",
+   34,
+   86,
+   0
+  ],
+  [
+   "hay",
+   40,
+   90,
+   0
+  ],
+  [
+   "crates",
+   36,
+   81,
+   0
+  ],
+  [
+   "barrel",
+   42,
+   84,
+   0
+  ],
+  [
+   "woodpile",
+   38,
+   92,
+   0
   ]
  ],
  "stairs": [
@@ -1011,6 +1399,26 @@
    "b_land": [
     33,
     48
+   ]
+  },
+  {
+   "name": "Farmhouse Stairs",
+   "style": "stairs",
+   "a": [
+    5,
+    84
+   ],
+   "a_land": [
+    6,
+    84
+   ],
+   "b": [
+    14,
+    25
+   ],
+   "b_land": [
+    14,
+    24
    ]
   }
  ]
