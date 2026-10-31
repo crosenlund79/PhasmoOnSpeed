@@ -26,6 +26,8 @@ var hold_t := 0.0
 var hold_needed := 0.0
 var prompt := ""
 var _cooldown := 0.0
+const HW_REFILL := 6.0
+var _hw_refill := 0.0          # the last holy water flask refilling after a splash
 var _beep_t := 0.0
 var _thermo_cold_t := 0.0
 var _spirit_t := -1.0
@@ -86,6 +88,7 @@ func charge_text(id: String) -> String:
 
 func process_input(delta: float) -> void:
 	_cooldown = maxf(0.0, _cooldown - delta)
+	_hw_refill = maxf(0.0, _hw_refill - delta)
 	var inp := player.input
 	if not player.input_enabled or player.dead:
 		hold_action = ""
@@ -254,7 +257,7 @@ func update_tools(delta: float) -> void:
 		"crucifix":
 			hint = "Crucifix — click to place (%d burns)" % player.crucifix_burns if player.charges["crucifix"] > 0 else "Crucifix placed — [E] to retrieve"
 		"holy_water":
-			hint = "Holy Water (%d) — click to splash" % player.charges["holy_water"]
+			hint = ("Holy Water (%d) — click to splash" % player.charges["holy_water"]) if _hw_refill <= 0.0 else "Holy Water — the last flask refills… %d s" % int(ceil(_hw_refill))
 		"garlic":
 			hint = "Garlic — its stench repels some things"
 		"wooden_stake", "silver_stake", "iron_nails":
@@ -312,10 +315,17 @@ func use_current() -> void:
 			if player.charges["crucifix"] > 0 and run.place_item(player, "crucifix", front):
 				player.charges["crucifix"] = 0
 		"holy_water":
-			if player.charges["holy_water"] > 0:
-				player.charges["holy_water"] -= 1
+			# Never runs dry: the last flask is not emptied — it refills for a few
+			# seconds after each splash instead.
+			if player.charges["holy_water"] > 0 and _hw_refill <= 0.0:
+				if player.charges["holy_water"] > 1:
+					player.charges["holy_water"] -= 1
+				else:
+					_hw_refill = HW_REFILL
 				_cooldown = 0.8
 				run.splash_holy_water(player)
+			elif _hw_refill > 0.0:
+				run.tell(player, "Your last flask is still refilling…", "icons/eq_holy_water.png", true)
 		"wooden_stake", "silver_stake", "iron_nails":
 			_cooldown = 0.9
 			run.strike(player, cur)

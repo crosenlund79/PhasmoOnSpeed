@@ -27,7 +27,7 @@ func _ready() -> void:
 		"test_audio_export", "test_game_setup",
 		"test_blightness_rushes", "test_safe_names", "test_temperatures", "test_ghost_marker_and_ruled_out",
 		"test_hellbound", "test_abyssal", "test_sailor_and_doctor", "test_consolidation", "test_home_rooms", "test_suspect_filter_and_splatter", "test_weeper_and_mimic",
-		"test_progression", "test_flee_death_immortal",
+		"test_progression", "test_flee_death_immortal", "test_required_items_reachable", "test_salt_water_relic",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -1559,3 +1559,56 @@ func test_flee_death_immortal() -> void:
 	check(not run3.player.dead and run3.state == "playing", "immortal: no death")
 	check(run3.build_summary()["dev_immortal"], "the run is marked as cheated (kept off records)")
 	Progression.immortal = false
+
+## Every house resource (iron nails above all) spawns, and on a cell a hunter can reach.
+func test_required_items_reachable() -> void:
+	for hid in Game.house_ids:
+		for sd in [3, 17, 29]:
+			var run: Run = Game.start_run(hid, sd, "shapeshifter")
+			await get_tree().process_frame
+			run.map.closed_doors.clear()   # doors open with E; they never seal a room
+			var reach := run.map.reachable_from_spawn()
+			for res in Defs.RESOURCE_SPAWNS:
+				var got: Array = run.pickups.filter(func(it): return it.get("res", "") == res)
+				check(got.size() >= int(Defs.RESOURCE_SPAWNS[res]["count"]), "%s/%d: %s spawned" % [hid, sd, res])
+				for it in got:
+					check(reach.has(HouseMap.to_cell(it["pos"])), "%s/%d: %s reachable" % [hid, sd, res])
+			_cleanup_scene()
+			await get_tree().process_frame
+
+func test_salt_water_relic() -> void:
+	var run := await _start("ashgrove", "shade", 91)
+	var p := run.player
+	# Salt: pour, then scrape it back up with a hold; never more than you started with.
+	run.place_item(p, "salt", p.global_position)
+	p.charges["salt"] -= 1
+	var it := run.find_interactable(p, p.global_position)
+	check(it.get("label", "") == "Scrape Up Salt" and float(it["hold"]) > 0.5, "salt is recovered with a hold")
+	run.do_interact(p, it)
+	check(int(p.charges["salt"]) == 3 and not run.placed.any(func(x): return x["type"] == "salt"), "one pour returned, the line gone")
+	run.do_interact(p, it)
+	check(int(p.charges["salt"]) == 3, "no duplication")
+	# Holy water never runs dry.
+	p.equipment.select(p.equipment.slots.find("holy_water"))
+	for i in 6:
+		p.equipment._cooldown = 0.0
+		p.equipment._hw_refill = 0.0
+		p.equipment.use_current()
+	check(int(p.charges["holy_water"]) >= 1, "the last flask is never emptied (%d)" % int(p.charges["holy_water"]))
+	_cleanup_scene()
+	await get_tree().process_frame
+	# The Abyss relic: kept by a survivor, lost by the dead.
+	var r2: Run = Game.start_run("blackwood", 92, "shade", "abyssal")
+	await get_tree().process_frame
+	r2.creature.set_process(false)
+	SaveData.progress()["owned"] = ["common"]
+	r2.open_abyss(r2.player.room_id)
+	var relic: Array = r2.pickups.filter(func(x): return x["kind"] == "relic")
+	if relic.is_empty():
+		r2._maybe_abyss_relic(true)
+		relic = r2.pickups.filter(func(x): return x["kind"] == "relic")
+	check(relic.size() == 1 and AbyssArena.contains(relic[0]["pos"]), "a Legendary lies in the realm")
+	r2.do_interact(r2.player, relic[0])
+	r2.close_abyss()
+	check("abyssglass" in SaveData.progress()["owned"], "survivors keep it")
+	check(Progression.NEEDLES["abyssglass"]["tier"] == "legendary" and Progression.buy_block(SaveData.progress(), "abyssglass") == "owned", "legendary, never sold")

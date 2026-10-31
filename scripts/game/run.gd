@@ -834,6 +834,22 @@ func open_abyss(room: String) -> void:
 		creature.modulate.a = 0.85
 		record_event("abyss_pull", {"actor": _creature_actor_id(), "entity": true})
 	_abyss_drift()
+	_maybe_abyss_relic()
+
+## Rarely, a Legendary needle lies somewhere in the realm, among the traps. Whoever
+## takes it keeps it — if they survive the minute and come back.
+func _maybe_abyss_relic(force: bool = false) -> void:
+	if not force and rng.randf() >= float(Progression.PENALTIES["abyss_drop_chance"]):
+		return
+	var pos := AbyssArena.ORIGIN + Vector2(rng.randf_range(8.0, 14.0), rng.randf_range(2.0, 10.0)) * AbyssArena.C
+	var node := _item_sprite("icons/eq_emf.png", pos, 30.0)
+	WorldFx.ring(view.overlay_layer, pos, Color(0.8, 0.5, 1.0), 60.0, 1.6)
+	pickups.append({"kind": "relic", "item": "abyssglass", "node": node, "pos": pos, "icon": "icons/eq_emf.png",
+		"label": "Take the %s (Legendary)" % Progression.NEEDLES["abyssglass"]["name"], "hold": 0.6})
+	record_event("relic", {"phase": "appear", "x": pos.x, "y": pos.y})
+	for h: Player in hunters:
+		if in_abyss(h):
+			tell(h, "Something glints among the traps…", "icons/eq_emf.png", true)
 
 ## Where the occupants and the entity hang in the realm (out of the hunters' way).
 func _abyss_drift() -> void:
@@ -844,6 +860,16 @@ func _abyss_drift() -> void:
 		k += 1
 	if in_abyss(creature):
 		creature.position = AbyssArena.far_point(k, t)
+
+## A survivor carries a Legendary find out: it is theirs, in their own save.
+func _grant_relic(h: Player, id: String) -> void:
+	record_event("relic", {"phase": "kept", "actor": h.actor_id, "item": id})
+	if h.is_local:
+		var fresh := Progression.grant_item(SaveData.progress(), id)
+		SaveData.save()
+		announce_to(h, "A LEGENDARY FIND", ("The %s is yours." if fresh else "Another %s — you already own one.") % Progression.NEEDLES[id]["name"], Color(1.0, 0.72, 0.25), 2.4)
+	elif multiplayer_match:
+		Net.host_private(h.peer_id, "relic", {"item": id})
 
 func in_abyss(n: Node) -> bool:
 	return n != null and is_instance_valid(n) and n.has_meta("abyss")
@@ -887,6 +913,11 @@ func close_abyss() -> void:
 		used[cell] = true
 		_move_hunter(h, HouseMap.cell_center(cell))
 		h.room_id = room
+		if h.has_meta("abyss_relic"):
+			var relic: String = h.get_meta("abyss_relic")
+			h.remove_meta("abyss_relic")
+			if not h.dead:
+				_grant_relic(h, relic)
 		if not h.dead:
 			h.invuln = maxf(h.invuln, 2.0)
 			h.set_meta("abyss_escapes", int(h.get_meta("abyss_escapes", 0)) + 1)
@@ -1785,7 +1816,7 @@ func perform_rite(p: Player) -> void:
 		_victory(p)
 		return
 	if "holy_water" in Defs.CREATURES[p.suspect].get("rite_needs", []):
-		p.charges["holy_water"] = maxi(0, int(p.charges["holy_water"]) - 1)   # rites of water spend a flask
+		p.charges["holy_water"] = maxi(1, int(p.charges["holy_water"]) - 1)   # rites of water spend a flask — never the last
 		p.equipment.changed.emit()
 	attempt_vanquish(p, p.suspect, "rite")
 
@@ -1951,6 +1982,10 @@ func find_interactable(p: Player, pos: Vector2) -> Dictionary:
 		if it["type"] in ["ghost_book", "crucifix"] and it["owner"] == p:
 			cands.append([{"kind": "retrieve", "item": it, "pos": it["pos"], "icon": Defs.EQUIPMENT[it["type"]]["icon"],
 				"label": "Retrieve " + Defs.EQUIPMENT[it["type"]]["name"], "hold": 0.0}, 46.0])
+		elif it["type"] == "salt" and it["owner"] == p and int(p.charges["salt"]) < int(Player.START_CHARGES["salt"]):
+			# Scraping up a line of salt takes a moment (hold), and gives back one pour.
+			cands.append([{"kind": "retrieve", "item": it, "pos": it["pos"], "icon": Defs.EQUIPMENT["salt"]["icon"],
+				"label": "Scrape Up Salt", "hold": 1.2}, 46.0])
 	for i in view.lights.size():
 		if view.can_extinguish(i) and not view.lights[i]["on"]:
 			var what: String = {"candle": "Candle", "lamp": "Lamp", "hearth": "Fire", "room": "Lamp"}.get(view.lights[i]["kind"], "Flame")
@@ -2007,6 +2042,15 @@ func do_interact(p: Player, it: Dictionary) -> void:
 	if it.is_empty() or p.dead:
 		return
 	match it["kind"]:
+		"relic":
+			if not pickups.has(it):
+				return
+			_remove_sprite(it["node"])
+			pickups.erase(it)
+			p.set_meta("abyss_relic", it["item"])
+			sound_to(p, "pickup", 0.0, 0.7)
+			tell(p, "You hold the %s. Survive, and it is yours." % Progression.NEEDLES[it["item"]]["name"], "icons/eq_emf.png")
+			record_event("relic", {"phase": "taken", "actor": p.actor_id})
 		"resource":
 			if not pickups.has(it):
 				return   # a rival got there first
@@ -2025,6 +2069,9 @@ func do_interact(p: Player, it: Dictionary) -> void:
 			placed.erase(item)
 			if item["type"] == "ghost_book":
 				p.book_placed = false
+			elif item["type"] == "salt":
+				p.charges["salt"] = mini(int(Player.START_CHARGES["salt"]), int(p.charges["salt"]) + 1)
+				sound_at("salt_pour", p.global_position, -8.0, 1.4)
 			else:
 				p.charges["crucifix"] = 1
 				p.crucifix_burns = item["burns"]

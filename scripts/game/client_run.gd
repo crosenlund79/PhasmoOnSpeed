@@ -322,6 +322,10 @@ func apply_private(kind: String, d: Dictionary) -> void:
 		"void":
 			player.journal.void_all()
 			hud.refresh()
+		"relic":
+			var fresh := Progression.grant_item(SaveData.progress(), str(d["item"]))
+			SaveData.save()
+			hud.big_message("A LEGENDARY FIND", ("The %s is yours." if fresh else "Another %s — you already own one.") % Progression.NEEDLES[str(d["item"])]["name"], Color(1.0, 0.72, 0.25), 2.4)
 		"wound":
 			hud.wound()
 		"knockback":
