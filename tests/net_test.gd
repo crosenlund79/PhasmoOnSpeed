@@ -25,6 +25,8 @@ func _ready() -> void:
 	scenario = a[3] if a.size() > 3 else "full"
 	SaveData.save_path = "user://net_test_%s_%d.json" % [role, index]
 	SaveData.reset_all()
+	# The setup scenario also plays the pre-game cards and die on every peer.
+	Game.pregame_intro = scenario == "setup"
 	get_tree().create_timer(90.0).timeout.connect(func():
 		_say("TIMEOUT")
 		get_tree().quit(2))
@@ -103,7 +105,11 @@ func _host() -> void:
 		check(run.blood_moon and run.view.blood_moon, "forced Blood Moon on the host")
 		check(run.difficulty in Defs.RANDOM_DIFFICULTIES, "random difficulty never Beginner (%s)" % run.difficulty)
 		_say("SETUP house=%s difficulty=%s moon=%s" % [run.house_id, run.difficulty, run.blood_moon])
-		await _wait(4.0)
+		check(Game.intro != null and Game.intro.house == run.house_id and Game.intro.difficulty == run.difficulty and get_tree().paused,
+			"host shows its resolved house and difficulty over a frozen run")
+		await _until(func(): return not get_tree().paused, 6.0)
+		check(not get_tree().paused and Game.intro == null, "host's run starts after the presentation")
+		await _wait(1.5)
 		_done()
 		return
 	var spawn := HouseMap.cell_center(run.map.spawn_cell)
@@ -275,6 +281,10 @@ func _client() -> void:
 	if scenario == "setup":
 		check(cr.blood_moon and cr.view.blood_moon, "Blood Moon reached this client")
 		_say("SETUP house=%s difficulty=%s moon=%s" % [cr.house_id, cr.difficulty, cr.blood_moon])
+		check(Game.intro != null and Game.intro.house == cr.house_id and Game.intro.difficulty == cr.difficulty and get_tree().paused,
+			"client shows the host's house and difficulty over a frozen run")
+		await _until(func(): return not get_tree().paused, 6.0)
+		check(not get_tree().paused and Game.intro == null and Net.client_run == cr, "client's run starts after the presentation")
 		_done()
 		return
 	if scenario == "pause":

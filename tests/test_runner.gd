@@ -27,7 +27,7 @@ func _ready() -> void:
 		"test_audio_export", "test_game_setup",
 		"test_blightness_rushes", "test_safe_names", "test_temperatures", "test_ghost_marker_and_ruled_out",
 		"test_hellbound", "test_abyssal", "test_sailor_and_doctor", "test_consolidation", "test_home_rooms", "test_suspect_filter_and_splatter", "test_weeper_and_mimic",
-		"test_progression", "test_flee_death_immortal", "test_required_items_reachable", "test_salt_water_relic", "test_sight_and_doors", "test_tavern_missions",
+		"test_progression", "test_flee_death_immortal", "test_required_items_reachable", "test_salt_water_relic", "test_sight_and_doors", "test_tavern_missions", "test_pregame_and_theme",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -880,9 +880,10 @@ func test_audio_overrides() -> void:
 		f.close()
 		made.append(path)
 	Sfx.clear_cache()
-	# Without creator audio every cue resolves to its placeholder.
+	# Without creator audio every cue resolves to its placeholder (or its composed theme).
 	for id in AudioCatalog.CUES:
-		check(Sfx.source_of(id) == "placeholder" and Sfx.stream(id) != null, "%s plays its placeholder" % id)
+		var want := "theme" if AudioCatalog.THEMES.has(id) else "placeholder"
+		check(Sfx.source_of(id) == want and Sfx.stream(id) != null, "%s plays its %s" % [id, want])
 	for f in DirAccess.get_files_at("res://assets/audio/"):
 		if f.ends_with(".wav"):
 			check(AudioCatalog.CUES.has(f.get_basename()), "%s is in the catalog" % f)
@@ -1697,4 +1698,32 @@ func test_tavern_missions() -> void:
 	check(int(p["renown"]) >= 0, "Renown never below 0 (%d)" % int(p["renown"]))
 	SaveData.load_data()
 	check(SaveData.progress()["missions"].get("marrow_tithe") == "failed" and SaveData.progress()["blackmail_keeper"], "mission state persists")
+
+# --- Front of house -----------------------------------------------------------------------
+
+## The menu theme resolves to the composed mp3 (looping), and the pre-game
+## cards-and-die land on exactly the resolved setup without changing it.
+func test_pregame_and_theme() -> void:
+	Sfx.clear_cache()
+	check(Sfx.source_of("music_menu") == "theme", "menu music is the composed theme")
+	var th = Sfx.stream("music_menu")
+	check(th is AudioStreamMP3 and th.loop, "the theme is a looping mp3")
+	var setup := {"mode": "custom", "house": "random", "entity": "random", "difficulty": "random", "blood_moon": "off"}
+	var before := setup.duplicate(true)
+	Game.pregame_intro = true
+	var run: Run = Game.start_setup(setup)
+	await _frames(2)
+	var intro := Game.intro
+	check(setup == before, "the setup is never changed")
+	check(intro != null and get_tree().paused, "the presentation shows over a frozen run")
+	if intro:
+		check(intro.house == run.house_id and intro.revealed_house() == run.house_id, "the turned card is the resolved house")
+		check(intro.die_difficulty(PregameIntro.DURATION) == run.difficulty and run.difficulty in Defs.RANDOM_DIFFICULTIES, "the die lands on the resolved difficulty")
+		var land := PregameIntro.landing(Game.house_ids, run.house_id, run.difficulty)
+		check(land["card"] >= 0 and land["die_face"] == Defs.DIFFICULTIES.find(run.difficulty) + 1, "landing matches the resolved values")
+		check(run.elapsed == 0.0, "the run clock waits for the presentation")
+		intro.skip()
+		await _frames(40)
+		check(Game.intro == null and not get_tree().paused, "skipping ends it and the run starts")
+	Game.pregame_intro = false
 	SaveData.reset_all()

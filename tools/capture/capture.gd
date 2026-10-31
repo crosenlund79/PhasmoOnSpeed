@@ -38,6 +38,22 @@ func _shot(s: String) -> void:
 		get_tree().current_scene.settings_panel.visible = true
 		await _wait(10)
 		await _save("settings")
+	elif s == "about":
+		Game.goto_about()
+		await _wait(20)
+		await _save("about")
+	elif s.begins_with("intro"):
+		# intro[:seconds] — the pre-game cards and die, frozen at a moment.
+		var at := float(s.split(":")[1]) if ":" in s else 3.3
+		Game.pregame_intro = true
+		Game.start_setup({"mode": "custom", "house": "evangeline", "entity": "shade", "difficulty": "hellbound", "blood_moon": "on"})
+		await _wait(5)
+		Game.intro.set_process(false)
+		Game.intro.t = at
+		Game.intro._table.queue_redraw()
+		await _wait(5)
+		await _save(s.replace(":", "_"))
+		Game.intro.set_process(true)
 	elif s == "houses":
 		Game.goto_house_select()
 		await _wait(20)

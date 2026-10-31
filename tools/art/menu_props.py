@@ -1,7 +1,7 @@
 """Revision 2: props for the overhead investigation-desk main menu, plus brass plaque buttons.
 
 All subjects are generic and invented (a gabled house, a silhouette at a
-window, a dark doorway); the only words are "SPECTRAL" and "CASE".
+window, a dark doorway); the only words are "UNSOLVED" and "CASE".
 """
 from __future__ import annotations
 
@@ -268,8 +268,8 @@ def case_file():
     # handwritten notes on the cover
     for j in range(5):
         scribble(cv, 30, 160 + j * 12, 90 + rr.random() * 40, rr, amp=1.2, rot=-1.5, op=0.7)
-    # red SPECTRAL stamp inside a double-ruled box, distressed
-    sm = text_arr(cv, "SPECTRAL", "IMFellEnglishSC-Regular.ttf", 21, 96, 118, 12, tracking=1.0)
+    # red UNSOLVED stamp inside a double-ruled box, distressed
+    sm = text_arr(cv, "UNSOLVED", "IMFellEnglishSC-Regular.ttf", 21, 96, 118, 12, tracking=1.0)
     bx = cv.mask().poly([(96 + x * math.cos(math.radians(-12)) - y * math.sin(math.radians(-12)),
                           118 + x * math.sin(math.radians(-12)) + y * math.cos(math.radians(-12)))
                          for x, y in rrect_pts(-72, -17, 72, 17, 3, 3)])
