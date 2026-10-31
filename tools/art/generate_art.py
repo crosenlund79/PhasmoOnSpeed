@@ -70,7 +70,8 @@ ICONS = ["ev_emf5", "ev_freezing", "ev_spirit_box", "ev_uv", "ev_writing", "ev_o
          "ev_shed_skin", "ev_mimic_voice", "eq_flashlight", "eq_emf", "eq_thermometer", "eq_uv", "eq_spirit_box",
          "eq_ghost_book", "eq_orb_camera", "eq_salt", "eq_crucifix", "eq_holy_water", "eq_garlic",
          "eq_wooden_stake", "eq_silverware", "eq_silver_stake", "eq_hand_mirror", "eq_iron_nails", "eq_voodoo_doll", "ui_heart",
-         "ui_heart_wounded", "ui_skull", "ui_clock", "ui_quill", "ui_house", "ui_trophy"]
+         "ui_heart_wounded", "ui_skull", "ui_clock", "ui_quill", "ui_house", "ui_trophy",
+         "ui_tome", "ui_crown", "ui_gear", "ui_keyboard", "ui_tavern", "ui_about"]
 UI = {"parchment": (512, 512), "panel_frame": (96, 96), "panel_dark": (96, 96), "button": (96, 48),
       "button_hover": (96, 48), "button_pressed": (96, 48), "title_logo": (1200, 300),
       "menu_background": (1920, 1080), "banner_vanquished": (1000, 220), "banner_perished": (1000, 220),

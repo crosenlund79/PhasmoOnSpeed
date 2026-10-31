@@ -188,6 +188,43 @@ func _plaque(text: String, cb: Callable, width: int = 360, dev: bool = false) ->
 	b.mouse_exited.connect(func(): b.create_tween().tween_property(b, "rotation", 0.0, 0.12))
 	return b
 
+const COL_W := 368
+const HALF_W := 180
+
+## An illustrated icon at the plaque's left, the title beside it.
+func _iconed(b: Button, icon: String, font_size: int = 22) -> Button:
+	b.icon = Art.tex(icon)
+	b.expand_icon = false
+	b.add_theme_constant_override("icon_max_width", 34)
+	b.add_theme_constant_override("h_separation", 6)
+	b.add_theme_font_size_override("font_size", font_size)
+	return b
+
+func _row(parent: Control, items: Array) -> void:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 8)
+	parent.add_child(row)
+	for it in items:
+		row.add_child(it)
+
+## Quit: a smaller plaque stained a deep oxblood.
+func _quit_plaque(b: Button) -> Button:
+	for state in ["normal", "hover", "focus", "pressed"]:
+		var sb = b.get_theme_stylebox(state)
+		if sb is StyleBoxTexture:
+			sb = sb.duplicate()
+			sb.modulate_color = Color(0.62, 0.2, 0.17) if state in ["normal", "pressed"] else Color(0.78, 0.26, 0.2)
+			b.add_theme_stylebox_override(state, sb)
+	b.add_theme_color_override("font_color", Color(0.97, 0.88, 0.8))
+	b.add_theme_color_override("font_hover_color", Color(1.0, 0.95, 0.85))
+	b.add_theme_color_override("font_focus_color", Color(1.0, 0.95, 0.85))
+	b.add_theme_color_override("font_pressed_color", Color(0.9, 0.75, 0.68))
+	b.add_theme_color_override("font_outline_color", Color(0.18, 0.02, 0.02))
+	b.add_theme_constant_override("outline_size", 4)
+	b.add_theme_font_size_override("font_size", 20)
+	return b
+
 func _build_ui(root: Control) -> void:
 	var shade := TextureRect.new()
 	shade.texture = Art.tex("ui/vignette.png")
@@ -221,28 +258,28 @@ func _build_ui(root: Control) -> void:
 	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
 	logo.size = Vector2(560, 140)
 	logo_holder.add_child(logo)
-	var tag := Art.label("A supernatural investigation speedrun", 21, Color(0.92, 0.86, 0.72), Art.font_italic)
-	tag.add_theme_color_override("font_outline_color", Color.BLACK)
-	tag.add_theme_constant_override("outline_size", 6)
-	left.add_child(tag)
 	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(0, 12)
+	gap.custom_minimum_size = Vector2(0, 14)
 	left.add_child(gap)
-	var begin := _plaque("Begin Investigation", func(): Game.goto_house_select())
-	left.add_child(begin)
-	left.add_child(_plaque("Competitive Hunt", func(): Game.goto_lobby()))
-	left.add_child(_plaque("The Forest Tavern", func(): Game.goto_tavern()))
-	var row2 := HBoxContainer.new()
-	row2.add_theme_constant_override("separation", 8)
-	left.add_child(row2)
-	row2.add_child(_plaque("Encyclopedia", func(): Game.goto_encyclopedia(), 176))
-	row2.add_child(_plaque("Rankings", func(): Game.goto_rankings(), 176))
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	left.add_child(row)
-	row.add_child(_plaque("Settings", func(): settings_panel.visible = true, 176))
-	row.add_child(_plaque("Controls", func(): help_panel.visible = true, 176))
-	left.add_child(_plaque("Quit", func(): get_tree().quit(), 176))
+	# One centred column: the two ways in are narrower than the icon rows below.
+	var col := VBoxContainer.new()
+	col.custom_minimum_size = Vector2(COL_W, 0)
+	col.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	col.add_theme_constant_override("separation", 10)
+	left.add_child(col)
+	var begin := _plaque("Begin Investigation", func(): Game.goto_house_select(), 300)
+	begin.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	col.add_child(begin)
+	var hunt := _plaque("Competitive Hunt", func(): Game.goto_lobby(), 300)
+	hunt.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	col.add_child(hunt)
+	col.add_child(_iconed(_plaque("The Forest Tavern", func(): Game.goto_tavern(), COL_W), "icons/ui_tavern.png"))
+	_row(col, [_iconed(_plaque("Encyclopedia", func(): Game.goto_encyclopedia(), HALF_W), "icons/ui_tome.png", 19),
+		_iconed(_plaque("Rankings", func(): Game.goto_rankings(), HALF_W), "icons/ui_crown.png", 19)])
+	_row(col, [_iconed(_plaque("Settings", func(): settings_panel.visible = true, HALF_W), "icons/ui_gear.png", 19),
+		_iconed(_plaque("Controls", func(): help_panel.visible = true, HALF_W), "icons/ui_keyboard.png", 19)])
+	_row(col, [_iconed(_plaque("About", func(): Game.goto_about(), HALF_W), "icons/ui_about.png", 19),
+		_quit_plaque(_plaque("Quit", func(): get_tree().quit(), 132))])
 	var best: int = SaveData.data["records"]["best_score"]
 	if best > 0:
 		var b := Art.label("Personal best: %d points" % best, 18, Art.GOLD, Art.font_heading)

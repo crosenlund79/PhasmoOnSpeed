@@ -200,7 +200,11 @@ def distress(cv, m, amount=0.25, seed="d"):
 def lettering(name, W, H, s, fnt_name, size, fill_tex, edge_color, ink_w=6.0, edge_w=3.0, tracking=0, y=None,
               drips=False, ss=2, rays=None, under=None, distress_amt=0.18, glow=None):
     cv = Canvas(W, H, ss, name=name)
-    m = text_mask(W, H, ss, s, fnt_name, size, y, tracking)
+    if isinstance(s, list):
+        # several lines: [(text, size, y, tracking), ...]
+        m = np.maximum.reduce([text_mask(W, H, ss, t, fnt_name, sz, yy, tr) for (t, sz, yy, tr) in s])
+    else:
+        m = text_mask(W, H, ss, s, fnt_name, size, y, tracking)
     m = distress(cv, m, distress_amt)
     if under is not None:
         under(cv, m)
@@ -266,7 +270,11 @@ def title_logo():
     edge = gold_tex(W * ss, H * ss, "logoedge")
 
     def under(cv, m):
-        # flourish rule under the title
+        # short rules flanking "THE", and a flourish rule under the title
+        for (x0, x1) in ((440, 536), (664, 760)):
+            ln = cv.mask().line([(x0, 54), (x1, 54)], 2.4)
+            cv.paint(dilate(ln.arr, 2 * ss), INK, 0.9)
+            cv.paint(ln, gold_tex(cv.W, cv.H, "fl"))
         y = 248
         for (x0, x1) in ((150, 520), (680, 1050)):
             ln = cv.mask().line([(x0, y), (x1, y)], 3.2)
@@ -282,9 +290,10 @@ def title_logo():
             cv.paint(dilate(c.arr, 2 * ss), INK)
             cv.paint(c, gold_tex(cv.W, cv.H, "fl"))
 
-    cv, m = lettering("title_logo", W, H, "SPECTRAL RUN", "IMFellEnglishSC-Regular.ttf", 176, fill, edge,
-                      ink_w=5.0, edge_w=3.4, tracking=10, y=132, ss=ss, under=under, distress_amt=0.14,
-                      glow=(150, 200, 215))
+    cv, m = lettering("title_logo", W, H, [("THE", 60, 52, 22), ("WITCHENING TALES", 146, 160, 6)],
+                      "IMFellEnglishSC-Regular.ttf", 150, fill, edge,
+                      ink_w=5.0, edge_w=3.4, ss=ss, under=under, distress_amt=0.12,
+                      glow=(160, 205, 180))
     # a few ink splatters
     r = rng("logo_splat")
     for _ in range(26):

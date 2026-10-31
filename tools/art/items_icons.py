@@ -6,6 +6,7 @@ import math
 import numpy as np
 
 import objects as O
+import menu_icons as MI
 import rev5 as R5
 from core import Canvas, INK, blur, col, dilate, gradient, save, catmull
 
@@ -150,6 +151,9 @@ ICONS = {
     "ui_house": lambda cv, st: O.house(cv, st),
     "ui_trophy": lambda cv, st: O.trophy(cv, st),
 }
+
+
+ICONS.update(MI.ICONS)   # main-menu plaque icons
 
 
 def build_items(only=None):

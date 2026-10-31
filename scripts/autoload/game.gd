@@ -81,6 +81,9 @@ func goto_tavern() -> void:
 func goto_encyclopedia() -> void:
 	_switch(preload("res://scripts/ui/encyclopedia.gd").new())
 
+func goto_about() -> void:
+	_switch(preload("res://scripts/ui/about_screen.gd").new())
+
 func goto_lobby(message: String = "") -> void:
 	var l = preload("res://scripts/ui/lobby.gd").new()
 	l.message = message
@@ -91,6 +94,7 @@ func start_match_host(house_id: String, run_seed: int, creature_override: String
 	var run = preload("res://scripts/game/run.gd").new()
 	run.setup(house_id, run_seed, creature_override, roster, difficulty, blood_moon, setup)
 	_switch(run)
+	_present(run, house_id, difficulty, blood_moon, true)
 	return run
 
 ## Client: build the mirrored view of the host's match.
@@ -98,6 +102,7 @@ func start_match_client(house_id: String, run_seed: int, roster: Array, my_peer:
 	var cr = preload("res://scripts/game/client_run.gd").new()
 	cr.setup(house_id, run_seed, roster, my_peer, difficulty, blood_moon, setup)
 	_switch(cr)
+	_present(cr, house_id, difficulty, blood_moon, true)
 	return cr
 
 ## Host: the match ended. Send everyone the results and the replay.
@@ -151,7 +156,30 @@ func resolve_setup(setup: Dictionary, rng: RandomNumberGenerator = null) -> Dict
 func start_setup(setup: Dictionary) -> Node:
 	SaveData.set_setting("setup", setup)
 	var r := resolve_setup(setup)
-	return start_run(r["house"], -1, r["entity"], r["difficulty"], r["blood_moon"], r)
+	var run := start_run(r["house"], -1, r["entity"], r["difficulty"], r["blood_moon"], r)
+	_present(run, r["house"], r["difficulty"], r["blood_moon"], false)
+	return run
+
+# --- Pre-game presentation ---------------------------------------------------------
+## The card-and-die moment before an investigation (PregameIntro). Off in headless
+## runs (tests, servers) unless a test turns it on.
+var pregame_intro := DisplayServer.get_name() != "headless"
+var intro: PregameIntro = null
+
+## Shows the already-resolved house and difficulty over the new run, which stays
+## frozen until the presentation ends. Purely visual: nothing is chosen here.
+## Matches use the same fixed duration on every peer.
+func _present(run: Node, house_id: String, difficulty: String, blood_moon: bool, is_match: bool) -> void:
+	if not pregame_intro or run == null:
+		return
+	intro = PregameIntro.new()
+	intro.setup(house_id, difficulty, blood_moon, is_match)
+	get_tree().paused = true
+	intro.finished.connect(func():
+		intro = null
+		if _current == run and Net.pause_by == 0:
+			get_tree().paused = false)
+	run.add_child(intro)
 
 ## Starts a run. creature_override picks the entity (Custom Game / tests); "" rolls it.
 ## Difficulty defaults to the one last chosen in the setup screen.

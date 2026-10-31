@@ -1,4 +1,4 @@
-# SPECTRAL RUN — Art Asset Manifest
+# THE WITCHENING TALES — Art Asset Manifest
 
 All artwork is looked up by **relative path** through the `Art` autoload
 (`scripts/autoload/art.gd`). For every path the game first checks
@@ -132,6 +132,11 @@ Equipment: `eq_flashlight`, `eq_emf`, `eq_thermometer`, `eq_uv`,
 UI: `ui_heart`, `ui_heart_wounded`, `ui_skull`, `ui_clock`, `ui_quill`,
 `ui_house`, `ui_trophy`.
 
+Main-menu plaques (tools/art/menu_icons.py): `ui_tome` (Encyclopedia, an antique
+tooled-leather tome), `ui_crown` (Rankings), `ui_gear` (Settings), `ui_keyboard`
+(Controls), `ui_tavern` (The Forest Tavern: a woodland hut among firs), `ui_about`
+(About, a wax-sealed letter).
+
 ## UI — `ui/`
 
 | file | size | notes |
@@ -140,7 +145,7 @@ UI: `ui_heart`, `ui_heart_wounded`, `ui_skull`, `ui_clock`, `ui_quill`,
 | `panel_frame.png` | 96×96 | 9-slice (24 px margins): parchment centre, charcoal inked border, thin gold inner rule |
 | `panel_dark.png` | 96×96 | 9-slice: charcoal panel with gold rule |
 | `button.png` / `button_hover.png` / `button_pressed.png` | 96×48 | 9-slice (16 px margins) |
-| `title_logo.png` | 1200×300 | "SPECTRAL RUN" distressed serif logo, transparent |
+| `title_logo.png` | 1200×300 | "THE WITCHENING TALES" distressed serif logo ("THE" small between gold rules), transparent |
 | `menu_background.png` | 1920×1080 | moonlit gothic manor, ink illustration |
 | `banner_vanquished.png` | 1000×220 | "VANQUISHED!" dramatic title, transparent |
 | `banner_perished.png` | 1000×220 | "PERISHED!" dramatic title (blood red), transparent |
@@ -213,7 +218,7 @@ UI: `ui_heart`, `ui_heart_wounded`, `ui_skull`, `ui_clock`, `ui_quill`,
 | file | size | notes |
 |---|---|---|
 | `case_photo_1.png`…`case_photo_3.png` | 128×160 | old sepia photographs of the houses / occupants (no real people), slightly curled, with tape |
-| `case_file.png` | 192×256 | manila case file with "SPECTRAL" stamp and handwritten notes |
+| `case_file.png` | 192×256 | manila case file with "UNSOLVED" stamp and handwritten notes |
 | `journal_open.png` | 320×224 | the open hunter's journal from above, inked notes and sketches |
 | `map_pinned.png` | 256×192 | hand-drawn floorplan with red string and pins |
 | `pocket_watch.png`, `magnifier.png`, `inkwell.png` | 96×96 | desk props from above |

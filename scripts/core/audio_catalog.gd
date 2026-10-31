@@ -90,6 +90,21 @@ const CUES := {
 	"results_lose": ["ui/results_lose", "wav"],
 }
 
+## Composed themes shipped with the game (res://assets/audio/Themes/). A theme
+## replaces a cue's generated placeholder; a creator file still wins over both,
+## and the placeholder stays as the fallback when the theme file is missing.
+const THEMES := {
+	"music_menu": "res://assets/audio/Themes/The Road Through Blackthorn.mp3",
+}
+
+## The composed theme for a cue, or null (no theme, or its file is missing).
+static func theme_stream(id: String) -> AudioStream:
+	var path: String = THEMES.get(id, "")
+	if path == "" or not ResourceLoader.exists(path):
+		return null
+	var r = load(path)
+	return r if r is AudioStream else null
+
 ## Candidate creator files for a cue, in lookup order: the single replacement
 ## (preferred format, then the other), then numbered variants _01 … _08.
 static func candidates(id: String) -> Array:

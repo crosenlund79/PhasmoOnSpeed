@@ -1,4 +1,4 @@
-# SPECTRAL RUN — Audio Catalog
+# THE WITCHENING TALES — Audio Catalog
 
 Every sound the game can play, where a replacement goes, and what is still
 missing. The code-side list lives in `scripts/core/audio_catalog.gd`
@@ -11,7 +11,8 @@ missing. The code-side list lives in `scripts/core/audio_catalog.gd`
 | Sound cues in the catalog | **64** |
 | …triggered by the game | **59** |
 | …generated but currently never triggered | **5** (`camera_shutter`, `cat_meow`, `emf_beep`, `emf_spike`, `thermometer_tick`) |
-| Cues using generated placeholder audio | **64 of 64** — all made by `tools/audio/generate_audio.py` |
+| Cues using generated placeholder audio | **63 of 64** — made by `tools/audio/generate_audio.py` |
+| Cues using a composed theme | **1** (`music_menu`: `assets/audio/Themes/The Road Through Blackthorn.mp3`) |
 | Cues with creator (original) audio | **0** so far |
 | Suggested missing sounds | **24** (see the end) |
 
@@ -138,7 +139,7 @@ Status in every row below: **Existing placeholder** (generated) unless marked.
 | ID | Name | Creator file | Trigger | Behavior | Priority | Notes |
 |---|---|---|---|---|---|---|
 | `ambience_house` | House ambience | `ambient/house_ambience.ogg` | The whole run (pitched down in basements) | **loop**, 2D | Essential | Long, seamless; the most-heard sound in the game. |
-| `music_menu` | Menu music | `ambient/menu_music.ogg` | Main menu | **loop**, music volume | Essential | |
+| `music_menu` | Menu theme | `ambient/menu_music.ogg` | Main menu and every menu screen (Encyclopedia, Rankings, About, Forest Tavern); never restarts between them, fades out when an investigation begins | **loop**, music volume | Essential | Plays the composed theme *The Road Through Blackthorn* (`assets/audio/Themes/`, looped); the generated `music_menu.wav` is the fallback if that file is missing. A creator file still wins over both. |
 
 ## Occupants — `res://assets/creator/audio/npc/`
 

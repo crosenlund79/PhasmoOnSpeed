@@ -1,7 +1,8 @@
 extends Node
 ## Sound playback: one-shots (with anti-spam cooldowns), positional sounds and
 ## named loops. Sounds are referenced by a stable id — the file stem of the
-## generated placeholder in res://assets/audio/. A creator file listed in
+## generated placeholder in res://assets/audio/. A composed theme
+## (AudioCatalog.THEMES) replaces a placeholder; a creator file listed in
 ## AudioCatalog (res://assets/creator/audio/…) replaces the placeholder's audio;
 ## everything about *how* the sound plays stays as below.
 
@@ -79,6 +80,10 @@ func _resolve(sound: String) -> Array:
 	if not out.is_empty():
 		_sources[sound] = "creator"
 		return out
+	var theme := AudioCatalog.theme_stream(sound)
+	if theme:
+		_sources[sound] = "theme"
+		return [_prepared(sound, theme)]
 	var path := AUDIO_DIR + sound + ".wav"
 	if ResourceLoader.exists(path):
 		_sources[sound] = "placeholder"
@@ -95,7 +100,7 @@ func _prepared(sound: String, s: AudioStream) -> AudioStream:
 		s.loop_mode = AudioStreamWAV.LOOP_FORWARD
 		s.loop_begin = 0
 		s.loop_end = int(s.get_length() * s.mix_rate)
-	elif s is AudioStreamOggVorbis:
+	elif s is AudioStreamOggVorbis or s is AudioStreamMP3:
 		s = s.duplicate()
 		s.loop = true
 	return s
