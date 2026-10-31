@@ -390,6 +390,20 @@ static func fits(id: String, journal) -> bool:
 static func candidates(journal) -> Array:
 	return ORDINARY_CREATURES.filter(func(id): return fits(id, journal))
 
+## Floor texture -> footstep surface. Tiles ring like stone; carpets muffle wood.
+## Any floor not listed (or a surface without recordings) uses the generic step.
+const FLOOR_SURFACE := {
+	"wood_dark": "wood", "wood_light": "wood", "parquet": "wood",
+	"carpet_red": "carpet", "carpet_blue": "carpet", "carpet_green": "carpet",
+	"stone": "stone", "tile_white": "stone", "tile_checker": "stone",
+	"dirt": "dirt", "grass": "grass", "gravel": "gravel",
+}
+
+## The footstep cue for a floor texture ("footstep" when the surface is unknown).
+static func footstep_cue(floor_texture: String) -> String:
+	var s: String = FLOOR_SURFACE.get(floor_texture, "")
+	return "footstep_" + s if s != "" else "footstep"
+
 static func is_ghost(id: String) -> bool:
 	return CREATURES.get(id, {}).get("kind", "") == "ghost"
 

@@ -361,6 +361,10 @@ func _grid_path(a: Vector2i, b: Vector2i) -> PackedVector2Array:
 	return astar.get_point_path(a, b)
 
 ## Line of sight: walls and closed doors block (furniture is low).
+## The floor texture underfoot at p ("" off the map; doorways take a neighbour room's).
+func floor_texture_at(p: Vector2, prefer: String = "") -> String:
+	return str(room(room_at(p, prefer)).get("floor", ""))
+
 ## Whether a hunter at `from` (in from_room) can see something at `to`: the same
 ## room, or a clear line through no walls, closed doors or the void between floors.
 ## (Inside the Abyss: only what is in the Abyss too.)

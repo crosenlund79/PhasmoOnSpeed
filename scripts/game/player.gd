@@ -235,5 +235,9 @@ func _physics_process(delta: float) -> void:
 		_step_t -= delta * (1.5 if sprinting else 1.0)
 		if _step_t <= 0.0:
 			_step_t = 0.32
-			Sfx.play("footstep", -8.0, randf_range(0.85, 1.1), 0.1)
+			# The surface underfoot picks the step (wood, stone, carpet…); unknown → generic.
+			var cue := "footstep"
+			if run and run.get("map"):
+				cue = Sfx.step_cue(Defs.footstep_cue(run.map.floor_texture_at(global_position, room_id)))
+			Sfx.play(cue, -8.0, randf_range(0.92, 1.08), 0.1)
 	token.modulate.a = 0.45 + 0.55 * absf(sin(invuln * 12.0)) if invuln > 0.0 else 1.0

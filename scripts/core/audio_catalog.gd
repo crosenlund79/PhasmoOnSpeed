@@ -18,6 +18,14 @@ const MAX_VARIANTS := 8
 const CUES := {
 	# player
 	"footstep": ["player/footstep", "wav"],
+	# Surface footsteps (creator recordings, 8 takes each; see Defs.FLOOR_SURFACE).
+	# A surface without files falls back to "footstep".
+	"footstep_wood": ["player/footsteps/wood", "wav"],
+	"footstep_stone": ["player/footsteps/stone", "wav"],
+	"footstep_dirt": ["player/footsteps/dirt", "wav"],
+	"footstep_grass": ["player/footsteps/grass", "wav"],
+	"footstep_gravel": ["player/footsteps/gravel", "wav"],
+	"footstep_carpet": ["player/footsteps/carpet", "wav"],
 	"player_hurt": ["player/hurt", "wav"],
 	"player_death": ["player/death", "wav"],
 	"pickup": ["player/pickup", "wav"],

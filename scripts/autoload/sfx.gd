@@ -12,6 +12,9 @@ const LOOP_NAMES := ["spirit_box_static", "hunt_loop", "ambience_house", "music_
 ## Per-sound default gain (dB) to balance the procedural mix.
 const GAIN := {
 	"stake_strike": 4.0, "camera_shutter": 5.0, "crucifix_burn": 3.0, "footstep": -10.0,
+	# Surface footsteps, matched to the generic step's loudness (carpet a little softer).
+	"footstep_wood": -8.5, "footstep_stone": -9.5, "footstep_dirt": -8.5, "footstep_grass": -8.0,
+	"footstep_gravel": -8.5, "footstep_carpet": -9.0,
 	"ambience_house": -2.0, "music_menu": -4.0, "hunt_loop": -1.0, "pencil_scribble": -1.0,
 }
 
@@ -55,7 +58,23 @@ func stream(sound: String) -> AudioStream:
 		return null
 	if list.size() == 1 or sound in LOOP_NAMES:
 		return list[0]
-	return list[randi() % list.size()]
+	# Variants: random, but never the same take twice in a row.
+	var i := randi() % list.size()
+	if i == int(_last_variant.get(sound, -1)):
+		i = (i + 1 + randi() % (list.size() - 1)) % list.size()
+	_last_variant[sound] = i
+	return list[i]
+
+var _last_variant := {}
+
+## A surface footstep cue if it has audio, otherwise the generic "footstep".
+func step_cue(cue: String) -> String:
+	return cue if cue != "footstep" and stream_count(cue) > 0 else "footstep"
+
+func stream_count(sound: String) -> int:
+	if not _streams.has(sound):
+		_streams[sound] = _resolve(sound)
+	return (_streams[sound] as Array).size()
 
 func source_of(sound: String) -> String:
 	stream(sound)

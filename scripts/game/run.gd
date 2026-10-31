@@ -504,7 +504,8 @@ func _phantom_steps(delta: float) -> void:
 	var tw := create_tween()
 	for k in 4:
 		var pos := h.global_position + back * (300.0 - k * 30.0) + side * (8.0 if k % 2 == 0 else -8.0)
-		tw.tween_callback(func(): sound_at("footstep", pos, -9.0, rng.randf_range(0.8, 0.9), 700.0))
+		var step := Sfx.step_cue(Defs.footstep_cue(map.floor_texture_at(pos)))
+		tw.tween_callback(func(): sound_at(step, pos, -9.0, rng.randf_range(0.8, 0.9), 700.0))
 		tw.tween_interval(0.48)
 
 func _record(delta: float) -> void:
@@ -1077,7 +1078,7 @@ func _take_stairs(h: Player, cell: Vector2i) -> void:
 		_apply_camera_limits(dest)
 		camera.reset_smoothing()
 		_on_local_floor(map.floor_at(dest))
-	sound_to(h, "footstep", -2.0, 0.7)
+	sound_to(h, Sfx.step_cue(Defs.footstep_cue(map.floor_texture_at(dest))), -2.0, 0.85)   # the first step on the new floor
 	tell(h, map.room_name(h.room_id), "icons/ui_house.png", true)
 	record_event("floor", {"actor": h.actor_id, "floor": map.floor_at(dest)})
 

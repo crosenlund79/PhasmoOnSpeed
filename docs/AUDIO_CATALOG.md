@@ -8,12 +8,12 @@ missing. The code-side list lives in `scripts/core/audio_catalog.gd`
 
 | | |
 |---|---|
-| Sound cues in the catalog | **64** |
-| …triggered by the game | **59** |
+| Sound cues in the catalog | **70** |
+| …triggered by the game | **65** |
 | …generated but currently never triggered | **5** (`camera_shutter`, `cat_meow`, `emf_beep`, `emf_spike`, `thermometer_tick`) |
 | Cues using generated placeholder audio | **63 of 64** — made by `tools/audio/generate_audio.py` |
 | Cues using a composed theme | **1** (`music_menu`: `assets/audio/Themes/The Road Through Blackthorn.mp3`) |
-| Cues with creator (original) audio | **0** so far |
+| Cues with creator (original) audio | **6** — the surface footsteps (`player/footsteps/`) |
 | Suggested missing sounds | **24** (see the end) |
 
 ## Replacing a sound (creator workflow)
@@ -61,6 +61,12 @@ Status in every row below: **Existing placeholder** (generated) unless marked.
 | ID | Name | Creator file | Trigger | Behavior | Priority | Notes |
 |---|---|---|---|---|---|---|
 | `footstep` | Footstep on boards | `player/footstep.wav` | Every ~0.32 s while you move (faster sprinting); taking stairs; one of the Nightmare noises | one-shot, 2D, pitch-randomised, private | Essential | Ideal for **variants** (`footstep_01…`). Rivals' footsteps are not played. |
+| `footstep_wood` | Footsteps — wood | `player/footsteps/wood_01…08.wav` | The local hunter walking on wood_dark, wood_light, parquet (also the first step after stairs, phantom steps) | one-shot, 2D, 8 variants | Essential | **Creator recordings** (Wood footsteps 2–9). |
+| `footstep_stone` | Footsteps — stone & tile | `player/footsteps/stone_01…08.wav` | stone, tile_white, tile_checker | one-shot, 2D, 8 variants | Essential | **Creator recordings** (Stone 1–8), de-clipped — listen to confirm. |
+| `footstep_dirt` | Footsteps — earth | `player/footsteps/dirt_01…08.wav` | dirt (sheds, cellars, stables) | one-shot, 2D, 8 variants | Desirable | **Creator recordings**. |
+| `footstep_grass` | Footsteps — grass | `player/footsteps/grass_01…08.wav` | grass (gardens) | one-shot, 2D, 8 variants | Desirable | **Creator recordings**. |
+| `footstep_gravel` | Footsteps — gravel | `player/footsteps/gravel_01…08.wav` | gravel (paths, drives, harbour road) | one-shot, 2D, 8 variants | Desirable | **Creator recordings**. |
+| `footstep_carpet` | Footsteps — carpet | `player/footsteps/carpet_01…08.wav` | carpet_red, carpet_blue, carpet_green | one-shot, 2D, 8 variants | Desirable | Derived from the wood recordings (muffled) — no carpet takes in the library. |
 | `player_hurt` | You are wounded | `player/hurt.wav` | First wound from the entity, embers or the furnace | one-shot, private | Essential | |
 | `player_death` | You perish | `player/death.wav` | Second wound | one-shot, private | Essential | |
 | `pickup` | Pick up / retrieve | `player/pickup.wav` | Picking up a resource; retrieving your book or crucifix | one-shot, private | Desirable | |

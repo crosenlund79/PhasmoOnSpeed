@@ -27,7 +27,7 @@ func _ready() -> void:
 		"test_audio_export", "test_game_setup",
 		"test_blightness_rushes", "test_safe_names", "test_temperatures", "test_ghost_marker_and_ruled_out",
 		"test_hellbound", "test_abyssal", "test_sailor_and_doctor", "test_consolidation", "test_home_rooms", "test_suspect_filter_and_splatter", "test_weeper_and_mimic",
-		"test_progression", "test_flee_death_immortal", "test_required_items_reachable", "test_salt_water_relic", "test_sight_and_doors", "test_tavern_missions", "test_pregame_and_theme",
+		"test_progression", "test_flee_death_immortal", "test_required_items_reachable", "test_salt_water_relic", "test_sight_and_doors", "test_tavern_missions", "test_pregame_and_theme", "test_footstep_surfaces",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -880,9 +880,11 @@ func test_audio_overrides() -> void:
 		f.close()
 		made.append(path)
 	Sfx.clear_cache()
-	# Without creator audio every cue resolves to its placeholder (or its composed theme).
+	# Without creator audio every cue resolves to its placeholder (or its composed theme);
+	# cues that ship creator recordings (the surface footsteps) resolve to those.
 	for id in AudioCatalog.CUES:
-		var want := "theme" if AudioCatalog.THEMES.has(id) else "placeholder"
+		var shipped: bool = AudioCatalog.candidates(id).any(func(pth): return ResourceLoader.exists(pth) or FileAccess.file_exists(pth))
+		var want := "creator" if shipped else ("theme" if AudioCatalog.THEMES.has(id) else "placeholder")
 		check(Sfx.source_of(id) == want and Sfx.stream(id) != null, "%s plays its %s" % [id, want])
 	for f in DirAccess.get_files_at("res://assets/audio/"):
 		if f.ends_with(".wav"):
@@ -1727,3 +1729,42 @@ func test_pregame_and_theme() -> void:
 		check(Game.intro == null and not get_tree().paused, "skipping ends it and the run starts")
 	Game.pregame_intro = false
 	SaveData.reset_all()
+
+func test_footstep_surfaces() -> void:
+	Sfx.clear_cache()
+	# Every floor used by any location maps to a cue that has audio.
+	for hid in Game.house_ids:
+		for r in Game.house(hid)["rooms"]:
+			var cue := Sfx.step_cue(Defs.footstep_cue(str(r["floor"])))
+			check(Sfx.stream_count(cue) > 0, "%s/%s (%s) has a footstep" % [hid, r["id"], r["floor"]])
+	for s in ["wood", "stone", "dirt", "grass", "gravel", "carpet"]:
+		check(Sfx.source_of("footstep_" + s) == "creator" and Sfx.stream_count("footstep_" + s) == 8, "%s: eight creator takes" % s)
+	check(Sfx.step_cue(Defs.footstep_cue("marble_unknown")) == "footstep", "unknown floors fall back to the generic step")
+	# Variants never repeat back to back.
+	var last: AudioStream = null
+	var repeats := 0
+	for i in 200:
+		var st := Sfx.stream("footstep_wood")
+		if st == last:
+			repeats += 1
+		last = st
+	check(repeats == 0, "no take plays twice in a row (%d)" % repeats)
+	# Walking triggers the surface underfoot.
+	var run := await _start("ashgrove", "shade", 97)
+	run.creature.set_process(false)
+	var stone_rooms: Array = run.map.indoor_rooms().filter(func(r): return r["floor"] in ["stone", "tile_white", "tile_checker"])
+	var room: Dictionary = stone_rooms[0]
+	run.player.global_position = HouseMap.cell_center(run.map.random_free_cell(room["id"], run.rng))
+	run.player.room_id = room["id"]
+	Sfx._last_played.erase("footstep_stone")
+	run.player.input.move = Vector2.RIGHT
+	run.player.input_enabled = true
+	Input.action_press("move_right")
+	await _frames(45)
+	Input.action_release("move_right")
+	check(Sfx._last_played.has("footstep_stone"), "walking on stone/tiles plays stone steps")
+	# Volume and mute: steps use the same pool and bus as every other sound.
+	check(Sfx._pool.all(func(p): return p.bus == "Master"), "footsteps follow the master volume / mute")
+	# The raw library stays outside Godot.
+	check(not ResourceLoader.exists("res://audio_library/player/Footsteps/Wood footsteps/Wood footstep 1.wav"), "audio_library is not imported")
+	check(FileAccess.file_exists("res://audio_library/.gdignore"), "audio_library keeps its .gdignore")
