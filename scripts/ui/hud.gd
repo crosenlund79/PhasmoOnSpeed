@@ -33,6 +33,8 @@ const REQUIREMENTS := {
 	"lost_one": {"method": "Book and salt in its room · Rite of Rest (hold V) · never touch its keepsake"},
 	"drowned_sailor": {"method": "Salt its room, carry holy water · Rite of the Tides there (hold V)"},
 	"plague_doctor": {"method": "Crucifix and book in its room · Rite of Cleansing there (hold V)"},
+	"weeper": {"method": "Salt and a crucifix in its room · Rite of Solace there (hold V)"},
+	"mimic": {"method": "Book in its room, carry holy water · Rite of Unmasking there (hold V)"},
 	"vampire": {"items": ["garlic", "wooden_stake"], "method": "Carry garlic · strike with the wooden stake"},
 	"werewolf": {"items": ["silverware", "silver_stake"], "method": "Melt silverware · strike with the silver stake"},
 	"shapeshifter": {"items": ["hand_mirror", "iron_nails"], "method": "Unmask it in the mirror · strike with iron nails"},

@@ -1725,6 +1725,24 @@ def s_clock_toll():
     return fades(remove_dc(fit(y, dur)), 0.002, 0.5)
 
 
+def s_weeper_sob():
+    """Muffled sobbing behind a wall: three catching breaths and a long wavering cry."""
+    rng = rng_for(416)
+    dur = 3.4
+    y = np.zeros(N(dur))
+    for k, at in enumerate([0.05, 0.42, 0.74]):
+        hic = voice(0.22, [(0, 330), (0.22, 300)], [(0, "h"), (0.08, "u"), (0.22, "h")],
+                    [(0, 0), (0.04, 1), (0.18, 0.3), (0.22, 0)], rng, breath=1.0, voiced=0.4, jitter=0.04, fshift=1.15)
+        place(y, hic * (0.6 - 0.1 * k), at)
+    cry = voice(2.2, [(0, 360), (0.6, 410), (1.2, 330), (1.8, 380), (2.2, 260)], [(0, "u"), (0.5, "o"), (1.4, "u"), (2.2, "h")],
+                [(0, 0), (0.2, 0.9), (1.0, 1.0), (1.7, 0.6), (2.2, 0)], rng, breath=0.7, voiced=0.8,
+                vib_rate=7.5, vib_depth=0.05, jitter=0.03, fshift=1.15)
+    place(y, cry, 1.05)
+    y = lp(y, 2400, 2)   # through a wall
+    y = reverb(y, 2.0, 0.5, rng, damp=2200, predelay=0.03)
+    return fades(remove_dc(fit(y, dur)), 0.01, 0.4)
+
+
 # name -> (generator, kind, expected duration (approx))
 SOUNDS = {
     "pencil_scribble": (s_pencil_scribble, "oneshot"),
@@ -1790,6 +1808,7 @@ SOUNDS = {
     "plague_breath": (s_plague_breath, "oneshot"),
     "bottle_clink": (s_bottle_clink, "oneshot"),
     "clock_toll": (s_clock_toll, "oneshot"),
+    "weeper_sob": (s_weeper_sob, "oneshot"),
 }
 
 

@@ -26,7 +26,7 @@ func _ready() -> void:
 		"test_counterattacks", "test_escalations", "test_prompt_and_needle", "test_audio_overrides",
 		"test_audio_export", "test_game_setup",
 		"test_blightness_rushes", "test_safe_names", "test_temperatures", "test_ghost_marker_and_ruled_out",
-		"test_hellbound", "test_abyssal", "test_sailor_and_doctor", "test_consolidation", "test_home_rooms", "test_suspect_filter_and_splatter",
+		"test_hellbound", "test_abyssal", "test_sailor_and_doctor", "test_consolidation", "test_home_rooms", "test_suspect_filter_and_splatter", "test_weeper_and_mimic",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -1364,3 +1364,43 @@ func test_suspect_filter_and_splatter() -> void:
 	run._wound(p, null, "test")
 	var ev: Array = run.recorder.data["events"].filter(func(e): return e[1] == "splatter")
 	check(ev.size() == 1 and ev[0][2]["room"] == run.map.room_at(p.global_position, p.room_id), "one splatter, in the room of death")
+
+func test_weeper_and_mimic() -> void:
+	# The Weeper: stops to cry (even hunting), slow at range, lunges up close.
+	var run := await _start("ashgrove", "weeper", 71)
+	var c := run.creature
+	c.begin_hunt(c.position, false)
+	c.state = "hunt"
+	c.target = run.player
+	run.player.global_position = c.position + Vector2(600, 0)
+	check(c.hunt_gait() == 1.0, "slow at a distance")
+	run.player.global_position = c.position + Vector2(120, 0)
+	check(c.hunt_gait() > 2.0 and c.speed_for_hunt() * c.hunt_gait() > Player.SPRINT_SPEED * 0.95, "lunges up close")
+	c._crying_t = 2.0
+	check(c.hunt_gait() == 0.0, "it stops to cry mid-hunt")
+	c.end_hunt()
+	c._crying_t = 0.0
+	c._cry_t = 0.01
+	await _frames(3)
+	check(c._crying_t > 0.0 and run.recorder.data["events"].size() >= 0, "it starts crying on its own")
+	run.player.charges["holy_water"] = 1
+	await _rite_in_lair(run, "weeper", ["salt", "crucifix"])
+	_cleanup_scene()
+	await get_tree().process_frame
+	# The Mimic: a real occupant's face and name while it roams; its own face while hunting.
+	var mr := await _start("blackwood", "mimic", 72)
+	var m := mr.creature
+	var twin: Array = mr.cast.filter(func(o): return o["name"] == mr.disguise["name"])
+	check(twin.size() == 1 and twin[0]["token"] == mr.disguise["token"], "it copies a real resident (name and look)")
+	await _frames(30)
+	check(m.disguised() and m.token.token_path == mr.disguise["token"] and m.alpha > 0.5, "seen in plain sight as that resident")
+	m.begin_hunt(m.position, false)
+	await _frames(2)
+	check(not m.disguised() and m.token.token_path == "tokens/mimic.png", "its own face while it hunts")
+	m.end_hunt()
+	await _frames(2)
+	check(m.token.token_path == mr.disguise["token"], "the borrowed face returns afterwards")
+	check(m._garble("hello there") != "hello there" or m._garble("hello there") != "hello there", "garbled speech")
+	mr.player.charges["holy_water"] = 2
+	await _rite_in_lair(mr, "mimic", ["ghost_book"])
+	check(int(mr.player.charges["holy_water"]) == 1, "the Rite of Unmasking spends a flask")

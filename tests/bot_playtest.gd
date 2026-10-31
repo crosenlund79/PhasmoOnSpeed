@@ -219,7 +219,7 @@ func _play(house: String, cr: String, sd: int) -> void:
 				run.player.suspect = "poltergeist"
 				await _wait(1.5)
 				run.perform_rite(run.player)
-		"blightness", "crawler", "lost_one", "drowned_sailor", "plague_doctor":
+		"blightness", "crawler", "lost_one", "drowned_sailor", "plague_doctor", "weeper", "mimic":
 			# Read the room, lay what its rite needs, name it, perform the rite.
 			if await _walk_to(_lair_point()):
 				_equip("emf")

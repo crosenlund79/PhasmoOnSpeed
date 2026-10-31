@@ -219,6 +219,8 @@ func _choose_creature() -> void:
 	if type_id == "" or not Defs.CREATURES.has(type_id):
 		type_id = Defs.ORDINARY_CREATURES[rng.randi_range(0, Defs.ORDINARY_CREATURES.size() - 1)]
 	original_creature = type_id
+	if type_id == "mimic" and not cast.is_empty():
+		disguise = cast[rng.randi_range(0, cast.size() - 1)].duplicate()   # a real resident, twice
 	var spawn_room := map.room_at(player.position)
 	var options: Array = map.indoor_rooms().filter(func(r): return map.free_cells(r["id"]).size() >= 10 and r["id"] != spawn_room)
 	var lair: Dictionary = options[rng.randi_range(0, options.size() - 1)]
@@ -1096,6 +1098,10 @@ func _on_hunt_started(c: Creature) -> void:
 		"crawler": sound_at("crawl_drag", c.position, 0.0)
 		"drowned_sailor": sound_at("sea_whisper", c.position, 2.0, 0.8)
 		"plague_doctor": sound_at("plague_breath", c.position, 2.0, 0.85)
+		"weeper": sound_at("weeper_sob", c.position, 4.0, 0.85)
+		"mimic":
+			sound_at("whisper_mimic", c.position, 2.0, 0.5)
+			sound_at("ghost_wail", c.position, -4.0, 0.8)
 		"lost_one":
 			if c.wrath:
 				sound_at("ghost_wail", c.position, 2.0, 1.4)

@@ -58,6 +58,7 @@ const CUES := {
 	"water_splash": ["entities/drowned_sailor_emerge", "wav"],
 	"plague_breath": ["entities/plague_doctor_breath", "wav"],
 	"bottle_clink": ["entities/plague_doctor_bottles", "wav"],
+	"weeper_sob": ["entities/weeper_sob", "wav"],
 	"reckless_reaction": ["entities/reckless_reaction", "wav"],
 	"vanquish_success": ["entities/vanquish", "wav"],
 	# environment

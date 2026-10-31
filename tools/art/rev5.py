@@ -426,7 +426,62 @@ def puddle(cv, st):
         cv.paint(cv.mask().circle(x, y, 0.8), (210, 235, 245), 0.7)
 
 
-TOKENS5 = [blightness, crawler, lost_one, drowned_sailor, plague_doctor]
+def weeper():
+    """Seen from above: a hunched figure under a long grey veil, hands over its face,
+    tears falling around it."""
+    cv, T = _token_base("weeper", "#6a7488", "#12131a")
+    r = cv.rnd
+    g = np.clip(1 - radial(cv.W, cv.H, *cv.T(62, 62), cv.TR(42)), 0, 1) ** 1.5
+    cv.glow(g, (150, 165, 200), 0.3)
+    T.ground_shadow(cv, 60, 63, 26, 30)
+    # the veil drapes over hunched shoulders and spills behind
+    veil = cv.mask().poly(catmull([(70, 64), (66, 42), (52, 34), (36, 40), (28, 54), (26, 64), (28, 76), (36, 88), (52, 94), (66, 86), (70, 64)], 8), wobble=1.4)
+    T.P(cv, veil, gradient(cv.W, cv.H, "#c8ccd6", "#4a4e5c", 160), depth=3, hatch=0.55)
+    for k in range(8):
+        y0 = 40 + k * 7
+        cv.stroke(catmull([(64, 64 + (y0 - 64) * 0.4), (46, y0), (30, y0 + (y0 - 64) * 0.15)], 8), 0.7, (90, 94, 108), 0.6)
+    # bowed head under the veil, pushed forward
+    hd = cv.mask().ellipse(70, 64, 10, 11)
+    T.P(cv, hd, gradient(cv.W, cv.H, "#d8dce4", "#7a7e8c", 45), depth=1.8, hatch=0.3)
+    # pale hands pressed to the face
+    for (y_, s_) in ((57, -1), (71, 1)):
+        T.limb(cv, [(58, y_ - s_ * 10), (68, y_ - s_ * 4), (78, y_)], 3.4, "#b8bcc6")
+        T.P(cv, cv.mask().ellipse(80, y_, 3.6, 3.0), "#e4e6ec", ow=1.4, depth=1.0, hatch=0.1)
+    # tears falling in a ring
+    for k in range(9):
+        a = r.uniform(-1.2, 1.2)
+        d = r.uniform(18, 34)
+        x, y = 80 + math.cos(a) * d, 64 + math.sin(a) * d
+        cv.paint(cv.mask().ellipse(x, y, 1.2, 2.0), (170, 200, 235), 0.85)
+    T.finish(cv, "tokens/weeper.png")
+
+
+def mimic():
+    """Its own face at last: a gaunt, colourless thing in a borrowed coat, eyes hollow,
+    mouth stretched in an imitation of a smile."""
+    cv, T = _token_base("mimic", "#7a6a8a", "#141218")
+    g = np.clip(1 - radial(cv.W, cv.H, *cv.T(62, 62), cv.TR(42)), 0, 1) ** 1.4
+    cv.glow(g, (190, 180, 215), 0.35)
+    T.ground_shadow(cv, 60, 63, 24, 30)
+    coat = cv.mask().ellipse(58, 64, 16, 27, wobble=1.2)
+    T.P(cv, coat, gradient(cv.W, cv.H, "#6a6470", "#1e1c22", 160), depth=3, hatch=0.6)
+    # long arms, too long, fingers trailing
+    for (y_, s_) in ((40, -1), (88, 1)):
+        T.limb(cv, [(60, y_ + s_ * -2), (76, y_ + s_ * 4), (94, y_ + s_ * 6)], 4.0, "#bdb8c4")
+        for f in range(3):
+            cv.stroke([(94, y_ + s_ * 6), (101 + f, y_ + s_ * (4 + f * 3))], 0.9, INK, 0.9)
+    hd = cv.mask().ellipse(70, 64, 11, 12)
+    T.P(cv, hd, gradient(cv.W, cv.H, "#f0eef4", "#9a96a6", 45), depth=1.6, hatch=0.2)
+    for yy in (59, 69):
+        cv.paint(cv.mask().ellipse(76, yy, 2.4, 3.0), (8, 6, 12))
+    # the stretched smile
+    cv.stroke(catmull([(80, 56), (83, 60), (84, 64), (83, 68), (80, 72)], 8), 1.6, (30, 10, 16), 0.95)
+    for k in range(5):
+        cv.stroke([(82.4, 58 + k * 3), (84.2, 58.6 + k * 3)], 0.6, (230, 225, 220), 0.8)   # teeth
+    T.finish(cv, "tokens/mimic.png")
+
+
+TOKENS5 = [blightness, crawler, lost_one, drowned_sailor, plague_doctor, weeper, mimic]
 
 
 def build_tokens(only=None):

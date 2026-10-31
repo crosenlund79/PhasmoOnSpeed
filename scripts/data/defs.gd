@@ -122,6 +122,32 @@ const CREATURES := {
 		"weaknesses": ["The slowest hunter of all — distance saves you.", "Placed crucifixes stop its hunts from starting.", "Holy water stuns it and ends a hunt.", "Salt slows it while it hunts."],
 		"vanquish": ["Find the room it haunts.", "Place a crucifix and lay the Ghost Writing Book in that room.", "Choose The Plague Doctor as your suspect (Tab).", "Hold V inside its room to perform the Rite of Cleansing."],
 	},
+	"weeper": {
+		"name": "The Weeper", "kind": "ghost", "token": "tokens/weeper.png",
+		"evidence": ["freezing", "spirit_box", "orbs"],
+		"hunt_threshold": 57.0, "hunt_cooldown": 30.0, "hunt_duration": 14.0,
+		"hunt_speed": 150.0, "roam_speed": 45.0, "interaction_interval": 11.0, "lair_bias": 0.75,
+		"difficulty": 1.15, "rite": "solace", "rite_needs": ["salt", "crucifix"], "rite_name": "Rite of Solace",
+		"blurb": "A hunched, veiled figure, sobbing into its hands.",
+		"behaviour": "Its crying carries through the walls — you will hear it rooms away. It shuffles slowly, stopping often to weep, but come too close and it darts away faster than you can follow.",
+		"hunting": "Hunts slowly and stops to sob even mid-hunt — until it is near you. Within a few strides it lunges faster than a sprint. Keep your distance; never let it get close.",
+		"strengths": ["Terrifyingly fast at close range.", "Its sobbing hides where it really is."],
+		"weaknesses": ["Slow at a distance, and it stops to cry.", "Placed crucifixes stop its hunts from starting.", "Holy water stuns it and ends a hunt.", "Salt slows it while it hunts."],
+		"vanquish": ["Find the room it haunts.", "Pour salt and place a crucifix in that room.", "Choose The Weeper as your suspect (Tab).", "Hold V inside its room to perform the Rite of Solace."],
+	},
+	"mimic": {
+		"name": "The Mimic", "kind": "ghost", "token": "tokens/mimic.png",
+		"evidence": ["emf5", "spirit_box", "uv"],
+		"hunt_threshold": 54.0, "hunt_cooldown": 28.0, "hunt_duration": 14.0,
+		"hunt_speed": 210.0, "roam_speed": 75.0, "interaction_interval": 10.0, "lair_bias": 0.6,
+		"difficulty": 1.2, "rite": "unmasking", "rite_needs": ["ghost_book", "holy_water"], "rite_name": "Rite of Unmasking",
+		"blurb": "One of the residents is here twice. Only one of them is alive.",
+		"behaviour": "Wears the face, the clothes and the name of a real occupant and goes about the house like them — so two of that person walk the halls. Now and then it moves wrongly, jerking or gliding, and its speech comes out garbled.",
+		"hunting": "Drops the borrowed face when it hunts: a pale, hollow-eyed thing. It returns to the disguise afterwards.",
+		"strengths": ["Hides in plain sight among the occupants.", "Ghost equipment is the only honest witness."],
+		"weaknesses": ["Two people with the same name is a giveaway.", "Its speech glitches; its movement is unnatural.", "Placed crucifixes stop its hunts from starting.", "Holy water stuns it and ends a hunt."],
+		"vanquish": ["Find the room it haunts.", "Lay the Ghost Writing Book there and carry holy water.", "Choose The Mimic as your suspect (Tab).", "Hold V inside its room to perform the Rite of Unmasking (it uses one flask)."],
+	},
 	"vampire": {
 		"name": "Vampire", "kind": "physical", "token": "tokens/vampire.png",
 		"evidence": ["bite_marks", "blood_drops", "coffin_soil"],
@@ -175,8 +201,8 @@ const CREATURES := {
 		"vanquish": ["Find the three pale sigil candles and hold E or Space to light each one.", "When all three burn it is bound in its room and stops hunting.", "Stand beside it and hold V to perform the Final Rite."],
 	},
 }
-const ORDINARY_CREATURES := ["shade", "poltergeist", "blightness", "crawler", "lost_one", "drowned_sailor", "plague_doctor", "vampire", "werewolf", "shapeshifter"]
-const ENCYCLOPEDIA_ORDER := ["shade", "poltergeist", "blightness", "crawler", "lost_one", "drowned_sailor", "plague_doctor", "vampire", "werewolf", "shapeshifter", "harbinger"]
+const ORDINARY_CREATURES := ["shade", "poltergeist", "blightness", "crawler", "lost_one", "drowned_sailor", "plague_doctor", "weeper", "mimic", "vampire", "werewolf", "shapeshifter"]
+const ENCYCLOPEDIA_ORDER := ["shade", "poltergeist", "blightness", "crawler", "lost_one", "drowned_sailor", "plague_doctor", "weeper", "mimic", "vampire", "werewolf", "shapeshifter", "harbinger"]
 const SHAPESHIFTER_FORMS := ["human", "ghost", "vampire", "werewolf", "cat"]
 const FORM_TOKENS := {
 	"human": "tokens/occupant_d.png", "ghost": "tokens/shade.png", "vampire": "tokens/vampire.png",

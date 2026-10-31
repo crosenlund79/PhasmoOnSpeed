@@ -224,4 +224,5 @@ and whispering) and `eq_orb_camera.png` the **Scrying Mirror**.
 | `items/ashes.png`, `items/embers.png` | 64×64 | what a burned occupant leaves (embers glow; they are a hazard) |
 | `tokens/blightness.png`, `tokens/crawler.png`, `tokens/lost_one.png` | 128×128 | the three new ghosts (the game draws the first two through a warp shader) |
 | `tokens/drowned_sailor.png`, `tokens/plague_doctor.png` | 128×128 | the Drowned Sailor (pea coat, tricorn, dripping sea water) and the Plague Doctor (hat brim, robes, beaked mask) |
+| `tokens/weeper.png`, `tokens/mimic.png` | 128×128 | the Weeper (veiled, hands to its face, tears) and the Mimic's true face (shown only while it hunts) |
 | `items/puddle.png`, `items/wet_footprint.png` | 64×64 | the Drowned Sailor's trail — atmospheric, not evidence; they dry up after a while |

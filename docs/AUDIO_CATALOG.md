@@ -8,10 +8,10 @@ missing. The code-side list lives in `scripts/core/audio_catalog.gd`
 
 | | |
 |---|---|
-| Sound cues in the catalog | **63** |
-| …triggered by the game | **58** |
+| Sound cues in the catalog | **64** |
+| …triggered by the game | **59** |
 | …generated but currently never triggered | **5** (`camera_shutter`, `cat_meow`, `emf_beep`, `emf_spike`, `thermometer_tick`) |
-| Cues using generated placeholder audio | **63 of 63** — all made by `tools/audio/generate_audio.py` |
+| Cues using generated placeholder audio | **64 of 64** — all made by `tools/audio/generate_audio.py` |
 | Cues with creator (original) audio | **0** so far |
 | Suggested missing sounds | **24** (see the end) |
 
@@ -112,6 +112,7 @@ Status in every row below: **Existing placeholder** (generated) unless marked.
 | `water_splash` | Rising from a puddle | `entities/drowned_sailor_emerge.wav` | The Drowned Sailor emerges from one of its puddles to hunt | one-shot, positional | Essential | |
 | `plague_breath` | Beaked breathing | `entities/plague_doctor_breath.wav` | The Plague Doctor's breathing (faster while hunting); each miasma cloud; its hunt start; a miasma wound | one-shot, positional | Essential | The tell players learn. |
 | `bottle_clink` | Medicine bottles | `entities/plague_doctor_bottles.wav` | Every 9–15 s while the Plague Doctor makes its rounds | one-shot, positional | Desirable | |
+| `weeper_sob` | The Weeper's crying | `entities/weeper_sob.wav` | Soft sobbing every few seconds (heard rooms away); louder when it stops to cry; its hunt start | one-shot, positional | Essential | The tell players learn. |
 | `reckless_reaction` | The house is angered | `entities/reckless_reaction.wav` | Wrong / reckless attempts; doll on a non-standard creature | one-shot, 2D | Desirable | |
 | `vanquish_success` | Vanquished | `entities/vanquish.wav` | The entity is vanquished | one-shot, 2D | Essential | |
 
@@ -201,6 +202,6 @@ Suggested ids and paths follow the same scheme so they slot in later.
 5. `hunt_start` + `hunt_loop` → `entities/…`
 6. `door_creak` / `door_slam` → `environment/…`
 7. `spirit_box_static` + `spirit_box_voice` → `equipment/whisper_box_…`
-8. The creature signatures: `vampire_hiss`, `werewolf_howl`, `blight_ping`, `crawl_drag`, `music_box`, `sea_whisper`, `plague_breath`
+8. The creature signatures: `vampire_hiss`, `werewolf_howl`, `blight_ping`, `crawl_drag`, `music_box`, `sea_whisper`, `plague_breath`, `weeper_sob`
 9. `results_win` / `results_lose`, `vanquish_success`
 10. `menu_music`

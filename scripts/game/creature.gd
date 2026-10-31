@@ -53,6 +53,12 @@ var wrath := false          # Lost One: its keepsake was touched
 # and pursuit ignore all of this and go anywhere in the house.
 var _excursion: Array = []  # rooms still to visit on the current excursion
 var _settle_t := 0.0        # time left resting at home before the next excursion
+# The Weeper stops to cry (even mid-hunt); the Mimic glitches now and then.
+var _cry_t := 6.0
+var _crying_t := 0.0
+var _sob_t := 3.0
+var _glitch_t := 10.0
+var _glitch_left := 0.0
 var wrath_target: Player = null
 # Blightness: rush in a straight line, stop, shake/recover ~0.5 s, pick a new line.
 const BLIGHT_RUSH_SPEED := {"roam": 430.0, "hunt": 640.0}
@@ -113,6 +119,10 @@ func setup(p_run: Run, p_type: String, p_lair: String, start: Vector2) -> void:
 		# A dark ripple in the floorboards rather than a figure.
 		_distort = WorldFx.distort_material(0.022, Color(0.45, 0.4, 0.5), 0.55)
 		token.sprite.material = _distort
+	if p_type == "mimic":
+		# A real occupant's face and name: that person now walks the house twice.
+		tag = SpeechTag.new(run.world_text, run.disguise["name"])
+		token.set_token(current_token())
 	if p_type == "shapeshifter":
 		tag = SpeechTag.new(run.world_text, run.disguise["name"])
 		_set_form(["human", "cat", "ghost"][rng.randi_range(0, 2)], false)
@@ -129,6 +139,8 @@ func _glow_color() -> Color:
 		"blightness": return Color(0.6, 0.85, 0.3)
 		"crawler": return Color(0.35, 0.25, 0.45)
 		"lost_one": return Color(0.85, 0.85, 1.0)
+		"weeper": return Color(0.7, 0.78, 0.95)
+		"mimic": return Color(0.85, 0.8, 0.95)
 		"drowned_sailor": return Color(0.45, 0.7, 0.8)
 		"plague_doctor": return Color(0.6, 0.75, 0.35)
 	return Art.SPECTRAL
@@ -136,6 +148,8 @@ func _glow_color() -> Color:
 func current_token() -> String:
 	if type_id == "werewolf" and (not wolf or reverted):
 		return "tokens/werewolf_human.png"
+	if type_id == "mimic":
+		return def["token"] if is_hunting() or state == "banished" else run.disguise["token"]
 	if type_id == "shapeshifter" and reverted:
 		return "tokens/shapeshifter_human.png"
 	if type_id == "shapeshifter":
@@ -306,8 +320,10 @@ func _process(delta: float) -> void:
 	angered_t = maxf(0.0, angered_t - delta)
 	if _distort:
 		_distort.set_shader_parameter("t", state_t + float(hunt_count) * 3.0)
-	if exposed_t <= 0.0 and type_id == "shapeshifter" and token.token_path != current_token():
-		token.set_token(current_token())
+	if (type_id == "mimic" or (exposed_t <= 0.0 and type_id == "shapeshifter")) and token.token_path != current_token():
+		token.set_token(current_token())   # (the Mimic drops its borrowed face while it hunts)
+	_weeper_tick(delta)
+	_glitch_left = maxf(0.0, _glitch_left - delta)
 	room_id = map.room_at(position, room_id)
 	match state:
 		"roam": _roam(delta)
@@ -338,12 +354,14 @@ func _update_visibility(delta: float) -> void:
 		want = 0.0
 		if type_id == "shapeshifter" and exposed_t <= 0.0 and (form == "cat" or form == "human"):
 			want = 1.0
+		elif type_id == "mimic":
+			want = 1.0   # in plain sight, as one of the residents
 		elif exposed_t > 0.0:
 			want = 1.0
 		elif _glimpsed():
 			want = 0.5
 		manifest_t -= delta
-		if is_ghost_like() and manifest_t < 0.0:
+		if is_ghost_like() and type_id != "mimic" and manifest_t < 0.0:
 			if manifest_t < -1.4:
 				manifest_t = rng.randf_range(18.0, 34.0)
 			else:
@@ -370,9 +388,11 @@ func _update_visibility(delta: float) -> void:
 		want = maxf(want, 0.8)   # an enraged creature shows itself now and then
 	alpha = move_toward(alpha, want, delta * 2.5)
 	modulate.a = alpha
-	glow.energy = 0.0 if silhouette else alpha * (1.2 if state == "hunt" or state == "bound" else 0.6)
+	glow.energy = 0.0 if silhouette or disguised() else alpha * (1.2 if state == "hunt" or state == "bound" else 0.6)
 
 func disguised() -> bool:
+	if type_id == "mimic":
+		return not is_hunting() and state != "banished" and state != "stunned"
 	return type_id == "shapeshifter" and form == "human" and exposed_t <= 0.0 and state != "banished"
 
 ## As a person it looks, is labelled and talks exactly like an occupant.
@@ -390,8 +410,26 @@ func _update_disguise(delta: float) -> void:
 		var fear := Defs.tune(run.difficulty, "panic")
 		_talk_t = Occupants.talk_delay(run.disguise["personality"], rng, fear)
 		var line := Occupants.pick_line(run.disguise["personality"], "lines", rng, fear)
+		if type_id == "mimic" and rng.randf() < 0.35:
+			line = _garble(line)
+			run.sound_at("whisper_mimic", position, -12.0, 0.7, 700.0)
 		tag.say(line)
 		run.on_say(run._creature_actor_id(), line)
+
+## The Mimic's borrowed voice slips: stretched, doubled, wrong.
+func _garble(line: String) -> String:
+	var out := ""
+	for ch in line:
+		var r := rng.randf()
+		if r < 0.1 and ch != " ":
+			out += ch + ch + ch
+		elif r < 0.2:
+			out += ch.to_upper()
+		elif r < 0.23:
+			out += "—"
+		else:
+			out += ch
+	return out
 
 func _glimpsed() -> bool:
 	var physical: bool = def["kind"] == "physical" and not (type_id == "shapeshifter" and form == "ghost")
@@ -513,10 +551,50 @@ func hunt_gait() -> float:
 			return 1.35 if fmod(state_t, 2.6) > 1.8 else 0.72
 		"plague_doctor":
 			return 0.75 + 0.3 * absf(sin(state_t * 2.2))
+		"weeper":
+			if _crying_t > 0.0:
+				return 0.0   # it stops to sob, even mid-hunt
+			if target and is_instance_valid(target) and position.distance_to(target.global_position) < 230.0:
+				return 2.2   # close in, it lunges faster than a sprint
 	return 1.0
+
+## The Weeper: soft sobbing that carries through walls, and every so often it
+## stops dead to cry — roaming or hunting.
+func _weeper_tick(delta: float) -> void:
+	if type_id != "weeper" or state in ["stunned", "bound"]:
+		return
+	if _crying_t > 0.0:
+		_crying_t -= delta
+		token.position = Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1)) * 1.6
+		if _crying_t <= 0.0:
+			token.position = Vector2.ZERO
+		return
+	_sob_t -= delta
+	if _sob_t <= 0.0:
+		_sob_t = rng.randf_range(5.0, 8.0)
+		run.sound_at("weeper_sob", position, -14.0, rng.randf_range(0.95, 1.08), 1150.0)
+	_cry_t -= delta
+	if _cry_t <= 0.0:
+		_cry_t = rng.randf_range(7.0, 11.0) if is_hunting() else rng.randf_range(9.0, 15.0)
+		_crying_t = rng.randf_range(1.8, 2.8)
+		run.sound_at("weeper_sob", position, -3.0 if is_hunting() else -7.0, rng.randf_range(0.92, 1.0), 1250.0)
+
+func _hunter_near(dist: float) -> bool:
+	for h: Player in run.living_hunters():
+		if position.distance_to(h.global_position) < dist and map.los(position, h.global_position):
+			return true
+	return false
 
 func _roam(delta: float) -> void:
 	_sway(delta)
+	if _crying_t > 0.0:
+		return
+	if type_id == "mimic":
+		_glitch_t -= delta
+		if _glitch_t <= 0.0:
+			_glitch_t = rng.randf_range(9.0, 16.0)
+			_glitch_left = 0.5   # a jerk, a glide — not how people move
+			run.sound_at("whisper_mimic", position, -14.0, 0.55, 650.0)
 	if room_id == lair_room:
 		_settle_t = maxf(0.0, _settle_t - delta)
 	if wait_t > 0.0:
@@ -527,6 +605,13 @@ func _roam(delta: float) -> void:
 	var spd: float = def["roam_speed"]
 	if type_id == "shapeshifter" and form == "cat":
 		spd = 80.0
+	if type_id == "weeper" and _hunter_near(150.0):
+		spd *= 3.2   # approached, it darts away faster than you can follow
+	if _glitch_left > 0.0:
+		spd *= 3.0
+		token.rotation = rng.randf_range(-0.6, 0.6)
+	elif type_id == "mimic":
+		token.rotation = 0.0
 	if type_id == "plague_doctor":
 		spd *= 0.55 + 0.45 * absf(sin(state_t * 1.8))   # slow, deliberate steps
 		if rng.randf() < delta * 0.12:
