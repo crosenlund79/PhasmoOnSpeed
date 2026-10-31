@@ -322,23 +322,38 @@ func path(from: Vector2, to: Vector2) -> PackedVector2Array:
 	var fa := floor_of_cell(a)
 	var fb := floor_of_cell(b)
 	if fa != fb and not stairs.is_empty():
-		var best := PackedVector2Array()
-		var best_len := INF
-		for st in stairs:
-			var top_first: bool = floor_of_cell(st["a"]) == fa
-			var enter: Vector2i = st["a"] if top_first else st["b"]
-			var land: Vector2i = st["b_land"] if top_first else st["a_land"]
+		return _floor_path(a, b, fa, fb)
+	return _grid_path(a, b)
+
+## Shortest route between floors: take a staircase on this floor that brings the
+## mover closer to the target floor, then continue from its landing (basement to
+## upper floor goes through the main floor: two staircases).
+func _floor_path(a: Vector2i, b: Vector2i, fa: int, fb: int) -> PackedVector2Array:
+	if fa == fb:
+		return _grid_path(a, b)
+	var best := PackedVector2Array()
+	var best_len := INF
+	for st in stairs:
+		for side in ["a", "b"]:
+			var enter: Vector2i = st[side]
+			if floor_of_cell(enter) != fa:
+				continue
+			var land: Vector2i = st["b_land"] if side == "a" else st["a_land"]
+			var fl := floor_of_cell(land)
+			if absi(fl - fb) >= absi(fa - fb):
+				continue
 			var p1 := _grid_path(a, enter)
-			var p2 := _grid_path(land, b)
-			if (p1.is_empty() and a != enter) or (p2.is_empty() and land != b):
+			if p1.is_empty() and a != enter:
+				continue
+			var p2 := _floor_path(land, b, fl, fb)
+			if p2.is_empty() and land != b:
 				continue
 			var length := float(p1.size() + p2.size())
 			if length < best_len:
 				best_len = length
 				best = p1 if not p1.is_empty() else PackedVector2Array([cell_center(enter)])
 				best.append_array(p2 if not p2.is_empty() else PackedVector2Array([cell_center(land)]))
-		return best
-	return _grid_path(a, b)
+	return best
 
 func _grid_path(a: Vector2i, b: Vector2i) -> PackedVector2Array:
 	if a == b:

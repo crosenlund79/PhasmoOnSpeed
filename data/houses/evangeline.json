@@ -4,7 +4,7 @@
  "blurb": "Consecrated ground. Allegedly.",
  "size": [
   48,
-  63
+  97
  ],
  "spawn": [
   22,
@@ -345,6 +345,132 @@
    ],
    "level": -1,
    "condition": "neglected"
+  },
+  {
+   "id": "bell_tower",
+   "name": "Bell Tower",
+   "floor": "stone",
+   "kind": "chapel",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     5,
+     76,
+     10,
+     9
+    ]
+   ],
+   "level": 1,
+   "condition": "abandoned"
+  },
+  {
+   "id": "organ_loft",
+   "name": "Organ Loft",
+   "floor": "wood_dark",
+   "kind": "chapel",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     16,
+     76,
+     15,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "worn"
+  },
+  {
+   "id": "curate_room",
+   "name": "Curate's Room",
+   "floor": "carpet_blue",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     32,
+     76,
+     11,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "neglected"
+  },
+  {
+   "id": "clerestory",
+   "name": "Clerestory Walk",
+   "floor": "stone",
+   "kind": "hall",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     16,
+     83,
+     27,
+     3
+    ]
+   ],
+   "level": 1,
+   "condition": "neglected"
+  },
+  {
+   "id": "linen_press",
+   "name": "Linen Press",
+   "floor": "wood_light",
+   "kind": "storage",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     16,
+     87,
+     8,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "worn"
+  },
+  {
+   "id": "housekeeper_room",
+   "name": "Housekeeper's Room",
+   "floor": "carpet_green",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     25,
+     87,
+     8,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "kept"
+  },
+  {
+   "id": "rectory_landing",
+   "name": "Rectory Landing",
+   "floor": "wood_dark",
+   "kind": "hall",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     34,
+     87,
+     9,
+     8
+    ]
+   ],
+   "level": 1,
+   "condition": "worn"
   }
  ],
  "doors": [
@@ -483,6 +609,46 @@
   [
    22,
    57
+  ],
+  [
+   15,
+   80
+  ],
+  [
+   15,
+   84
+  ],
+  [
+   31,
+   78
+  ],
+  [
+   23,
+   82
+  ],
+  [
+   37,
+   82
+  ],
+  [
+   20,
+   86
+  ],
+  [
+   24,
+   89
+  ],
+  [
+   28,
+   86
+  ],
+  [
+   33,
+   89
+  ],
+  [
+   38,
+   86
   ]
  ],
  "furniture": [
@@ -1055,6 +1221,222 @@
    25,
    59,
    0
+  ],
+  [
+   "old_trunk",
+   5,
+   76,
+   0
+  ],
+  [
+   "broken_chair",
+   8,
+   79,
+   0
+  ],
+  [
+   "debris",
+   9,
+   81,
+   0
+  ],
+  [
+   "boards",
+   6,
+   83,
+   0
+  ],
+  [
+   "storage_shelf",
+   11,
+   76,
+   0
+  ],
+  [
+   "candelabra",
+   5,
+   84,
+   0
+  ],
+  [
+   "barrel",
+   12,
+   83,
+   0
+  ],
+  [
+   "piano",
+   22,
+   76,
+   0
+  ],
+  [
+   "pew",
+   18,
+   79,
+   0
+  ],
+  [
+   "pew",
+   25,
+   79,
+   0
+  ],
+  [
+   "candelabra",
+   30,
+   76,
+   0
+  ],
+  [
+   "chair",
+   23,
+   78,
+   0
+  ],
+  [
+   "bed_single",
+   41,
+   76,
+   0
+  ],
+  [
+   "nightstand",
+   40,
+   76,
+   0
+  ],
+  [
+   "desk",
+   33,
+   76,
+   0
+  ],
+  [
+   "chair",
+   34,
+   78,
+   2
+  ],
+  [
+   "wardrobe",
+   38,
+   81,
+   0
+  ],
+  [
+   "wall_mirror",
+   32,
+   81,
+   0
+  ],
+  [
+   "pew",
+   25,
+   83,
+   0
+  ],
+  [
+   "candelabra",
+   42,
+   83,
+   0
+  ],
+  [
+   "rug_rect",
+   30,
+   83,
+   0
+  ],
+  [
+   "potted_plant",
+   42,
+   85,
+   0
+  ],
+  [
+   "storage_shelf",
+   16,
+   87,
+   0
+  ],
+  [
+   "cabinet",
+   16,
+   92,
+   0
+  ],
+  [
+   "wash_tub",
+   21,
+   91,
+   0
+  ],
+  [
+   "trunk",
+   22,
+   87,
+   0
+  ],
+  [
+   "bed_single",
+   29,
+   91,
+   1
+  ],
+  [
+   "nightstand",
+   32,
+   90,
+   0
+  ],
+  [
+   "dresser",
+   25,
+   87,
+   0
+  ],
+  [
+   "washbasin",
+   31,
+   87,
+   0
+  ],
+  [
+   "chair",
+   26,
+   91,
+   0
+  ],
+  [
+   "grandfather_clock",
+   42,
+   87,
+   0
+  ],
+  [
+   "side_table",
+   34,
+   87,
+   0
+  ],
+  [
+   "potted_plant",
+   42,
+   94,
+   0
+  ],
+  [
+   "rug_rect",
+   37,
+   90,
+   0
+  ],
+  [
+   "bookshelf",
+   39,
+   87,
+   0
   ]
  ],
  "stairs": [
@@ -1096,6 +1478,46 @@
    "b_land": [
     39,
     53
+   ]
+  },
+  {
+   "name": "Loft Stairs",
+   "style": "stairs",
+   "a": [
+    16,
+    76
+   ],
+   "a_land": [
+    16,
+    77
+   ],
+   "b": [
+    16,
+    4
+   ],
+   "b_land": [
+    16,
+    5
+   ]
+  },
+  {
+   "name": "Rectory Stairs",
+   "style": "stairs",
+   "a": [
+    34,
+    94
+   ],
+   "a_land": [
+    34,
+    93
+   ],
+   "b": [
+    32,
+    27
+   ],
+   "b_land": [
+    32,
+    26
    ]
   }
  ]

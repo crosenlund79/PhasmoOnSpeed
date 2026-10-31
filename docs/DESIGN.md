@@ -225,6 +225,18 @@ share walls, light or line of sight; paths for the entity and occupants include
 the staircase jump. Basement rooms are rooms like any other (names, evidence,
 resources, lairs). The view is darker and the ambience deeper while you are below.
 
+## Upper floors and locations
+
+Every location also has an upper floor (level 1: attics, nurseries, guest rooms,
+galleries, lofts), laid out apart in the world like the basement and reached by
+staircases that sit in a room corner with their steps running into the wall.
+Seven locations: Ashgrove Cottage, Blackwood Manor, Hollow Lane Farmhouse,
+St. Evangeline Rectory, Marrow Street Townhouse, The Black Lantern Inn (common
+room, taproom, kitchen, stables, guest rooms, innkeeper's quarters, beer cellar)
+and Saltmarsh Harbour (quay and jetties over black water, a moored lugger you can
+board, warehouse and loft, harbour master's office and lodging, bonded vaults).
+Harbour water is impassable tiles that never block sight.
+
 ## Neglect
 
 Each room has a condition — kept, worn, neglected or abandoned — that tints the

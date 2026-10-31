@@ -4,7 +4,7 @@
  "blurb": "Three generations lived here. One of them never left.",
  "size": [
   40,
-  63
+  95
  ],
  "spawn": [
   19,
@@ -380,6 +380,132 @@
    ],
    "level": -1,
    "condition": "abandoned"
+  },
+  {
+   "id": "landing",
+   "name": "First-Floor Landing",
+   "floor": "parquet",
+   "kind": "hall",
+   "lit": true,
+   "outdoor": false,
+   "rects": [
+    [
+     4,
+     83,
+     32,
+     3
+    ]
+   ],
+   "level": 1,
+   "condition": "kept"
+  },
+  {
+   "id": "master",
+   "name": "Master Bedroom",
+   "floor": "carpet_red",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     4,
+     76,
+     12,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "kept"
+  },
+  {
+   "id": "dressing_room",
+   "name": "Dressing Room",
+   "floor": "carpet_blue",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     17,
+     76,
+     6,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "worn"
+  },
+  {
+   "id": "nursery",
+   "name": "Nursery",
+   "floor": "carpet_green",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     24,
+     76,
+     12,
+     6
+    ]
+   ],
+   "level": 1,
+   "condition": "abandoned"
+  },
+  {
+   "id": "upper_study",
+   "name": "Upstairs Study",
+   "floor": "wood_dark",
+   "kind": "study",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     4,
+     87,
+     11,
+     7
+    ]
+   ],
+   "level": 1,
+   "condition": "neglected"
+  },
+  {
+   "id": "water_closet",
+   "name": "Water Closet",
+   "floor": "tile_white",
+   "kind": "bathroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     16,
+     87,
+     6,
+     7
+    ]
+   ],
+   "level": 1,
+   "condition": "worn"
+  },
+  {
+   "id": "garret",
+   "name": "Maid's Garret",
+   "floor": "wood_light",
+   "kind": "bedroom",
+   "lit": false,
+   "outdoor": false,
+   "rects": [
+    [
+     23,
+     87,
+     13,
+     7
+    ]
+   ],
+   "level": 1,
+   "condition": "neglected"
   }
  ],
  "doors": [
@@ -546,6 +672,46 @@
   [
    21,
    59
+  ],
+  [
+   10,
+   82
+  ],
+  [
+   20,
+   82
+  ],
+  [
+   30,
+   82
+  ],
+  [
+   16,
+   79
+  ],
+  [
+   23,
+   79
+  ],
+  [
+   9,
+   86
+  ],
+  [
+   19,
+   86
+  ],
+  [
+   29,
+   86
+  ],
+  [
+   15,
+   90
+  ],
+  [
+   22,
+   90
   ]
  ],
  "furniture": [
@@ -1010,6 +1176,228 @@
    31,
    61,
    0
+  ],
+  [
+   "bed_double",
+   8,
+   76,
+   0
+  ],
+  [
+   "nightstand",
+   7,
+   76,
+   0
+  ],
+  [
+   "nightstand",
+   11,
+   76,
+   0
+  ],
+  [
+   "wardrobe",
+   4,
+   76,
+   0
+  ],
+  [
+   "dresser",
+   13,
+   81,
+   0
+  ],
+  [
+   "armchair",
+   4,
+   80,
+   0
+  ],
+  [
+   "fireplace",
+   13,
+   76,
+   0
+  ],
+  [
+   "wardrobe",
+   17,
+   76,
+   0
+  ],
+  [
+   "wall_mirror",
+   21,
+   76,
+   0
+  ],
+  [
+   "dresser",
+   17,
+   81,
+   0
+  ],
+  [
+   "bed_single",
+   34,
+   76,
+   0
+  ],
+  [
+   "rug_round",
+   27,
+   77,
+   0
+  ],
+  [
+   "chair",
+   25,
+   76,
+   0
+  ],
+  [
+   "trunk",
+   32,
+   81,
+   0
+  ],
+  [
+   "dresser",
+   24,
+   81,
+   0
+  ],
+  [
+   "rug_rect",
+   12,
+   83,
+   0
+  ],
+  [
+   "rug_rect",
+   23,
+   83,
+   0
+  ],
+  [
+   "grandfather_clock",
+   35,
+   83,
+   0
+  ],
+  [
+   "side_table",
+   35,
+   85,
+   0
+  ],
+  [
+   "candelabra",
+   25,
+   85,
+   0
+  ],
+  [
+   "bookshelf",
+   4,
+   87,
+   0
+  ],
+  [
+   "bookshelf",
+   11,
+   87,
+   0
+  ],
+  [
+   "desk",
+   6,
+   90,
+   0
+  ],
+  [
+   "chair",
+   7,
+   92,
+   2
+  ],
+  [
+   "armchair",
+   11,
+   92,
+   0
+  ],
+  [
+   "floor_lamp",
+   14,
+   93,
+   0
+  ],
+  [
+   "bathtub",
+   16,
+   87,
+   0
+  ],
+  [
+   "toilet",
+   21,
+   93,
+   0
+  ],
+  [
+   "washbasin",
+   21,
+   87,
+   0
+  ],
+  [
+   "wall_mirror",
+   18,
+   93,
+   0
+  ],
+  [
+   "bed_single",
+   34,
+   87,
+   0
+  ],
+  [
+   "bed_single",
+   31,
+   87,
+   0
+  ],
+  [
+   "nightstand",
+   33,
+   87,
+   0
+  ],
+  [
+   "trunk",
+   23,
+   93,
+   0
+  ],
+  [
+   "washbasin",
+   35,
+   93,
+   0
+  ],
+  [
+   "broken_chair",
+   27,
+   92,
+   0
+  ],
+  [
+   "wash_tub",
+   25,
+   87,
+   0
   ]
  ],
  "stairs": [
@@ -1051,6 +1439,26 @@
    "b_land": [
     29,
     53
+   ]
+  },
+  {
+   "name": "Main Stairs",
+   "style": "stairs",
+   "a": [
+    4,
+    85
+   ],
+   "a_land": [
+    5,
+    85
+   ],
+   "b": [
+    4,
+    9
+   ],
+   "b_land": [
+    4,
+    10
    ]
   }
  ]

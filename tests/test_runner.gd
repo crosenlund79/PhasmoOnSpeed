@@ -74,7 +74,7 @@ func _start(house: String, creature: String, run_seed: int = 1234) -> Run:
 # --- Houses ---------------------------------------------------------------------------
 
 func test_houses_valid() -> void:
-	check(Game.house_ids.size() == 5, "five houses expected, got %d" % Game.house_ids.size())
+	check(Game.house_ids.size() == 7, "seven locations expected, got %d" % Game.house_ids.size())
 	for id in Game.house_ids:
 		var m := HouseMap.from_data(Game.house(id))
 		var reach := m.reachable_from_spawn()
@@ -397,7 +397,7 @@ func test_basements() -> void:
 		var below: Array = m.rooms.filter(func(r): return int(r["level"]) == -1)
 		check(below.size() >= 4, "%s: basement has several rooms" % id)
 		check(m.stairs.size() >= 2, "%s: two ways between floors" % id)
-		check(m.floors() == [0, -1], "%s: two floors" % id)
+		check(m.floors() == [1, 0, -1], "%s: upper floor, main floor and basement (%s)" % [id, m.floors()])
 		var reach := m.reachable_from_spawn()
 		for r in below:
 			check(reach.has(m.free_cells(r["id"], false)[0]), "%s: %s reachable via the stairs" % [id, r["id"]])
@@ -416,6 +416,25 @@ func test_basements() -> void:
 				jumps += 1
 		check(jumps == 1, "%s: path takes exactly one staircase (%d)" % [id, jumps])
 		check(not m.los(a, b), "%s: no line of sight between floors" % id)
+		# The upper floor: separate, reachable by one staircase, rooms with conditions.
+		var above: Array = m.rooms.filter(func(r): return int(r["level"]) == 1)
+		check(above.size() >= 4, "%s: upper floor has several rooms" % id)
+		var up := m.floor_bounds(1)
+		check(not up.intersects(top) and not up.intersects(bottom), "%s: upper floor is separate" % id)
+		for r in above:
+			check(reach.has(m.free_cells(r["id"], false)[0]), "%s: %s reachable via the stairs" % [id, r["id"]])
+			check(r.has("condition"), "%s: %s has a condition" % [id, r["id"]])
+		var c := HouseMap.cell_center(m.free_cells(above[0]["id"])[0])
+		var up_path := m.path(a, c)
+		check(not up_path.is_empty(), "%s: path from spawn upstairs" % id)
+		check(not m.los(a, c), "%s: no line of sight to the upper floor" % id)
+		# Basement to attic: two staircases, via the main floor.
+		var deep := m.path(b, c)
+		var hops := 0
+		for i in range(1, deep.size()):
+			if deep[i].distance_to(deep[i - 1]) > 90.0:
+				hops += 1
+		check(hops == 2, "%s: basement to upper floor takes two staircases (%d)" % [id, hops])
 
 func test_stairs_and_basement_evidence() -> void:
 	var run := await _start("blackwood", "werewolf", 13)

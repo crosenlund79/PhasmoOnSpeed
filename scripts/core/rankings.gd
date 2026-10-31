@@ -16,8 +16,8 @@ const LEGENDS := [
 	{"id": "thistle", "alt": "Sam Winchester", "alt_note": "Does the research. Dean takes the credit.", "name": "Old Meg Thistle", "score": 8730, "time": 142.9, "house": "Hollow Lane Farmhouse", "note": "Carries garlic. For every occasion."},
 	{"id": "penumbra", "alt": "Geralt of Rivia", "alt_note": "Charges for every haunting. Hmm.", "name": "Silas Penumbra", "score": 8240, "time": 157.1, "house": "Marrow Street Townhouse", "note": "Prefers the dark. The dark is ambivalent."},
 	{"id": "fogg", "alt": "Ichabod Crane", "alt_note": "Prefers houses without horses.", "name": "Lady Wilhelmina Fogg", "score": 7810, "time": 176.4, "house": "Ashgrove Cottage", "note": "Investigates in full evening dress."},
-	{"id": "quill", "alt": "Jonathan Harker", "alt_note": "Took notes. Survived the castle. Mostly.", "name": "Barnaby Quill", "score": 7150, "time": 203.0, "house": "Blackwood Manor", "note": "Journalist. Survived, mostly."},
-	{"id": "lantern", "alt": "Carl Kolchak", "alt_note": "Reporter. Nobody believes his articles.", "name": "Theo Lantern", "score": 6380, "time": 238.6, "house": "Ashgrove Cottage", "note": "Still afraid of the dark. Goes anyway."},
+	{"id": "quill", "alt": "Jonathan Harker", "alt_note": "Took notes. Survived the castle. Mostly.", "name": "Barnaby Quill", "score": 7150, "time": 203.0, "house": "Saltmarsh Harbour", "note": "Journalist. Survived, mostly."},
+	{"id": "lantern", "alt": "Carl Kolchak", "alt_note": "Reporter. Nobody believes his articles.", "name": "Theo Lantern", "score": 6380, "time": 238.6, "house": "The Black Lantern Inn", "note": "Still afraid of the dark. Goes anyway."},
 ]
 
 ## A legend as currently displayed (name and note follow the Safe Names setting).
