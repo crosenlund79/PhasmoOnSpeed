@@ -14,6 +14,8 @@ decisions made during development. **Contains spoilers.**
 | The Lost One | ghost | Needle 5, Handprints, Orbs | its ordinary hunts cannot hurt. One of the three keepsakes (music box, locket, little shoe) — always the one in its room — twitches and hums a lullaby. Touch it and it hunts at 360 (faster than a sprint) and drags its catch to the basement furnace: a wound, or death if already wounded | **Rite of Rest**: salt and the Ghost Writing Book in its room, Tab → Lost One, hold V there |
 | The Drowned Sailor | ghost | Freezing, Whisper Box, Ghost Writing | sways slowly, leaving wet footprints and salt-water puddles (atmosphere, not evidence; they dry up), drips, creaking timbers, a distant shanty; lights stutter as it passes. Hunts in surges (heavy steps, then a lunge) and may rise from one of its puddles — only ever one at least 300 px from every hunter | **Rite of the Tides**: salt in its room and holy water in hand (one flask is spent), Tab → Drowned Sailor, hold V there |
 | The Plague Doctor | ghost | Needle 5, Freezing, Ghost Writing | slow, deliberate, pausing; raspy breathing and clinking bottles, rarely seen. Hunts at 185 (the slowest), dropping a miasma cloud every 3.2 s that swells over 1.6 s and fades after 9 s; 1.2 s inside one is a wound (4 s grace before another) | **Rite of Cleansing**: crucifix and Ghost Writing Book in its room, Tab → Plague Doctor, hold V there |
+| The Weeper | ghost | Freezing, Whisper Box, Orbs | sobbing heard rooms away; slow (45 / hunts at 150) and stops to cry, even mid-hunt; darts away when approached and lunges at 330 within ~230 px | **Rite of Solace**: salt and a crucifix in its room, Tab → Weeper, hold V there |
+| The Mimic | ghost | Needle 5, Whisper Box, Handprints | wears a real occupant's face and name (that resident walks the house twice), glitches in movement, garbled speech; its own pale face only while hunting (210) | **Rite of Unmasking**: Ghost Writing Book in its room, carry holy water (one flask is spent), Tab → Mimic, hold V there |
 | Vampire | physical (hidden) | Bite Marks, Blood Droplets, Grave Soil | stalks the investigator, ambushes from behind and out of the light | carry **garlic** (weakens and repels it when close) and strike with a **wooden stake** |
 | Werewolf | physical (hidden) | Claw Marks, Shed Fur, Unusual Footprints | relentless pursuit, accelerates while it sees you (240→288) | collect **3 silverware**, hold E at a stove or hearth to cast a **silver stake**, strike |
 | Shapeshifter | physical (hidden) | Wrong Reflection, Shed Skin, Mimicked Voice | changes appearance (human, ghost, vampire, werewolf, rarely a cat); identity never changes | **expose** it with the **hand mirror** (hold click while facing it — works even when it is unseen), then strike with **iron nails** while exposed |
@@ -252,3 +254,14 @@ correct/incorrect identifications, blind wins, wounds, transformations and
 Harbinger encounters, plus the last 60 runs. The DEV STATISTICS screen shows
 them. Statistics are never read by gameplay: creature choice is uniform from
 the run seed.
+
+## Home rooms (0.11.0)
+
+Every entity lives in a home room (its lair). Ordinary wandering is short
+excursions into one or two neighbouring rooms, then back home to settle for
+15–30 s (longer for stronger homebodies). Hunts and pursuit ignore this and reach
+any floor or the outdoors. A home room can change at most twice per run (first
+check at 100–160 s with a 50 % chance, a second 90–140 s later at 30 %; never for
+the Lost One). The cold and the orbs move with it; "The haunting has shifted…" is
+shown, the room is not. Passive dread runs at 80 % of the old rate (0.176/s).
+
