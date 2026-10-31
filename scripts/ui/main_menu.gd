@@ -31,6 +31,15 @@ func _ready() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui.add_child(root)
 	_build_ui(root)
+	# An investigation abandoned by quitting was settled as fleeing at launch: say so once.
+	if SaveData.startup_notice != "":
+		var note := Art.label(SaveData.startup_notice, 17, Color(0.9, 0.45, 0.35), Art.font_italic)
+		note.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+		note.position = Vector2(-260, -60)
+		note.add_theme_color_override("font_outline_color", Color.BLACK)
+		note.add_theme_constant_override("outline_size", 6)
+		root.add_child(note)
+		SaveData.startup_notice = ""
 	_build_settings(root)
 	_build_help(root)
 
