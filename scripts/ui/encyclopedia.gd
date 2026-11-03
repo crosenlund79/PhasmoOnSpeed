@@ -7,6 +7,11 @@ extends Screen
 var list_box: VBoxContainer
 var page: VBoxContainer
 var _buttons := {}
+## In-run use (opened from the pause menu): the investigation keeps going behind it,
+## Back returns to it, and a "Your Notes & Rituals" page reads the hunter's journal.
+var run_ref = null
+var start_page := ""
+signal closed()
 
 func _ready() -> void:
 	add_backdrop("ui/menu_background.png", 0.65)
@@ -36,10 +41,15 @@ func _ready() -> void:
 	list_box.add_theme_constant_override("separation", 6)
 	list_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	list_scroll.add_child(list_box)
+	if run_ref != null:
+		_add_entry_button("_notes", "Your Notes & Rituals", "icons/ui_quill.png")
 	for id in Defs.ENCYCLOPEDIA_ORDER:
 		_add_entry_button(id, Defs.creature_name(id), Defs.CREATURES[id]["token"])
 	_add_entry_button("_equipment", "Equipment", "icons/eq_emf.png")
-	left.add_child(Art.button("Back", func(): Game.goto_menu(), 330))
+	if run_ref != null:
+		left.add_child(Art.button("Back to the investigation", func(): close(), 330))
+	else:
+		left.add_child(Art.button("Back", func(): Game.goto_menu(), 330))
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root.add_child(panel)
@@ -50,8 +60,18 @@ func _ready() -> void:
 	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	page.add_theme_constant_override("separation", 8)
 	scroll.add_child(page)
-	show_entry(Defs.ENCYCLOPEDIA_ORDER[0])
-	_buttons[Defs.ENCYCLOPEDIA_ORDER[0]].grab_focus()
+	var first := start_page if start_page != "" else ("_notes" if run_ref != null else Defs.ENCYCLOPEDIA_ORDER[0])
+	show_entry(first)
+	_buttons[first].grab_focus()
+
+func close() -> void:
+	closed.emit()
+	queue_free()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if run_ref != null and event.is_action_pressed("pause"):
+		get_viewport().set_input_as_handled()
+		close()
 
 func _add_entry_button(id: String, title: String, icon: String) -> void:
 	var b := Button.new()
@@ -87,6 +107,9 @@ func show_entry(id: String) -> void:
 		c.queue_free()
 	if id == "_equipment":
 		_show_equipment()
+		return
+	if id == "_notes":
+		_show_notes()
 		return
 	var d: Dictionary = Defs.CREATURES[id]
 	var head := HBoxContainer.new()
@@ -126,6 +149,49 @@ func show_entry(id: String) -> void:
 	var steps: Array = d["vanquish"]
 	for i in steps.size():
 		page.add_child(_para("%d.  %s" % [i + 1, steps[i]], 18))
+
+## The hunter's own investigation: what they have found and ruled out, which
+## entities still fit, and the ritual (or weapon) each one needs. Reads only their
+## journal — never the hidden identity of the entity.
+func _show_notes() -> void:
+	var p = run_ref.player
+	var j: Journal = p.journal
+	page.add_child(Art.heading("Your Notes", 40))
+	if run_ref.is_harbinger():
+		page.add_child(_para("The Harbinger has come. Your earlier notes no longer count.", 18, true))
+		_section("The Final Rite")
+		_bullets(Defs.CREATURES["harbinger"]["vanquish"])
+		return
+	_section("Evidence recorded")
+	var found: Array = j.active_entries()
+	if found.is_empty():
+		page.add_child(_para("Nothing yet. Sweep the house with your instruments.", 17, true))
+	for e in found:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		row.add_child(Art.icon_rect(Defs.EVIDENCE[e["id"]]["icon"], 30))
+		row.add_child(Art.label("%s — %s, at %s" % [Defs.EVIDENCE[e["id"]]["name"], e["room_name"], Journal.format_time(float(e["time"]))], 17, Art.INK, Art.font_heading))
+		page.add_child(row)
+	if not j.ruled_out.is_empty():
+		page.add_child(_para("Ruled out by you: " + ", ".join(j.ruled_out.keys().map(func(id): return Defs.evidence_name(id))), 16, true))
+	var fits: Array = Defs.candidates(j)
+	_section("Entities that fit your notes (%d)" % fits.size())
+	if fits.is_empty():
+		page.add_child(_para("None — something in your notes is wrong. Restore a ruled-out evidence type (right-click it).", 17, true))
+	for id in fits:
+		var d: Dictionary = Defs.CREATURES[id]
+		var head := HBoxContainer.new()
+		head.add_theme_constant_override("separation", 10)
+		head.add_child(Art.icon_rect(d["token"], 40))
+		var title: String = d["name"] + ("   (your suspect)" if p.suspect == id else "")
+		head.add_child(Art.label(title, 20, Art.BLOOD if p.suspect == id else Art.INK, Art.font_heading))
+		page.add_child(head)
+		if Defs.is_ghost(id):
+			var needs: Array = d.get("rite_needs", [])
+			var parts: Array = needs.map(func(n): return ("✓ " if p.has_prepared(n) else "✗ ") + Defs.EQUIPMENT[n]["name"])
+			page.add_child(_para("%s — needs %s" % [d["rite_name"], ", ".join(parts)], 17))
+		for i in d["vanquish"].size():
+			page.add_child(_para("%d.  %s" % [i + 1, d["vanquish"][i]], 16))
 
 ## Facts computed from the same numbers the game uses.
 func _derived_hunt_facts(d: Dictionary) -> String:

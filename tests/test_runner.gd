@@ -27,7 +27,7 @@ func _ready() -> void:
 		"test_audio_export", "test_game_setup",
 		"test_blightness_rushes", "test_safe_names", "test_temperatures", "test_ghost_marker_and_ruled_out",
 		"test_hellbound", "test_abyssal", "test_sailor_and_doctor", "test_consolidation", "test_home_rooms", "test_suspect_filter_and_splatter", "test_weeper_and_mimic",
-		"test_progression", "test_flee_death_immortal", "test_required_items_reachable", "test_salt_water_relic", "test_sight_and_doors", "test_tavern_missions", "test_pregame_and_theme", "test_footstep_surfaces",
+		"test_progression", "test_flee_death_immortal", "test_required_items_reachable", "test_salt_water_relic", "test_sight_and_doors", "test_tavern_missions", "test_pregame_and_theme", "test_footstep_surfaces", "test_trails_presence_notes",
 	]
 	var only := OS.get_cmdline_user_args()
 	if not only.is_empty():
@@ -1346,10 +1346,15 @@ func test_home_rooms() -> void:
 		c.cooldown_t = 0.0
 		c.begin_hunt(c.position, false)
 		c.state = "hunt"
+		# It last saw the hunter heading down: it must find the way across floors
+		# (an unseen hunter is otherwise searched for at random, by design).
+		c.last_seen = run.player.global_position
 		var reached := false
 		for i in 1500:
 			await get_tree().process_frame
 			c.state_t = 0.0   # keep the hunt going
+			if c.last_seen == Vector2.INF and c.path_i >= c.path.size():
+				c.last_seen = run.player.global_position   # still remembers where they went
 			if run.map.floor_at(c.position) == run.map.floor_at(run.player.global_position):
 				reached = true
 				break
@@ -1768,3 +1773,55 @@ func test_footstep_surfaces() -> void:
 	# The raw library stays outside Godot.
 	check(not ResourceLoader.exists("res://audio_library/player/Footsteps/Wood footsteps/Wood footstep 1.wav"), "audio_library is not imported")
 	check(FileAccess.file_exists("res://audio_library/.gdignore"), "audio_library keeps its .gdignore")
+
+func test_trails_presence_notes() -> void:
+	Sfx.clear_cache()
+	# 1. Every evidence type has its own cue, and recording it plays it.
+	for ev in Defs.EVIDENCE:
+		check(AudioCatalog.CUES.has("ev_" + ev) and Sfx.stream("ev_" + ev) != null, "%s has an evidence cue" % ev)
+	var run := await _start("ashgrove", "shade", 101)
+	var c := run.creature
+	c.set_process(false)
+	var p := run.player
+	Sfx._last_played.erase("ev_freezing")
+	run.discover(p, "freezing", p.room_id)
+	check(Sfx._last_played.has("ev_freezing"), "recording Freezing plays its cue")
+	# 2 + 4. The encyclopedia and the notes open over a running investigation.
+	run.hud.open_encyclopedia("_notes")
+	await get_tree().process_frame
+	var e = run.hud.encyclopedia
+	check(e != null and is_instance_valid(e) and run.state == "playing" and is_instance_valid(run), "encyclopedia opens in-run")
+	var text := ""
+	for n in e.page.find_children("*", "Label", true, false):
+		text += n.text + "\n"
+	check(text.contains("Freezing") and text.contains("The Shade") and text.contains("Rite of Stillness"), "notes list the evidence, the fitting entities and their rituals")
+	check(not text.contains("The Poltergeist"), "entities the notes rule out are not listed")
+	e.close()
+	await get_tree().process_frame
+	check(run.hud.pause_panel.visible and is_instance_valid(run), "Back returns to the pause menu, the run untouched")
+	run.hud.pause_panel.visible = false
+	# 3. Trails: a themed trace, discoverable, never evidence.
+	var indoor: Array = run.map.indoor_rooms()
+	c.position = HouseMap.cell_center(run.map.random_free_cell(indoor[0]["id"], run.rng))
+	c.room_id = indoor[0]["id"]
+	run._trail_t = 0.0
+	run._trail_tick(0.1)
+	check(run.trails.size() == 1, "the entity left a trail")
+	check(run.recorder.data["events"].any(func(ev): return ev[1] == "decal" and ev[2].has("tint")), "the trail reaches clients and replays")
+	var before := p.journal.active_entries().size()
+	var inv := p.investigation
+	p.global_position = run.trails[0]["pos"]
+	run._trail_tick(0.1)
+	check(p.investigation > inv and p.journal.active_entries().size() == before, "finding a trail is noted, not recorded as evidence")
+	# 5 + 6. Ambient activity pings the direction to nearby hunters only.
+	p.global_position = c.position + Vector2(200, 0)
+	c.state = "roam"
+	run._ambient_t = 0.0
+	run._ambient_tick(0.1)
+	check(p.presence_arc != null and p.presence_arc.t > 0.0, "a nearby sign shows the red arc")
+	check(absf(angle_difference(p.presence_arc.angle, PI)) < 0.05, "the arc points toward the source")
+	p.presence_arc.t = 0.0
+	p.set_meta("presence_at", -99.0)
+	p.global_position = c.position + Vector2(2000, 0)
+	run.presence_ping(c.position)
+	check(p.presence_arc.t == 0.0, "nothing for a distant sign")

@@ -103,7 +103,7 @@ func _resolve(sound: String) -> Array:
 	if theme:
 		_sources[sound] = "theme"
 		return [_prepared(sound, theme)]
-	var path := AUDIO_DIR + sound + ".wav"
+	var path := AUDIO_DIR + str(AudioCatalog.FALLBACK.get(sound, [sound])[0]) + ".wav"
 	if ResourceLoader.exists(path):
 		_sources[sound] = "placeholder"
 		return [_prepared(sound, load(path))]

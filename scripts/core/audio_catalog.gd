@@ -16,6 +16,23 @@ const MAX_VARIANTS := 8
 
 ## id -> [creator path without extension, preferred format]
 const CUES := {
+	# One cue per evidence type, played when it is recorded (creator file
+	# evidence/<id>.wav; until then a fitting placeholder — see FALLBACK).
+	"ev_emf5": ["evidence/emf5", "wav"],
+	"ev_freezing": ["evidence/freezing", "wav"],
+	"ev_spirit_box": ["evidence/spirit_box", "wav"],
+	"ev_uv": ["evidence/uv", "wav"],
+	"ev_writing": ["evidence/writing", "wav"],
+	"ev_orbs": ["evidence/orbs", "wav"],
+	"ev_bite_marks": ["evidence/bite_marks", "wav"],
+	"ev_blood_drops": ["evidence/blood_drops", "wav"],
+	"ev_coffin_soil": ["evidence/coffin_soil", "wav"],
+	"ev_claw_marks": ["evidence/claw_marks", "wav"],
+	"ev_fur": ["evidence/fur", "wav"],
+	"ev_footprints": ["evidence/footprints", "wav"],
+	"ev_wrong_reflection": ["evidence/wrong_reflection", "wav"],
+	"ev_shed_skin": ["evidence/shed_skin", "wav"],
+	"ev_mimic_voice": ["evidence/mimic_voice", "wav"],
 	# player
 	"footstep": ["player/footstep", "wav"],
 	# Surface footsteps (creator recordings, 8 takes each; see Defs.FLOOR_SURFACE).
@@ -101,6 +118,27 @@ const CUES := {
 ## Composed themes shipped with the game (res://assets/audio/Themes/). A theme
 ## replaces a cue's generated placeholder; a creator file still wins over both,
 ## and the placeholder stays as the fallback when the theme file is missing.
+## Cues with no generated placeholder of their own borrow an existing one:
+## id -> [placeholder cue, pitch, volume dB] (pitch/volume apply to the borrowed
+## sound only; a creator file plays as recorded).
+const FALLBACK := {
+	"ev_emf5": ["emf_spike", 1.0, -6.0],
+	"ev_freezing": ["thermometer_tick", 0.8, -4.0],
+	"ev_spirit_box": ["whisper_mimic", 0.9, -10.0],
+	"ev_uv": ["mirror_reveal", 1.3, -8.0],
+	"ev_writing": ["pencil_scribble", 0.7, -4.0],
+	"ev_orbs": ["mirror_reveal", 1.6, -10.0],
+	"ev_bite_marks": ["npc_gasp", 0.9, -8.0],
+	"ev_blood_drops": ["water_drip", 0.7, -4.0],
+	"ev_coffin_soil": ["salt_pour", 0.6, -4.0],
+	"ev_claw_marks": ["crawl_drag", 1.5, -8.0],
+	"ev_fur": ["werewolf_growl", 1.15, -16.0],
+	"ev_footprints": ["footstep", 0.75, -2.0],
+	"ev_wrong_reflection": ["mirror_reveal", 0.8, -4.0],
+	"ev_shed_skin": ["critter_squish", 0.8, -6.0],
+	"ev_mimic_voice": ["whisper_mimic", 1.1, -8.0],
+}
+
 const THEMES := {
 	"music_menu": "res://assets/audio/Themes/The Road Through Blackthorn.mp3",
 }

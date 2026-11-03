@@ -279,16 +279,20 @@ func _place_resources() -> void:
 		pickups.append({"kind": "resource", "res": "silver_stake", "node": _item_sprite("items/silver_stake.png", pos, 26.0), "pos": pos,
 			"icon": Defs.EQUIPMENT["silver_stake"]["icon"], "label": "Pick Up " + Defs.EQUIPMENT["silver_stake"]["name"], "hold": 0.0})
 
-func _item_sprite(path: String, pos: Vector2, size: float, rot: float = 0.0) -> Sprite2D:
+func _item_sprite(path: String, pos: Vector2, size: float, rot: float = 0.0, tint: Color = Color.WHITE) -> Sprite2D:
 	var s := Sprite2D.new()
 	s.texture = Art.tex(path)
 	s.position = pos
 	s.rotation = rot
+	s.modulate = tint
 	var k := size / maxf(1.0, s.texture.get_size().x)
 	s.scale = Vector2(k, k)
 	s.name = "item_%d" % next_uid()
 	view.decal_layer.add_child(s)
-	record_event("decal", {"id": s.name, "sprite": path, "x": pos.x, "y": pos.y, "rot": snappedf(rot, 0.01), "size": size})
+	var ev := {"id": s.name, "sprite": path, "x": pos.x, "y": pos.y, "rot": snappedf(rot, 0.01), "size": size}
+	if tint != Color.WHITE:
+		ev["tint"] = tint.to_html()
+	record_event("decal", ev)
 	return s
 
 func _remove_sprite(s: Node) -> void:
@@ -379,6 +383,8 @@ func _process(delta: float) -> void:
 	_phantom_steps(delta)
 	_relocation_tick(delta)
 	_sight_tick(delta)
+	_trail_tick(delta)
+	_ambient_tick(delta)
 	_record(delta)
 	if multiplayer_match:
 		_net_tick(delta)
@@ -455,6 +461,106 @@ func relocate_home() -> void:
 	phenomena.move_lair(old, new_room)
 	record_event("relocate", {"room": new_room})   # replay only: never sent to rivals' clients
 	tell_all("The haunting has shifted…", "icons/ui_skull.png")
+
+# --- Entity trails, ambient activity and presence pings ------------------------------------
+# Trails: now and then the entity leaves a small, fading trace of its nature —
+# never evidence (the three defining evidence types are untouched), but a hunter who
+# finds one learns it passed here. The Drowned Sailor already leaves wet footprints
+# and puddles (sailor_tick), so it has no entry here.
+const ENTITY_TRAILS := {
+	"shade": ["decor/stain_2.png", 26.0, Color(0.75, 0.85, 1.0, 0.5), "a thin rime of frost on the floor"],
+	"poltergeist": ["decor/papers_scattered.png", 22.0, Color(1, 1, 1, 0.8), "papers scattered by no hand"],
+	"blightness": ["decor/stain_1.png", 26.0, Color(0.55, 0.75, 0.3, 0.5), "a sickly patch of rot"],
+	"crawler": ["decor/stain_3.png", 30.0, Color(0.1, 0.08, 0.12, 0.6), "a dark smear along the boards"],
+	"lost_one": ["items/wet_footprint.png", 10.0, Color(0.85, 0.85, 0.9, 0.55), "a small, dusty footprint"],
+	"plague_doctor": ["items/ashes.png", 18.0, Color(0.7, 0.8, 0.55, 0.55), "a dusting of pale powder"],
+	"weeper": ["items/puddle.png", 12.0, Color(0.75, 0.85, 1.0, 0.45), "a few fallen tears"],
+	"mimic": ["decor/dust_sheet_scrap.png", 18.0, Color(0.85, 0.85, 0.85, 0.6), "a scrap of borrowed cloth"],
+	"vampire": ["items/ashes.png", 16.0, Color(0.6, 0.15, 0.15, 0.5), "a fine red-brown dust"],
+	"werewolf": ["decor/rubble.png", 18.0, Color(0.7, 0.6, 0.5, 0.8), "splinters gouged from the floor"],
+	"shapeshifter": ["decor/stain_2.png", 20.0, Color(0.85, 0.75, 0.8, 0.4), "a faint, glistening residue"],
+	"harbinger": ["items/ashes.png", 22.0, Color(0.3, 0.25, 0.3, 0.7), "scorched soot"],
+}
+const TRAIL_LIFE := 60.0
+const TRAIL_MAX := 6
+var trails: Array = []          # [{node, pos, until, text, found: {actor: true}}]
+var _trail_t := 14.0
+
+func _trail_tick(delta: float) -> void:
+	for t in trails.duplicate():
+		if elapsed >= t["until"]:
+			trails.erase(t)
+			_remove_sprite(t["node"])
+			continue
+		for h: Player in living_hunters():
+			if not t["found"].has(h.actor_id) and h.global_position.distance_to(t["pos"]) < 38.0:
+				t["found"][h.actor_id] = true
+				tell(h, "You notice %s. Something passed this way." % t["text"], "icons/ui_quill.png", true)
+				add_investigation(h, 1, "trail")
+	var c := creature
+	if c == null or c.state == "banished" or in_abyss(c) or not ENTITY_TRAILS.has(c.type_id):
+		return
+	_trail_t -= delta
+	if _trail_t > 0.0:
+		return
+	_trail_t = rng.randf_range(18.0, 32.0)
+	if map.room(c.room_id).get("outdoor", true):
+		return
+	var spec: Array = ENTITY_TRAILS[c.type_id]
+	var pos := c.position + Vector2(rng.randf_range(-10, 10), rng.randf_range(-10, 10))
+	var node := _item_sprite(spec[0], pos, spec[1], rng.randf() * TAU, spec[2])
+	trails.append({"node": node, "pos": pos, "until": elapsed + TRAIL_LIFE, "text": spec[3], "found": {}})
+	if trails.size() > TRAIL_MAX:
+		_remove_sprite(trails.pop_front()["node"])
+
+# Ambient activity: the entity is never wholly still. Every so often, while it is
+# not hunting, it makes one small sign — a noise, a glimpse, a rattle, stuttering
+# lights — and hunters nearby feel which way it came from.
+const AMBIENT_NOISES := {
+	"ghost": [["nm_knock", -14.0, 1.0], ["whisper_mimic", -18.0, 0.8], ["door_creak", -14.0, 0.9], ["wood_creak", -12.0, 1.0]],
+	"physical": [["footstep", -12.0, 0.8], ["nm_drag", -14.0, 1.0], ["door_creak", -14.0, 0.9], ["wood_creak", -13.0, 0.9]],
+}
+var _ambient_t := 20.0
+
+func _ambient_tick(delta: float) -> void:
+	var c := creature
+	if c == null or c.state != "roam" or in_abyss(c) or is_harbinger():
+		return
+	_ambient_t -= delta
+	if _ambient_t > 0.0:
+		return
+	_ambient_t = rng.randf_range(16.0, 28.0) * (1.3 if Defs.rules(difficulty) == "beginner" else 1.0)
+	var ghostly := c.is_ghost_like()
+	var roll := rng.randf()
+	if roll < 0.5:
+		var pool: Array = AMBIENT_NOISES["ghost" if ghostly else "physical"]
+		var n: Array = pool[rng.randi_range(0, pool.size() - 1)]
+		sound_at(n[0], c.position, n[1], n[2] * rng.randf_range(0.92, 1.08), 900.0)
+	elif roll < 0.7 and ghostly and c.type_id != "mimic":
+		c.manifest_t = -0.01   # a brief glimpse (its normal manifestation, early)
+	elif roll < 0.85:
+		shake_furniture_near(c.position)
+	else:
+		creature_fx("lights", c.position)
+	presence_ping(c.position)
+
+## A nearby sign of the entity: each hunter close enough feels its direction — a short
+## red arc on their ring — never its position or what it is. Clients receive only the angle.
+const PRESENCE_RANGE := 650.0
+
+func presence_ping(src: Vector2) -> void:
+	for h: Player in hunters_in_house():
+		if h.dead or in_abyss(h):
+			continue
+		var d := h.global_position.distance_to(src)
+		if d > PRESENCE_RANGE or d < 24.0 or elapsed < float(h.get_meta("presence_at", -99.0)) + 1.5:
+			continue
+		h.set_meta("presence_at", elapsed)
+		var a := (src - h.global_position).angle()
+		if h.is_local:
+			h.show_presence(a)
+		elif multiplayer_match:
+			Net.host_private(h.peer_id, "presence", {"a": snappedf(a, 0.01)})
 
 var _sight_t := 0.0
 
@@ -649,6 +755,7 @@ func discover(p: Player, evidence_id: String, room_id: String) -> void:
 		return
 	if p.journal.record(evidence_id, elapsed, room_id, map.room_name(room_id)):
 		sound_to(p, "pencil_scribble", 0.0)
+		_evidence_cue(p, evidence_id)
 		add_threat(4.0 / hunters.size(), "evidence")
 		add_investigation(p, 3, "evidence")
 		var first := not first_finder.has(evidence_id)
@@ -660,6 +767,18 @@ func discover(p: Player, evidence_id: String, room_id: String) -> void:
 		if not p.is_local and multiplayer_match:
 			Net.host_private(p.peer_id, "evidence", {"id": evidence_id, "time": elapsed, "room": room_id, "room_name": map.room_name(room_id)})
 		refit_suspect(p)
+
+## Each evidence type has its own sound when it is recorded (a creator file plays
+## as recorded; the borrowed placeholder gets its own pitch and level).
+func _evidence_cue(p: Player, evidence_id: String) -> void:
+	var cue := "ev_" + evidence_id
+	if not AudioCatalog.CUES.has(cue):
+		return
+	var spec: Array = AudioCatalog.FALLBACK.get(cue, [cue, 1.0, -6.0])
+	if Sfx.source_of(cue) == "creator":
+		sound_to(p, cue, -4.0, 1.0)
+	else:
+		sound_to(p, cue, float(spec[2]), float(spec[1]))
 
 func placed_books() -> Array:
 	var out: Array = []
@@ -981,6 +1100,7 @@ func close_abyss() -> void:
 
 ## The entity snuffs a flame or swings a door near pos.
 func haunt_near(pos: Vector2) -> void:
+	presence_ping(pos)
 	if rng.randf() < 0.55:
 		var doors_near: Array = []
 		for i in view.doors.size():

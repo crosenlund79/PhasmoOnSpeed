@@ -139,6 +139,8 @@ func apply(type: String, d: Dictionary) -> bool:
 			s.texture = Art.tex(d["sprite"])
 			s.position = Vector2(d["x"], d["y"])
 			s.rotation = float(d.get("rot", 0.0))
+			if d.has("tint"):
+				s.modulate = Color.html(str(d["tint"]))
 			var k := float(d.get("size", 28.0)) / maxf(1.0, s.texture.get_size().x)
 			s.scale = Vector2(k, k)
 			if d.get("uv", false):

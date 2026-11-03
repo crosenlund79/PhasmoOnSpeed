@@ -8,9 +8,9 @@ missing. The code-side list lives in `scripts/core/audio_catalog.gd`
 
 | | |
 |---|---|
-| Sound cues in the catalog | **70** |
-| …triggered by the game | **65** |
-| …generated but currently never triggered | **5** (`camera_shutter`, `cat_meow`, `emf_beep`, `emf_spike`, `thermometer_tick`) |
+| Sound cues in the catalog | **85** |
+| …triggered by the game | **82** |
+| …generated but currently never triggered | **3** (`camera_shutter`, `cat_meow`, `emf_beep`; `emf_spike` and `thermometer_tick` now voice evidence) |
 | Cues using generated placeholder audio | **63 of 64** — made by `tools/audio/generate_audio.py` |
 | Cues using a composed theme | **1** (`music_menu`: `assets/audio/Themes/The Road Through Blackthorn.mp3`) |
 | Cues with creator (original) audio | **6** — the surface footsteps (`player/footsteps/`) |
@@ -96,6 +96,21 @@ Status in every row below: **Existing placeholder** (generated) unless marked.
 | ID | Name | Creator file | Trigger | Behavior | Priority | Notes |
 |---|---|---|---|---|---|---|
 | `pencil_scribble` | Journal pencil | `evidence/journal_write.wav` | A new journal entry; a Beginner Mode tip appears (soft) | one-shot, 2D, private | Essential | The "evidence recorded" signature sound. |
+| `ev_emf5` | Evidence — Needle frenzy | `evidence/emf5.wav` | When a hunter records this evidence (with the journal pencil) | one-shot, 2D, to the finder only | Desirable | Placeholder: `emf_spike` at pitch 1.0, -6 dB. |
+| `ev_freezing` | Evidence — Freezing reading | `evidence/freezing.wav` | When a hunter records this evidence (with the journal pencil) | one-shot, 2D, to the finder only | Desirable | Placeholder: `thermometer_tick` at pitch 0.8, -4 dB. |
+| `ev_spirit_box` | Evidence — Whisper Box answer | `evidence/spirit_box.wav` | When a hunter records this evidence (with the journal pencil) | one-shot, 2D, to the finder only | Desirable | Placeholder: `whisper_mimic` at pitch 0.9, -10 dB. |
+| `ev_uv` | Evidence — Handprints revealed | `evidence/uv.wav` | When a hunter records this evidence (with the journal pencil) | one-shot, 2D, to the finder only | Desirable | Placeholder: `mirror_reveal` at pitch 1.3, -8 dB. |
+| `ev_writing` | Evidence — Ghost writing | `evidence/writing.wav` | When a hunter records this evidence (with the journal pencil) | one-shot, 2D, to the finder only | Desirable | Placeholder: `pencil_scribble` at pitch 0.7, -4 dB. |
+| `ev_orbs` | Evidence — Orbs seen | `evidence/orbs.wav` | When a hunter records this evidence (with the journal pencil) | one-shot, 2D, to the finder only | Desirable | Placeholder: `mirror_reveal` at pitch 1.6, -10 dB. |
+| `ev_bite_marks` | Evidence — Bite marks | `evidence/bite_marks.wav` | When a hunter records this evidence (with the journal pencil) | one-shot, 2D, to the finder only | Desirable | Placeholder: `npc_gasp` at pitch 0.9, -8 dB. |
+| `ev_blood_drops` | Evidence — Blood droplets | `evidence/blood_drops.wav` | When a hunter records this evidence (with the journal pencil) | one-shot, 2D, to the finder only | Desirable | Placeholder: `water_drip` at pitch 0.7, -4 dB. |
+| `ev_coffin_soil` | Evidence — Grave soil | `evidence/coffin_soil.wav` | When a hunter records this evidence (with the journal pencil) | one-shot, 2D, to the finder only | Desirable | Placeholder: `salt_pour` at pitch 0.6, -4 dB. |
+| `ev_claw_marks` | Evidence — Claw marks | `evidence/claw_marks.wav` | When a hunter records this evidence (with the journal pencil) | one-shot, 2D, to the finder only | Desirable | Placeholder: `crawl_drag` at pitch 1.5, -8 dB. |
+| `ev_fur` | Evidence — Shed fur | `evidence/fur.wav` | When a hunter records this evidence (with the journal pencil) | one-shot, 2D, to the finder only | Desirable | Placeholder: `werewolf_growl` at pitch 1.15, -16 dB. |
+| `ev_footprints` | Evidence — Unusual footprints | `evidence/footprints.wav` | When a hunter records this evidence (with the journal pencil) | one-shot, 2D, to the finder only | Desirable | Placeholder: `footstep` at pitch 0.75, -2 dB. |
+| `ev_wrong_reflection` | Evidence — Wrong reflection | `evidence/wrong_reflection.wav` | When a hunter records this evidence (with the journal pencil) | one-shot, 2D, to the finder only | Desirable | Placeholder: `mirror_reveal` at pitch 0.8, -4 dB. |
+| `ev_shed_skin` | Evidence — Shed skin | `evidence/shed_skin.wav` | When a hunter records this evidence (with the journal pencil) | one-shot, 2D, to the finder only | Desirable | Placeholder: `critter_squish` at pitch 0.8, -6 dB. |
+| `ev_mimic_voice` | Evidence — Mimicked voice | `evidence/mimic_voice.wav` | When a hunter records this evidence (with the journal pencil) | one-shot, 2D, to the finder only | Desirable | Placeholder: `whisper_mimic` at pitch 1.1, -8 dB. |
 | `whisper_mimic` | Mimicked voice | `evidence/mimic_voice.wav` | The shapeshifter imitates an occupant (evidence) | one-shot, positional | Essential | |
 
 ## Entities — `res://assets/creator/audio/entities/`

@@ -140,6 +140,43 @@ func _draw() -> void:
 	draw_arc(Vector2.ZERO, 22.0, 0.0, TAU, 40, Color(0, 0, 0, 0.6), 5.0)
 	draw_arc(Vector2.ZERO, 22.0, 0.0, TAU, 40, color(), 2.5)
 
+## The entity stirred nearby: a short red arc — one eighth of the ring around the
+## hunter — points toward it for a moment. Direction only.
+var presence_arc: PresenceArc
+
+func show_presence(angle: float) -> void:
+	if presence_arc == null:
+		presence_arc = PresenceArc.new()
+		add_child(presence_arc)
+	presence_arc.show_at(angle)
+
+class PresenceArc extends Node2D:
+	const LIFE := 1.6
+	const RING_R := 20.5
+	var angle := 0.0
+	var t := 0.0
+	func _ready() -> void:
+		var m := CanvasItemMaterial.new()
+		m.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED   # readable in the dark
+		material = m
+		z_index = 2
+	func show_at(a: float) -> void:
+		angle = a
+		t = LIFE
+		queue_redraw()
+	func _process(delta: float) -> void:
+		if t > 0.0:
+			t = maxf(0.0, t - delta)
+			queue_redraw()
+	func _draw() -> void:
+		if t <= 0.0:
+			return
+		var k := clampf(t / 0.5, 0.0, 1.0) * clampf((LIFE - t) / 0.12 + 0.3, 0.0, 1.0)
+		var half := PI / 8.0   # one eighth of the circle
+		# Laid over the token's own ring (radius ≈ 20.5 world px on the 40-px investigator).
+		draw_arc(Vector2.ZERO, RING_R, angle - half, angle + half, 14, Color(0, 0, 0, 0.5 * k), 6.0, true)
+		draw_arc(Vector2.ZERO, RING_R, angle - half, angle + half, 14, Color(0.92, 0.12, 0.08, 0.95 * k), 3.6, true)
+
 func _process(_delta: float) -> void:
 	if name_label:
 		name_label.position = global_position + Vector2(-80, -40)

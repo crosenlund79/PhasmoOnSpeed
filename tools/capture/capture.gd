@@ -209,6 +209,21 @@ func _shot(s: String) -> void:
 			run.spawn_miasma(spot + Vector2(30, 40))
 		await _wait(100)
 		await _save(s)
+	elif s == "notes" or s == "presence":
+		var run: Run = Game.start_run("ashgrove", 7, "shade")
+		await _wait(5)
+		run.creature.set_process(false)
+		run.discover(run.player, "freezing", run.player.room_id)
+		run.discover(run.player, "orbs", run.player.room_id)
+		if s == "notes":
+			run.hud.toggle_pause()
+			run.hud.open_encyclopedia("_notes")
+			await _wait(10)
+			await _save("pause_notes")
+		else:
+			run.player.show_presence(-PI * 0.25)
+			await _wait(6)
+			await _save("presence_arc")
 	elif s == "death":
 		var run: Run = Game.start_run("ashgrove", 7, "shade")
 		await _wait(5)

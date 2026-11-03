@@ -282,6 +282,7 @@ func setup(p_run) -> void:
 	_build_big_message(root)
 	_build_suspect_picker(root)
 	_build_spectate(root)
+	_ui_root = root
 	_build_pause(root)
 	_build_shared_pause(root)
 	_build_help(root)
@@ -842,8 +843,28 @@ func _build_pause(root: Control) -> void:
 		v.add_child(Art.button("Restart run", func():
 			run.set_paused(false)
 			run.restart()))
+	v.add_child(Art.button("Your Notes & Rituals", func(): open_encyclopedia("_notes")))
+	v.add_child(Art.button("Encyclopedia", func(): open_encyclopedia(Defs.ENCYCLOPEDIA_ORDER[0])))
 	v.add_child(Art.button("Controls", func(): help_panel.visible = true))
 	v.add_child(Art.button("Flee the match" if run.multiplayer_match else "Flee the house", func(): show_flee_confirm()))
+
+# --- The encyclopedia, in the middle of an investigation ------------------------------------
+var _ui_root: Control
+var encyclopedia: Control
+
+## Opened from the pause menu: the run stays exactly as it is (paused in solo;
+## a match keeps its shared-pause rules) and Back / Esc returns to the menu.
+func open_encyclopedia(first_page: String) -> void:
+	if encyclopedia and is_instance_valid(encyclopedia):
+		return
+	var e = preload("res://scripts/ui/encyclopedia.gd").new()
+	e.run_ref = run
+	e.start_page = first_page
+	e.z_index = 8
+	e.closed.connect(func(): pause_panel.visible = run.state == "playing")   # back to the pause menu
+	pause_panel.visible = false
+	_ui_root.add_child(e)
+	encyclopedia = e
 
 # --- Fleeing ------------------------------------------------------------------------------
 var flee_panel: Control
@@ -1208,6 +1229,8 @@ func _update_notifications(delta: float, p) -> void:
 				card.queue_free()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if encyclopedia and is_instance_valid(encyclopedia):
+		return   # it handles its own Esc
 	if event.is_action_pressed("pause"):
 		if help_panel.visible:
 			help_panel.visible = false

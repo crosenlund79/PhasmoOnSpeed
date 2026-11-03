@@ -327,6 +327,8 @@ func apply_private(kind: String, d: Dictionary) -> void:
 		"void":
 			player.journal.void_all()
 			hud.refresh()
+		"presence":
+			player.show_presence(float(d["a"]))
 		"relic":
 			var fresh := Progression.grant_item(SaveData.progress(), str(d["item"]))
 			SaveData.save()
